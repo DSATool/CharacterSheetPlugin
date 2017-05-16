@@ -1,0 +1,4 @@
+{
+	"releaseDate" : "@releaseDate@",
+	"releaseLink" : "https://raw.githubusercontent.com/DSATool/CharacterSheetPlugin/master/release/CharacterSheet_@releaseDate@.zip"
+}

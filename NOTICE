@@ -1,0 +1,10 @@
+The source code of this project is released under Apache License Version 2.0 (see LICENSE).
+
+All other files distributed with this project are under their respective licenses.
+These include:
+PDFBox under Apache License Version 2.0
+FontBox under Apache License Version 2.0
+Apache Commons Logging under Apache License Version 2.0
+BoxTable under Apache License Version 2.0
+Linux Libertine under SIL Open Font License Version 1.1 (see licenses/LinLibertine-OFL.txt)
+Several images in images/zones by Alexander Kremel by courtesy of Mario Rauschenberg for use with DSATool only: Achaz.jpg, Amazone.jpg, Magier.jpg
