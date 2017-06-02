@@ -166,7 +166,7 @@ public class AnimalSheet extends Sheet {
 		bottom.bottom = baseTable.render(document, 571, 12, bottom.bottom, 54, 10) - 5;
 	}
 
-	public TitledPane addAnimal(String type) {
+	public TitledPane addAnimal(final String type) {
 		final TitledPane control = new TitledPane();
 		animalControls.add(control);
 		animalsBox.getChildren().add(animalsBox.getChildren().size() - 1, control);
@@ -300,7 +300,6 @@ public class AnimalSheet extends Sheet {
 
 				if (fill) {
 					final JSONObject attack = attacks.getObj(attackName);
-
 					name = new TextCell(attackName);
 					tp = new TextCell(HeroUtil.getTPString(null, attack, attack));
 					at = new TextCell(Integer.toString(attack.getIntOrDefault("Attackewert", 0)));
@@ -681,7 +680,7 @@ public class AnimalSheet extends Sheet {
 			actual = Integer.toString(lo);
 			mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
 
-			final JSONObject riding = HeroUtil.findActualTalent(hero, "Reiten")._1;
+			final JSONObject riding = (JSONObject) HeroUtil.findActualTalent(hero, "Reiten")._1;
 			if (riding.getIntOrDefault("TaW", -1) < 0) {
 				actualRight = new TextCell("—").addText("/").addText("—").setEquallySpaced(true);
 			} else {
@@ -890,7 +889,7 @@ public class AnimalSheet extends Sheet {
 	}
 
 	@Override
-	public void setHero(JSONObject hero) {
+	public void setHero(final JSONObject hero) {
 		super.setHero(hero);
 
 		settings.clear();

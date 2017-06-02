@@ -204,26 +204,40 @@ public class SpellsSheet extends Sheet {
 		for (final String name : spells.keySet()) {
 			final JSONObject spell = spells.getObj(name);
 			final JSONObject spellRepresentations = spell.getObj("Repräsentationen");
-			if (actualSpells != null && actualSpells.containsKey(name)) {
-				final JSONObject actualSpell = actualSpells.getObj(name);
-				for (final String representation : spellRepresentations.keySet()) {
-					if (actualSpell.containsKey(representation)) {
-						fillSpell(table, name, spell, representation, actualSpell.getObj(representation));
-					} else {
-						for (final String knownRepresentation : spellRepresentations.getObj(representation).getObj("Verbreitung").keySet()) {
-							if (representations.get(knownRepresentation).get()) {
-								fillSpell(table, name, spell, representation, null);
-								break;
+			if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
+				if (actualSpells != null && actualSpells.containsKey(name)) {
+					final JSONObject actualSpell = actualSpells.getObj(name);
+					for (final String representation : spellRepresentations.keySet()) {
+						if (actualSpell.containsKey(representation)) {
+							final JSONArray choiceSpell = actualSpell.getArr(representation);
+							for (int i = 0; i < choiceSpell.size(); ++i) {
+								fillSpell(table, name, spell, representation, choiceSpell.getObj(i));
 							}
 						}
 					}
 				}
 			} else {
-				for (final String representation : spellRepresentations.keySet()) {
-					for (final String knownRepresentation : spellRepresentations.getObj(representation).getObj("Verbreitung").keySet()) {
-						if (representations.get(knownRepresentation).get()) {
-							fillSpell(table, name, spell, representation, null);
-							break;
+				if (actualSpells != null && actualSpells.containsKey(name)) {
+					final JSONObject actualSpell = actualSpells.getObj(name);
+					for (final String representation : spellRepresentations.keySet()) {
+						if (actualSpell.containsKey(representation)) {
+							fillSpell(table, name, spell, representation, actualSpell.getObj(representation));
+						} else {
+							for (final String knownRepresentation : spellRepresentations.getObj(representation).getObj("Verbreitung").keySet()) {
+								if (representations.get(knownRepresentation).get()) {
+									fillSpell(table, name, spell, representation, null);
+									break;
+								}
+							}
+						}
+					}
+				} else {
+					for (final String representation : spellRepresentations.keySet()) {
+						for (final String knownRepresentation : spellRepresentations.getObj(representation).getObj("Verbreitung").keySet()) {
+							if (representations.get(knownRepresentation).get()) {
+								fillSpell(table, name, spell, representation, null);
+								break;
+							}
 						}
 					}
 				}
@@ -300,7 +314,7 @@ public class SpellsSheet extends Sheet {
 		return left + 335;
 	}
 
-	private void fillSpell(final Table table, final String name, final JSONObject baseSpell, final String actualRepresentation, final JSONObject actualSpell) {
+	private void fillSpell(final Table table, String name, final JSONObject baseSpell, final String actualRepresentation, final JSONObject actualSpell) {
 		final JSONObject spell = baseSpell.getObj("Repräsentationen").getObjOrDefault(actualRepresentation, baseSpell);
 
 		String value = " ";
@@ -423,6 +437,12 @@ public class SpellsSheet extends Sheet {
 		final String effectTime = DSAUtil.getModificationString(spell.getObjOrDefault("Wirkungsdauer", baseSpell.getObjOrDefault("Wirkungsdauer", null)),
 				Units.TIME, false);
 		final String description = spell.getStringOrDefault("Beschreibung:Kurz", baseSpell.getStringOrDefault("Beschreibung:Kurz", ""));
+
+		if (baseSpell.containsKey("Auswahl")) {
+			name = name + ": " + actualSpell.getStringOrDefault("Auswahl", "");
+		} else if (baseSpell.containsKey("Freitext")) {
+			name = name + ": " + actualSpell.getStringOrDefault("Freitext", "");
+		}
 
 		table.addRow(name, value, se, complexity, actualRepresentation, challenge, traitString, revString, specString, spoMoString, range, target, cost,
 				castTime, effectTime, description);

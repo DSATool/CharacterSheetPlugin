@@ -17,6 +17,8 @@ package charactersheet.sheets;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -41,6 +43,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
+import jsonant.value.JSONValue;
 
 public class TalentsSheet extends Sheet {
 	private static float fontSize = 8.4f;
@@ -116,7 +119,7 @@ public class TalentsSheet extends Sheet {
 				int min = Integer.MAX_VALUE;
 				int current;
 				for (int i = 0; i < calculation.size(); ++i) {
-					final JSONObject actualTalent = HeroUtil.findActualTalent(hero, calculation.getString(i))._1;
+					final JSONObject actualTalent = (JSONObject) HeroUtil.findActualTalent(hero, calculation.getString(i))._1;
 					final JSONObject currentTalent = HeroUtil.findTalent(calculation.getString(i))._1;
 					if (actualTalent == null && !currentTalent.getBoolOrDefault("Basis", false)
 							|| actualTalent != null && actualTalent.getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1) < 0) {
@@ -131,15 +134,24 @@ public class TalentsSheet extends Sheet {
 					final JSONArray choice = talent.getArr("Berechnung:Auswahl");
 					int choiceTaw = -1;
 					for (int i = 0; i < choice.size(); ++i) {
-						final JSONObject actualTalent = HeroUtil.findActualTalent(hero, choice.getString(i))._1;
+						final JSONValue actualTalent = HeroUtil.findActualTalent(hero, choice.getString(i))._1;
 						final JSONObject currentTalent = HeroUtil.findTalent(choice.getString(i))._1;
-						if (actualTalent != null) {
-							choiceTaw = Math.max(choiceTaw, actualTalent.getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
-						} else if (choiceTaw == -1 && currentTalent.getBoolOrDefault("Basis", false)) {
-							choiceTaw = 0;
+						if (currentTalent.containsKey("Auswahl") || currentTalent.containsKey("Freitext")) {
+							int max = -1;
+							for (int j = 0; j < actualTalent.size(); ++j) {
+								max = Math.max(max, ((JSONArray) actualTalent).getObj(j).getIntOrDefault("TaW", -1));
+							}
+							choiceTaw = Math.max(choiceTaw, Math.max(max, currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
+						} else {
+							if (actualTalent != null) {
+								choiceTaw = Math.max(choiceTaw,
+										((JSONObject) actualTalent).getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
+							} else if (choiceTaw == -1 && currentTalent.getBoolOrDefault("Basis", false)) {
+								choiceTaw = 0;
+							}
 						}
 					}
-					if (choiceTaw == -1) {
+					if (choiceTaw < 0) {
 						taw = Double.NEGATIVE_INFINITY;
 					} else {
 						min = Math.min(min, choiceTaw);
@@ -184,10 +196,14 @@ public class TalentsSheet extends Sheet {
 			table.addRow(talentName, tawString, challengeCell, calculationString.toString());
 		}
 
-		bottom.bottom = table.render(document, 419, 164, bottom.bottom, 72, 10) - 5;
+		bottom.bottom = table.render(document, 419, 12, bottom.bottom, 72, 10) - 5;
 	}
 
 	private void addSpecialTable(final PDDocument document) throws IOException {
+		if (hero == null) return;
+		final JSONObject actualGroup = hero.getObj("Talente").getObjOrDefault("Gaben", null);
+		if (actualGroup == null) return;
+
 		final Table table = new Table().setFiller(SheetUtil.stripe()).setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -216,57 +232,77 @@ public class TalentsSheet extends Sheet {
 
 		for (final String talentName : specialTalents.keySet()) {
 			final JSONObject talent = specialTalents.get(talentName);
-			JSONObject actualTalent = null;
-			if (hero != null && hero.getObj("Talente").getObjOrDefault("Gaben", null) != null) {
-				actualTalent = hero.getObj("Talente").getObj("Gaben").getObjOrDefault(talentName, null);
-			}
 
-			String name = talentName;
-			if (hero != null && fill) {
-				final int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
-				if (enhancement != talentGroupInfo.getIntOrDefault("Steigerung", 0)) {
-					name += " (" + DSAUtil.getEnhancementGroupString(enhancement) + ")";
+			final List<JSONObject> actualTalents = new LinkedList<>();
+			if (!actualGroup.containsKey(talentName)) {
+				continue;
+			}
+			if (talent.containsKey("Auswahl") || talent.containsKey("Freitext")) {
+				final JSONArray choiceTalent = actualGroup.getArr(talentName);
+				for (int i = 0; i < choiceTalent.size(); ++i) {
+					actualTalents.add(choiceTalent.getObj(i));
 				}
 			} else {
-				if (talent.containsKey("Steigerung") && talent.getIntOrDefault("Steigerung", 0) != 0) {
-					name += " (" + DSAUtil.getEnhancementGroupString(talentGroupInfo.getIntOrDefault("Steigerung", 0) + talent.getIntOrDefault("Steigerung", 0))
-							+ ")";
+				actualTalents.add(actualGroup.getObj(talentName));
+			}
+
+			for (final JSONObject actualTalent : actualTalents) {
+				String name = talentName;
+				if (talent.containsKey("Auswahl")) {
+					name = name + ": " + actualTalent.getStringOrDefault("Auswahl", "");
+				} else if (talent.containsKey("Freitext")) {
+					name = name + ": " + actualTalent.getStringOrDefault("Freitext", "");
 				}
-			}
 
-			final Cell nameCell = new TextCell(name);
-
-			String taw;
-			if (fillAll && actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
-				taw = actualTalent.getIntOrDefault("TaW", 0).toString();
-			} else if (hero != null && fillAll && talent.getBoolOrDefault("Basis", false)) {
-				taw = "0";
-			} else {
-				taw = " ";
-			}
-
-			String se;
-			int ses;
-			if (fillAll && actualTalent != null && (ses = actualTalent.getIntOrDefault("SEs", 0)) != 0) {
-				if (ses == 1) {
-					se = "X";
-				} else if (ses == 2) {
-					se = "XX";
+				if (fill) {
+					final int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
+					if (enhancement != talentGroupInfo.getIntOrDefault("Steigerung", 0)) {
+						name += " (" + DSAUtil.getEnhancementGroupString(enhancement) + ")";
+					}
 				} else {
-					se = Integer.toString(ses);
+					if (talent.containsKey("Steigerung") && talent.getIntOrDefault("Steigerung", 0) != 0) {
+						name += " ("
+								+ DSAUtil.getEnhancementGroupString(talentGroupInfo.getIntOrDefault("Steigerung", 0) + talent.getIntOrDefault("Steigerung", 0))
+								+ ")";
+					}
 				}
-			} else {
-				se = " ";
+
+				final Cell nameCell = new TextCell(name);
+
+				String taw;
+				if (fillAll && actualTalent.getBoolOrDefault("aktiviert", true)) {
+					taw = actualTalent.getIntOrDefault("TaW", 0).toString();
+				} else if (hero != null && fillAll && talent.getBoolOrDefault("Basis", false)) {
+					taw = "0";
+				} else {
+					taw = " ";
+				}
+
+				String se;
+				int ses;
+				if (fillAll && (ses = actualTalent.getIntOrDefault("SEs", 0)) != 0) {
+					if (ses == 1) {
+						se = "X";
+					} else if (ses == 2) {
+						se = "XX";
+					} else {
+						se = Integer.toString(ses);
+					}
+				} else {
+					se = " ";
+				}
+
+				final JSONArray challenge = talent.getArrOrDefault("Probe", null);
+				final Cell challengeCell = challenge != null ? new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
+						.addText(challenge.getString(2)).setEquallySpaced(true).setPadding(0, 1, 1, 0) : new TextCell("—");
+
+				table.addRow(nameCell, taw, se, challengeCell);
 			}
-
-			final JSONArray challenge = talent.getArrOrDefault("Probe", null);
-			final Cell challengeCell = challenge != null ? new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
-					.addText(challenge.getString(2)).setEquallySpaced(true).setPadding(0, 1, 1, 0) : new TextCell("—");
-
-			table.addRow(nameCell, taw, se, challengeCell);
 		}
 
-		bottom.bottom = table.render(document, 152, 12, bottom.bottom, 72, 10) - 5;
+		if (table.getNumRows() > 2) {
+			bottom.bottom = table.render(document, 152, showMetaTalents.get() ? 431 : 12, bottom.bottom, 72, 10) - 5;
+		}
 	}
 
 	@Override
@@ -291,12 +327,14 @@ public class TalentsSheet extends Sheet {
 			}
 		}
 
-		final float currentBottom = bottom.bottom;
-		addSpecialTable(document);
-		bottom.bottom = currentBottom;
-
 		if (showMetaTalents.get()) {
+			final float currentBottom = bottom.bottom;
 			addMetaTable(document);
+			bottom.bottom = currentBottom;
+		}
+
+		if (hero != null) {
+			addSpecialTable(document);
 		}
 
 		endCreate(document);
@@ -419,327 +457,349 @@ public class TalentsSheet extends Sheet {
 				continue;
 			}
 
-			JSONObject actualTalent = null;
-			if (hero != null) {
-				actualTalent = hero.getObj("Talente").getObj(isLanguage || isWriting ? "Sprachen und Schriften" : groupName).getObjOrDefault(talentName, null);
-			}
-
-			TextCell nameCell;
-			final PDFont font = markBasis.get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic : FontManager.serif;
-			if (talent.containsKey("Sprachfamilien")) {
-				final String name = "Geheiligte Glyphen von Unau".equals(talentName) ? "Geh. Glyphen von Unau" : talentName.replace(" (Schrift)", "");
-
-				nameCell = new TextCell(name);
-				nameCell.setFont(font);
-
-				final JSONArray families = talent.getArr("Sprachfamilien");
-				final StringBuilder familyString = new StringBuilder("");
-				for (int i = 0; i < families.size(); ++i) {
-					final String family = families.getString(i);
-					if (!languageFamilies.containsKey(family)) {
-						languageFamilies.put(family, languageFamilies.size() + 1);
-					}
-					if (i != 0) {
-						familyString.append(", ");
-					}
-					familyString.append(languageFamilies.get(family));
-				}
-
-				final Text family = new Text(familyString.toString()).setFont(FontManager.serif).setFontSize(4).setVerticalOffset(3);
-				nameCell.addText(family);
-
-				if (hero != null && fill) {
-					int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
-
-					if (talent.getBoolOrDefault("Leittalent", false) || actualTalent != null && actualTalent.getBoolOrDefault("Leittalent", false)) {
-						if (primaryTalents.get()) {
-							nameCell.addText(new Text("(L)").setFont(FontManager.serif));
+			final List<JSONObject> actualTalents = new LinkedList<>();
+			final JSONObject actualGroup = hero != null ? hero.getObj("Talente").getObj(isLanguage || isWriting ? "Sprachen und Schriften" : groupName) : null;
+			if (talent.containsKey("Auswahl") || talent.containsKey("Freitext")) {
+				if (hero != null) {
+					final JSONArray choiceTalent = actualGroup.getArrOrDefault(talentName, null);
+					if (choiceTalent != null) {
+						for (int i = 0; i < choiceTalent.size(); ++i) {
+							actualTalents.add(choiceTalent.getObj(i));
 						}
-					} else if (hero.getObj("Nachteile").containsKey("Elfische Weltsicht")) {
-						--enhancement;
-					}
-					if (enhancement != talentGroupInfo.getIntOrDefault("Steigerung", 0)) {
-						nameCell.addText(new Text("(" + DSAUtil.getEnhancementGroupString(enhancement) + ")").setFont(FontManager.serif));
-					}
-				} else {
-					if (talent.containsKey("Steigerung") && talent.getIntOrDefault("Steigerung", 0) != 0) {
-						nameCell.addText(new Text("("
-								+ DSAUtil.getEnhancementGroupString(talentGroupInfo.getIntOrDefault("Steigerung", 0) + talent.getIntOrDefault("Steigerung", 0))
-								+ ")").setFont(FontManager.serif));
 					}
 				}
 			} else {
-				final String name = talentName;
-				nameCell = new TextCell(name);
-				nameCell.setFont(font);
+				actualTalents.add(actualGroup != null ? actualGroup.getObjOrDefault(talentName, null) : null);
+			}
 
-				if (hero != null && fill) {
-					int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
-
-					if (talent.getBoolOrDefault("Leittalent", false) || actualTalent != null && actualTalent.getBoolOrDefault("Leittalent", false)) {
-						if (primaryTalents.get()) {
-							nameCell.addText(new Text("(L)").setFont(FontManager.serif));
-						}
-					} else if (hero.getObj("Nachteile").containsKey("Elfische Weltsicht")) {
-						--enhancement;
+			for (final JSONObject actualTalent : actualTalents) {
+				TextCell nameCell;
+				final PDFont font = markBasis.get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic : FontManager.serif;
+				if (talent.containsKey("Sprachfamilien")) {
+					String name = "Geheiligte Glyphen von Unau".equals(talentName) ? "Geh. Glyphen von Unau" : talentName.replace(" (Schrift)", "");
+					if (talent.containsKey("Auswahl")) {
+						name = name + ": " + actualTalent.getStringOrDefault("Auswahl", "");
+					} else if (talent.containsKey("Freitext")) {
+						name = name + ": " + actualTalent.getStringOrDefault("Freitext", "");
 					}
 
-					if (enhancement != talentGroupInfo.getIntOrDefault("Steigerung", 0)) {
-						nameCell.addText(new Text("(" + DSAUtil.getEnhancementGroupString(enhancement) + ")").setFont(FontManager.serif));
+					nameCell = new TextCell(name);
+					nameCell.setFont(font);
+
+					final JSONArray families = talent.getArr("Sprachfamilien");
+					final StringBuilder familyString = new StringBuilder("");
+					for (int i = 0; i < families.size(); ++i) {
+						final String family = families.getString(i);
+						if (!languageFamilies.containsKey(family)) {
+							languageFamilies.put(family, languageFamilies.size() + 1);
+						}
+						if (i != 0) {
+							familyString.append(", ");
+						}
+						familyString.append(languageFamilies.get(family));
+					}
+
+					final Text family = new Text(familyString.toString()).setFont(FontManager.serif).setFontSize(4).setVerticalOffset(3);
+					nameCell.addText(family);
+
+					if (hero != null && fill) {
+						int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
+
+						if (talent.getBoolOrDefault("Leittalent", false) || actualTalent != null && actualTalent.getBoolOrDefault("Leittalent", false)) {
+							if (primaryTalents.get()) {
+								nameCell.addText(new Text("(L)").setFont(FontManager.serif));
+							}
+						} else if (hero.getObj("Nachteile").containsKey("Elfische Weltsicht")) {
+							--enhancement;
+						}
+						if (enhancement != talentGroupInfo.getIntOrDefault("Steigerung", 0)) {
+							nameCell.addText(new Text("(" + DSAUtil.getEnhancementGroupString(enhancement) + ")").setFont(FontManager.serif));
+						}
+					} else {
+						if (talent.containsKey("Steigerung") && talent.getIntOrDefault("Steigerung", 0) != 0) {
+							nameCell.addText(new Text("("
+									+ DSAUtil.getEnhancementGroupString(
+											talentGroupInfo.getIntOrDefault("Steigerung", 0) + talent.getIntOrDefault("Steigerung", 0))
+									+ ")").setFont(FontManager.serif));
+						}
 					}
 				} else {
-					if (talent.containsKey("Steigerung") && talent.getIntOrDefault("Steigerung", 0) != 0) {
-						nameCell.addText(new Text("("
-								+ DSAUtil.getEnhancementGroupString(talentGroupInfo.getIntOrDefault("Steigerung", 0) + talent.getIntOrDefault("Steigerung", 0))
-								+ ")").setFont(FontManager.serif));
+					final String name = talentName;
+					nameCell = new TextCell(name);
+					nameCell.setFont(font);
+
+					if (hero != null && fill) {
+						int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
+
+						if (talent.getBoolOrDefault("Leittalent", false) || actualTalent != null && actualTalent.getBoolOrDefault("Leittalent", false)) {
+							if (primaryTalents.get()) {
+								nameCell.addText(new Text("(L)").setFont(FontManager.serif));
+							}
+						} else if (hero.getObj("Nachteile").containsKey("Elfische Weltsicht")) {
+							--enhancement;
+						}
+
+						if (enhancement != talentGroupInfo.getIntOrDefault("Steigerung", 0)) {
+							nameCell.addText(new Text("(" + DSAUtil.getEnhancementGroupString(enhancement) + ")").setFont(FontManager.serif));
+						}
+					} else {
+						if (talent.containsKey("Steigerung") && talent.getIntOrDefault("Steigerung", 0) != 0) {
+							nameCell.addText(new Text("("
+									+ DSAUtil.getEnhancementGroupString(
+											talentGroupInfo.getIntOrDefault("Steigerung", 0) + talent.getIntOrDefault("Steigerung", 0))
+									+ ")").setFont(FontManager.serif));
+						}
 					}
 				}
-			}
 
-			String taw;
-			if (fillAll && actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
-				taw = actualTalent.getIntOrDefault("TaW", 0).toString();
-			} else if (hero != null && fillAll && talent.getBoolOrDefault("Basis", false)) {
-				taw = "0";
-			} else {
-				taw = " ";
-			}
-
-			String se;
-			int ses;
-			if (fillAll && actualTalent != null && (ses = actualTalent.getIntOrDefault("SEs", 0)) != 0) {
-				if (ses == 1) {
-					se = "X";
-				} else if (ses == 2) {
-					se = "XX";
+				String taw;
+				if (fillAll && actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
+					taw = actualTalent.getIntOrDefault("TaW", 0).toString();
+				} else if (hero != null && fillAll && talent.getBoolOrDefault("Basis", false)) {
+					taw = "0";
 				} else {
-					se = Integer.toString(ses);
+					taw = " ";
 				}
-			} else {
-				se = " ";
-			}
 
-			table.addCells(nameCell, taw, se);
-
-			if (isCloseCombat) {
-				String at = " ", pa = " ";
-				final boolean ATOnly = talent.getBoolOrDefault("NurAT", false);
-				if (ATOnly) {
-					pa = "—";
+				String se;
+				int ses;
+				if (fillAll && actualTalent != null && (ses = actualTalent.getIntOrDefault("SEs", 0)) != 0) {
+					if (ses == 1) {
+						se = "X";
+					} else if (ses == 2) {
+						se = "XX";
+					} else {
+						se = Integer.toString(ses);
+					}
+				} else {
+					se = " ";
 				}
-				if (hero != null && fillAll) {
-					final int ATBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"),
-							hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Attacke-Basis"), false);
-					final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero.getObj("Eigenschaften"),
-							hero.getObj("Basiswerte").getObj("Parade-Basis"), false);
 
-					if (actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
-						at = Integer.toString(ATBase + actualTalent.getIntOrDefault("AT", 0));
-						if (!ATOnly) {
-							pa = Integer.toString(PABase + actualTalent.getIntOrDefault("PA", 0));
-						}
-					} else if (talent.getBoolOrDefault("Basis", false)) {
-						at = Integer.toString(ATBase);
-						if (!ATOnly) {
-							pa = Integer.toString(PABase);
+				table.addCells(nameCell, taw, se);
+
+				if (isCloseCombat) {
+					String at = " ", pa = " ";
+					final boolean ATOnly = talent.getBoolOrDefault("NurAT", false);
+					if (ATOnly) {
+						pa = "—";
+					}
+					if (hero != null && fillAll) {
+						final int ATBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"),
+								hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Attacke-Basis"), false);
+						final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"),
+								hero.getObj("Eigenschaften"),
+								hero.getObj("Basiswerte").getObj("Parade-Basis"), false);
+
+						if (actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
+							at = Integer.toString(ATBase + actualTalent.getIntOrDefault("AT", 0));
+							if (!ATOnly) {
+								pa = Integer.toString(PABase + actualTalent.getIntOrDefault("PA", 0));
+							}
+						} else if (talent.getBoolOrDefault("Basis", false)) {
+							at = Integer.toString(ATBase);
+							if (!ATOnly) {
+								pa = Integer.toString(PABase);
+							}
 						}
 					}
-				}
-				table.addCells(new TextCell(at).addText("/").addText(pa).setEquallySpaced(true));
-			} else if (isFightGroup) {
-				String fk;
-				if (hero != null && fillAll) {
-					final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"),
-							hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
-					if (actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
-						fk = Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0));
-					} else if (talent.getBoolOrDefault("Basis", false)) {
-						fk = Integer.toString(FKBase);
+					table.addCells(new TextCell(at).addText("/").addText(pa).setEquallySpaced(true));
+				} else if (isFightGroup) {
+					String fk;
+					if (hero != null && fillAll) {
+						final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"),
+								hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
+						if (actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
+							fk = Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0));
+						} else if (talent.getBoolOrDefault("Basis", false)) {
+							fk = Integer.toString(FKBase);
+						} else {
+							fk = " ";
+						}
 					} else {
 						fk = " ";
 					}
-				} else {
-					fk = " ";
+					table.addCells(fk);
+				} else if (!isLanguage && !isWriting) {
+					final JSONArray challenge = talent.getArrOrDefault("Probe", null);
+					final Cell challengeCell = challenge != null
+							? new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
+									.addText(challenge.getString(2)).setEquallySpaced(true).setPadding(0, 1, 1, 0)
+							: new TextCell("—");
+					table.addCells(challengeCell);
 				}
-				table.addCells(fk);
-			} else if (!isLanguage && !isWriting) {
-				final JSONArray challenge = talent.getArrOrDefault("Probe", null);
-				final Cell challengeCell = challenge != null ? new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
-						.addText(challenge.getString(2)).setEquallySpaced(true).setPadding(0, 1, 1, 0) : new TextCell("—");
-				table.addCells(challengeCell);
-			}
 
-			if (needsBE) {
-				table.addCells(new TextCell(DSAUtil.getBEString(talent)).setPadding(0, 1, 1, 0));
-			}
+				if (needsBE) {
+					table.addCells(new TextCell(DSAUtil.getBEString(talent)).setPadding(0, 1, 1, 0));
+				}
 
-			JSONObject skills = null;
-			if (hero != null) {
-				skills = hero.getObj("Sonderfertigkeiten");
-			}
+				JSONObject skills = null;
+				if (hero != null) {
+					skills = hero.getObj("Sonderfertigkeiten");
+				}
 
-			if (isLanguage || isWriting) {
-				table.addCells(talent.getInt("Komplexität").toString());
-				String special;
-				if (hero != null && fill && actualTalent != null) {
-					if (actualTalent.getBoolOrDefault("Muttersprache", false)) {
-						special = "MS";
-					} else if (actualTalent.getBoolOrDefault("Zweitsprache", false)) {
-						special = "ZS";
-					} else if (actualTalent.getBoolOrDefault("Lehrsprache", false)) {
-						special = "LS";
+				if (isLanguage || isWriting) {
+					table.addCells(talent.getInt("Komplexität").toString());
+					String special;
+					if (fill && actualTalent != null) {
+						if (actualTalent.getBoolOrDefault("Muttersprache", false)) {
+							special = "MS";
+						} else if (actualTalent.getBoolOrDefault("Zweitsprache", false)) {
+							special = "ZS";
+						} else if (actualTalent.getBoolOrDefault("Lehrsprache", false)) {
+							special = "LS";
+						} else {
+							special = " ";
+						}
 					} else {
 						special = " ";
 					}
+					table.addCells(special);
 				} else {
-					special = " ";
-				}
-				table.addCells(special);
-			} else {
-				String specialisationString;
-				if (hero != null && fill) {
-					boolean first = true;
-					JSONArray specialisations = null;
-					if (isFightGroup && skills.containsKey("Waffenspezialisierung")) {
-						specialisations = skills.getArr("Waffenspezialisierung");
-					} else if (skills.containsKey("Talentspezialisierung")) {
-						specialisations = skills.getArr("Talentspezialisierung");
-					}
-					final StringBuilder specString = new StringBuilder();
-					if (specialisations != null) {
-						for (int i = 0; i < specialisations.size(); ++i) {
-							final JSONObject specialisation = specialisations.getObj(i);
-							if (talentName.equals(specialisation.getString("Auswahl"))) {
-								if (first) {
-									first = false;
-								} else {
-									specString.append(", ");
+					String specialisationString;
+					if (hero != null && fill) {
+						boolean first = true;
+						JSONArray specialisations = null;
+						if (isFightGroup && skills.containsKey("Waffenspezialisierung")) {
+							specialisations = skills.getArr("Waffenspezialisierung");
+						} else if (skills.containsKey("Talentspezialisierung")) {
+							specialisations = skills.getArr("Talentspezialisierung");
+						}
+						final StringBuilder specString = new StringBuilder();
+						if (specialisations != null) {
+							for (int i = 0; i < specialisations.size(); ++i) {
+								final JSONObject specialisation = specialisations.getObj(i);
+								if (talentName.equals(specialisation.getString("Auswahl"))) {
+									if (first) {
+										first = false;
+									} else {
+										specString.append(", ");
+									}
+									specString.append(specialisation.getStringOrDefault("Freitext", ""));
 								}
-								specString.append(specialisation.getStringOrDefault("Freitext", ""));
 							}
 						}
+						specialisationString = specString.toString();
+					} else {
+						specialisationString = " ";
 					}
-					specialisationString = specString.toString();
-				} else {
-					specialisationString = " ";
+					table.addCells(specialisationString);
 				}
-				table.addCells(specialisationString);
-			}
 
-			if (isFightGroup) {
-				String weaponmaster;
-				if (hero != null && fill) {
-					boolean first = true;
-					final JSONArray specialisations = skills.getArrOrDefault("Waffenmeister", null);
-					final StringBuilder specString = new StringBuilder();
-					if (specialisations != null) {
-						for (int i = 0; i < specialisations.size(); ++i) {
-							final JSONObject specialisation = specialisations.getObj(i);
-							if (talentName.equals(specialisation.getString("Auswahl"))) {
-								if (first) {
-									first = false;
-								} else {
-									specString.append(", ");
+				if (isFightGroup) {
+					String weaponmaster;
+					if (hero != null && fill) {
+						boolean first = true;
+						final JSONArray specialisations = skills.getArrOrDefault("Waffenmeister", null);
+						final StringBuilder specString = new StringBuilder();
+						if (specialisations != null) {
+							for (int i = 0; i < specialisations.size(); ++i) {
+								final JSONObject specialisation = specialisations.getObj(i);
+								if (talentName.equals(specialisation.getString("Auswahl"))) {
+									if (first) {
+										first = false;
+									} else {
+										specString.append(", ");
+									}
+									specString.append(specialisation.getStringOrDefault("Freitext", ""));
 								}
-								specString.append(specialisation.getStringOrDefault("Freitext", ""));
+							}
+						}
+						weaponmaster = specString.toString();
+					} else {
+						weaponmaster = " ";
+					}
+					table.addCells(weaponmaster);
+				} else if (!isWriting) {
+					String requirementString;
+					if (talent.containsKey("Voraussetzungen")) {
+						final StringBuilder requirementsString = new StringBuilder();
+						final JSONArray requirements = talent.getArr("Voraussetzungen");
+						boolean first = true;
+						for (int i = 0; i < requirements.size(); ++i) {
+							if (first) {
+								first = false;
+							} else {
+								requirementsString.append(", ");
+							}
+							final JSONObject requirement = requirements.getObj(i);
+							if (requirement.containsKey("Ab")) {
+								requirementsString.append(requirement.getInt("Ab"));
+								requirementsString.append("+:\u00A0");
+							}
+							requirementsString.append(SheetUtil.getRequirementString(requirement, talent));
+						}
+						requirementString = requirementsString.toString();
+					} else {
+						requirementString = " ";
+					}
+					table.addCells(requirementString);
+				}
+
+				if (isLanguage && talent.containsKey("Schriften")) {
+					table.addCells(String.join(", ", talent.getArr("Schriften").getStrings()));
+				} else if (isWriting) {
+					final JSONObject languages = ResourceManager.getResource("data/Talente").getObj("Sprachen und Schriften");
+					boolean first = true;
+					final StringBuilder languagesString = new StringBuilder();
+					for (final String languageName : languages.keySet()) {
+						final JSONObject language = languages.getObj(languageName);
+						if (language.containsKey("Schriften")) {
+							final JSONArray writings = language.getArr("Schriften");
+							for (int i = 0; i < writings.size(); ++i) {
+								if (talentName.equals(writings.getString(i))) {
+									if (first) {
+										first = false;
+									} else {
+										languagesString.append(", ");
+									}
+									languagesString.append(languageName);
+								}
 							}
 						}
 					}
-					weaponmaster = specString.toString();
-				} else {
-					weaponmaster = " ";
-				}
-				table.addCells(weaponmaster);
-			} else if (!isWriting) {
-				String requirementString;
-				if (talent.containsKey("Voraussetzungen")) {
-					final StringBuilder requirementsString = new StringBuilder();
-					final JSONArray requirements = talent.getArr("Voraussetzungen");
+					table.addCells(languagesString.toString());
+				} else if (talent.containsKey("Ableiten")) {
 					boolean first = true;
-					for (int i = 0; i < requirements.size(); ++i) {
-						if (first) {
-							first = false;
+					final StringBuilder derivationString = new StringBuilder();
+					final JSONObject derive = talent.getObj("Ableiten");
+					for (final String derivationTalentName : derive.keySet()) {
+						final JSONObject derivationTalent = derive.getObj(derivationTalentName);
+						if (derivationTalent.containsKey("Spezialisierung")) {
+							final JSONObject specializations = derivationTalent.getObj("Spezialisierung");
+							for (final String specialization : specializations.keySet()) {
+								if (first) {
+									first = false;
+								} else {
+									derivationString.append(", ");
+								}
+								derivationString.append(derivationTalentName);
+								derivationString.append("\u00A0(");
+								derivationString.append(specialization);
+								derivationString.append(')');
+								final int difficulty = specializations.getIntOrDefault(specialization, 0);
+								if (difficulty != groupDerive) {
+									derivationString.append(" +");
+									derivationString.append(difficulty);
+								}
+							}
 						} else {
-							requirementsString.append(", ");
-						}
-						final JSONObject requirement = requirements.getObj(i);
-						if (requirement.containsKey("Ab")) {
-							requirementsString.append(requirement.getInt("Ab"));
-							requirementsString.append("+:\u00A0");
-						}
-						requirementsString.append(SheetUtil.getRequirementString(requirement, talent));
-					}
-					requirementString = requirementsString.toString();
-				} else {
-					requirementString = " ";
-				}
-				table.addCells(requirementString);
-			}
-
-			if (isLanguage && talent.containsKey("Schriften")) {
-				table.addCells(String.join(", ", talent.getArr("Schriften").getStrings()));
-			} else if (isWriting) {
-				final JSONObject languages = ResourceManager.getResource("data/Talente").getObj("Sprachen und Schriften");
-				boolean first = true;
-				final StringBuilder languagesString = new StringBuilder();
-				for (final String languageName : languages.keySet()) {
-					final JSONObject language = languages.getObj(languageName);
-					if (language.containsKey("Schriften")) {
-						final JSONArray writings = language.getArr("Schriften");
-						for (int i = 0; i < writings.size(); ++i) {
-							if (talentName.equals(writings.getString(i))) {
-								if (first) {
-									first = false;
-								} else {
-									languagesString.append(", ");
-								}
-								languagesString.append(languageName);
-							}
-						}
-					}
-				}
-				table.addCells(languagesString.toString());
-			} else if (talent.containsKey("Ableiten")) {
-				boolean first = true;
-				final StringBuilder derivationString = new StringBuilder();
-				final JSONObject derive = talent.getObj("Ableiten");
-				for (final String derivationTalentName : derive.keySet()) {
-					final JSONObject derivationTalent = derive.getObj(derivationTalentName);
-					if (derivationTalent.containsKey("Spezialisierung")) {
-						final JSONObject specializations = derivationTalent.getObj("Spezialisierung");
-						for (final String specialization : specializations.keySet()) {
 							if (first) {
 								first = false;
 							} else {
 								derivationString.append(", ");
 							}
 							derivationString.append(derivationTalentName);
-							derivationString.append("\u00A0(");
-							derivationString.append(specialization);
-							derivationString.append(')');
-							final int difficulty = specializations.getIntOrDefault(specialization, 0);
-							if (difficulty != groupDerive) {
+							if (derivationTalent.containsKey("Erschwernis")) {
 								derivationString.append(" +");
-								derivationString.append(difficulty);
+								derivationString.append(derivationTalent.getInt("Erschwernis"));
 							}
 						}
-					} else {
-						if (first) {
-							first = false;
-						} else {
-							derivationString.append(", ");
-						}
-						derivationString.append(derivationTalentName);
-						if (derivationTalent.containsKey("Erschwernis")) {
-							derivationString.append(" +");
-							derivationString.append(derivationTalent.getInt("Erschwernis"));
-						}
 					}
+					table.addCells(derivationString.toString());
 				}
-				table.addCells(derivationString.toString());
-			}
 
-			table.completeRow();
+				table.completeRow();
+			}
 
 			if (groupBasis.get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
 				table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
@@ -770,7 +830,7 @@ public class TalentsSheet extends Sheet {
 	}
 
 	@Override
-	public void setHero(JSONObject hero) {
+	public void setHero(final JSONObject hero) {
 		super.setHero(hero);
 		primaryTalents.set(hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht"));
 	}

@@ -16,6 +16,8 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -46,6 +48,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
+import jsonant.value.JSONValue;
 
 public class CompactSheet extends Sheet {
 	private static final float fontSize = 10;
@@ -465,7 +468,16 @@ public class CompactSheet extends Sheet {
 		int rows = additionalTalentRows.get() + 2;
 
 		for (final String talentGroupName : actualTalentGroups.keySet()) {
-			rows += 1 + actualTalentGroups.getObj(talentGroupName).size();
+			++rows;
+			final JSONObject actualTalentGroup = actualTalentGroups.getObj(talentGroupName);
+			for (final String talentName : actualTalentGroup.keySet()) {
+				final JSONObject talent = HeroUtil.findTalent(talentName)._1;
+				if (talent.containsKey("Auswahl") || talent.containsKey("Freitext")) {
+					rows += actualTalentGroup.getArr(talentName).size();
+				} else {
+					++rows;
+				}
+			}
 		}
 
 		int index = 0;
@@ -532,114 +544,140 @@ public class CompactSheet extends Sheet {
 
 			++index;
 
-			final Map<String, JSONObject> actualTalents = new TreeMap<>((s1, s2) -> {
+			final Map<String, JSONValue> actual = new TreeMap<>((s1, s2) -> {
 				final boolean firstIsBasis = talentGroup.getObj(s1).getBoolOrDefault("Basis", false);
 				if (groupBasis.get() && firstIsBasis != talentGroup.getObj(s2).getBoolOrDefault("Basis", false)) return firstIsBasis ? -1 : 1;
 				return SheetUtil.comparator.compare(s1, s2);
 			});
 			for (final String talentName : actualTalentGroup.keySet()) {
-				actualTalents.put(talentName, actualTalentGroup.getObj(talentName));
+				final JSONObject talent = talentGroup.getObj(talentName);
+				if (talent.containsKey("Auswahl") || talent.containsKey("Freitext")) {
+					actual.put(talentName, actualTalentGroup.getArr(talentName));
+				} else {
+					actual.put(talentName, actualTalentGroup.getObj(talentName));
+				}
 			}
 
 			boolean basicTalent = false;
 
-			for (final String talentName : actualTalents.keySet()) {
-				final JSONObject actualTalent = actualTalents.get(talentName);
+			for (final String talentName : actual.keySet()) {
 				final JSONObject talent = talentGroup.getObj(talentName);
 
-				if (index >= rows / 3) {
-					talentsTable.addCells(new TableCell(table), " ");
-					table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-					table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
-					table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
-					table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
-					table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
-					table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
-					index = 0;
-				}
-
-				Cell special;
-				Cell language = null;
-				switch (talentGroupName) {
-				case "Nahkampftalente":
-					final boolean ATOnly = talent.getBoolOrDefault("NurAT", false);
-
-					final int at = ATBase + actualTalent.getIntOrDefault("AT", 0);
-					final String atString = (at < 10 ? "  " : "") + Integer.toString(at);
-
-					String paString;
-					if (ATOnly) {
-						paString = "—";
-					} else {
-						final int pa = PABase + actualTalent.getIntOrDefault("PA", 0);
-						paString = (pa < 10 ? "  " : "") + Integer.toString(pa);
-					}
-					special = new TextCell(atString).addText("/").addText(paString).setEquallySpaced(true).setColSpan(2);
-					break;
-				case "Fernkampftalente":
-					special = new TextCell(Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0))).setColSpan(2);
-					break;
-				case "Sprachen und Schriften":
-					special = new TextCell(talent.getInt("Komplexität").toString());
-					if (actualTalent.getBoolOrDefault("Muttersprache", false)) {
-						language = new TextCell("MS");
-					} else if (actualTalent.getBoolOrDefault("Zweitsprache", false)) {
-						language = new TextCell("ZS");
-					} else if (actualTalent.getBoolOrDefault("Lehrsprache", false)) {
-						language = new TextCell("LS");
-					} else {
-						language = new TextCell(" ");
-					}
-					break;
-				default:
-					if (talent.containsKey("Probe")) {
-						final JSONArray challenge = talent.getArr("Probe");
-						special = new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/").addText(challenge.getString(2))
-								.setEquallySpaced(true).setPadding(0, 1, 1, 0).setColSpan(2);
-					} else {
-						special = new TextCell("—").setColSpan(2);
-					}
-					break;
-				}
-
-				String be = " ";
-				switch (talentGroupName) {
-				case "Nahkampftalente":
-				case "Fernkampftalente":
-				case "Körperliche Talente":
-					be = DSAUtil.getBEString(talent);
-					break;
-				}
-
-				String taw = "—";
-				if (actualTalent.getBoolOrDefault("aktiviert", true) || talent.getBoolOrDefault("Basis", false)) {
-					taw = actualTalent.getIntOrDefault("TaW", 0).toString();
-				}
-
-				final TextCell nameCell = new TextCell(talentName,
-						markBasis.get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic : FontManager.serif, 8, 8);
-				table.addCells(nameCell, special);
-				if ("Sprachen und Schriften".equals(talentGroupName)) {
-					table.addCells(language);
-				}
-				table.addCells(be, taw);
-
-				if (index != 0 && groupBasis.get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
-					table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
-						try {
-							final PDPageContentStream stream = event.getStream();
-							stream.setLineWidth(1);
-							stream.moveTo(event.getLeft(), event.getTop());
-							stream.lineTo(event.getLeft() + event.getWidth(), event.getTop());
-							stream.stroke();
-						} catch (final IOException e) {
-							ErrorLogger.logError(e);
+				final List<JSONObject> actualTalents = new LinkedList<>();
+				if (talent.containsKey("Auswahl") || talent.containsKey("Freitext")) {
+					final JSONArray choiceTalent = (JSONArray) actual.get(talentName);
+					if (choiceTalent != null) {
+						for (int i = 0; i < choiceTalent.size(); ++i) {
+							actualTalents.add(choiceTalent.getObj(i));
 						}
-					});
+					}
+				} else {
+					actualTalents.add((JSONObject) actual.get(talentName));
 				}
-				basicTalent = talent.getBoolOrDefault("Basis", false);
 
-				++index;
+				for (final JSONObject actualTalent : actualTalents) {
+					if (index >= rows / 3) {
+						talentsTable.addCells(new TableCell(table), " ");
+						table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+						table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
+						table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
+						table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
+						table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
+						table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+						index = 0;
+					}
+
+					Cell special;
+					Cell language = null;
+					switch (talentGroupName) {
+					case "Nahkampftalente":
+						final boolean ATOnly = talent.getBoolOrDefault("NurAT", false);
+
+						final int at = ATBase + actualTalent.getIntOrDefault("AT", 0);
+						final String atString = (at < 10 ? "  " : "") + Integer.toString(at);
+
+						String paString;
+						if (ATOnly) {
+							paString = "—";
+						} else {
+							final int pa = PABase + actualTalent.getIntOrDefault("PA", 0);
+							paString = (pa < 10 ? "  " : "") + Integer.toString(pa);
+						}
+						special = new TextCell(atString).addText("/").addText(paString).setEquallySpaced(true).setColSpan(2);
+						break;
+					case "Fernkampftalente":
+						special = new TextCell(Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0))).setColSpan(2);
+						break;
+					case "Sprachen und Schriften":
+						special = new TextCell(talent.getInt("Komplexität").toString());
+						if (actualTalent.getBoolOrDefault("Muttersprache", false)) {
+							language = new TextCell("MS");
+						} else if (actualTalent.getBoolOrDefault("Zweitsprache", false)) {
+							language = new TextCell("ZS");
+						} else if (actualTalent.getBoolOrDefault("Lehrsprache", false)) {
+							language = new TextCell("LS");
+						} else {
+							language = new TextCell(" ");
+						}
+						break;
+					default:
+						if (talent.containsKey("Probe")) {
+							final JSONArray challenge = talent.getArr("Probe");
+							special = new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
+									.addText(challenge.getString(2))
+									.setEquallySpaced(true).setPadding(0, 1, 1, 0).setColSpan(2);
+						} else {
+							special = new TextCell("—").setColSpan(2);
+						}
+						break;
+					}
+
+					String be = " ";
+					switch (talentGroupName) {
+					case "Nahkampftalente":
+					case "Fernkampftalente":
+					case "Körperliche Talente":
+						be = DSAUtil.getBEString(talent);
+						break;
+					}
+
+					String taw = "—";
+					if (actualTalent.getBoolOrDefault("aktiviert", true) || talent.getBoolOrDefault("Basis", false)) {
+						taw = actualTalent.getIntOrDefault("TaW", 0).toString();
+					}
+
+					String name = talentName;
+					if (talent.containsKey("Auswahl")) {
+						name = name + ": " + actualTalent.getStringOrDefault("Auswahl", "");
+					} else if (talent.containsKey("Freitext")) {
+						name = name + ": " + actualTalent.getStringOrDefault("Freitext", "");
+					}
+
+					final TextCell nameCell = new TextCell(name,
+							markBasis.get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic : FontManager.serif, 8, 8);
+					table.addCells(nameCell, special);
+					if ("Sprachen und Schriften".equals(talentGroupName)) {
+						table.addCells(language);
+					}
+					table.addCells(be, taw);
+
+					if (index != 0 && groupBasis.get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
+						table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
+							try {
+								final PDPageContentStream stream = event.getStream();
+								stream.setLineWidth(1);
+								stream.moveTo(event.getLeft(), event.getTop());
+								stream.lineTo(event.getLeft() + event.getWidth(), event.getTop());
+								stream.stroke();
+							} catch (final IOException e) {
+								ErrorLogger.logError(e);
+							}
+						});
+					}
+					basicTalent = talent.getBoolOrDefault("Basis", false);
+
+					++index;
+				}
 			}
 		}
 
