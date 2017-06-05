@@ -692,13 +692,13 @@ public class FightSheet extends Sheet {
 						table.addRow(name, type, ebe, tp, at, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0],
 								tpdistance[1], tpdistance[2], tpdistance[3], tpdistance[4], num, notes);
 					} else {
-						table.addRow();
+						table.addRow("");
 					}
 				}
 			}
 		}
 		for (int i = 0; i < additionalRangedWeaponRows.get(); ++i) {
-			table.addRow();
+			table.addRow("");
 		}
 
 		if (table.getNumRows() > 1) {

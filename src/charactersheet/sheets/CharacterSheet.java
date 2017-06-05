@@ -512,7 +512,7 @@ public class CharacterSheet extends Sheet {
 		}
 		final int additionalRows = "Vorteil".equals(title) ? additionalProRows.get() : additionalConRows.get();
 		for (int i = 0; i < additionalRows; ++i) {
-			table.addRow();
+			table.addRow("");
 		}
 
 		bottom.bottom = table.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
@@ -567,7 +567,7 @@ public class CharacterSheet extends Sheet {
 	}
 
 	@Override
-	public void setHero(JSONObject hero) {
+	public void setHero(final JSONObject hero) {
 		super.setHero(hero);
 		showAsP.set(HeroUtil.isMagical(hero));
 		showKaP.set(HeroUtil.isClerical(hero, false));

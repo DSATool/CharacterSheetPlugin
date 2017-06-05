@@ -375,7 +375,7 @@ public class CompactSheet extends Sheet {
 		}
 
 		for (int i = 0; i < additionalRangedWeaponRows.get(); ++i) {
-			table.addRow();
+			table.addRow("");
 		}
 
 		if (table.getNumRows() > 1) {
@@ -758,7 +758,7 @@ public class CompactSheet extends Sheet {
 		}
 
 		for (int i = 0; i < additionalArmorRows.get(); ++i) {
-			table.addRow();
+			table.addRow("");
 		}
 
 		table.addRow("Gesamt:", SheetUtil.threeDecimalPlaces.format(HeroUtil.getBERaw(hero)), SheetUtil.threeDecimalPlaces.format(RS));
@@ -843,7 +843,7 @@ public class CompactSheet extends Sheet {
 		}
 
 		for (int i = 0; i < additionalArmorRows.get(); ++i) {
-			table.addRow();
+			table.addRow("");
 		}
 
 		int i = 0;

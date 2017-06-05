@@ -245,7 +245,7 @@ public class SpellsSheet extends Sheet {
 		}
 
 		for (int i = 0; i < additionalRows.get(); ++i) {
-			table.addRow();
+			table.addRow("");
 		}
 
 		bottom.bottom = table.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
