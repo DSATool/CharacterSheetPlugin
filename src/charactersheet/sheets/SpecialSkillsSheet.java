@@ -109,7 +109,7 @@ public class SpecialSkillsSheet extends Sheet {
 		baseTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
 		baseTable.addColumn(new Column(10, FontManager.serif, fontSize, HAlign.CENTER));
 		baseTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
-		baseTable.addColumn(new Column(117, FontManager.serif, fontSize, HAlign.LEFT));
+		baseTable.addColumn(new Column(107, FontManager.serif, fontSize, HAlign.LEFT));
 		baseTable.addColumn(new Column(0, FontManager.serif, fontSize, HAlign.LEFT));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Fertigkeit", 1);

@@ -272,18 +272,18 @@ public class SheetUtil {
 			if (pros.containsKey("Veteran")) {
 				final JSONObject veteran = pros.getObj("Veteran");
 				professionString.append(" Veteran");
-				if (veteran != null && veteran.containsKey("Profession:Variante")) {
+				if (veteran != null && veteran.containsKey("Profession:Modifikation")) {
 					professionString.append(' ');
-					professionString.append(veteran.getString("Profession:Variante"));
+					professionString.append(String.join(", ", veteran.getArr("Profession:Modifikation").getStrings()));
 				}
 			}
 			if (pros.containsKey("Breitgefächerte Bildung")) {
 				final JSONObject bgb = pros.getObj("Breitgefächerte Bildung");
 				professionString.append(" BGB ");
 				professionString.append(bgb.getString("Profession"));
-				if (bgb.containsKey("Profession:Variante")) {
+				if (bgb.containsKey("Profession:Modifikation")) {
 					professionString.append(" (");
-					professionString.append(bgb.getString("Profession:Variante"));
+					professionString.append(String.join(", ", bgb.getArr("Profession:Modifikation").getStrings()));
 					professionString.append(")");
 				}
 			}
@@ -652,7 +652,7 @@ public class SheetUtil {
 		return targetString.toString();
 	}
 
-	public static boolean matchesPageSize(PDDocument document, PDRectangle pageSize) {
+	public static boolean matchesPageSize(final PDDocument document, final PDRectangle pageSize) {
 		final PDRectangle current = document.getPage(document.getNumberOfPages() - 1).getMediaBox();
 		return current.getWidth() == pageSize.getWidth() && current.getHeight() == pageSize.getHeight();
 	}

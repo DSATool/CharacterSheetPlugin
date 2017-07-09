@@ -50,16 +50,13 @@ public class TalentsSheet extends Sheet {
 
 	private static String getGroupTableHeader(final String name, final JSONObject talentGroup) {
 		final StringBuilder title = new StringBuilder(name);
-		title.append(" (");
 
 		if (talentGroup.containsKey("Steigerung")) {
 			final int enhancement = talentGroup.getInt("Steigerung");
+			title.append(" (");
 			title.append(DSAUtil.getEnhancementGroupString(enhancement));
-		} else {
-			title.append("variabel");
+			title.append(')');
 		}
-
-		title.append(')');
 
 		if (talentGroup.containsKey("Probe")) {
 			title.append(" (");
@@ -319,8 +316,8 @@ public class TalentsSheet extends Sheet {
 		for (final String talentGroupName : talentGroups.keySet()) {
 			if (!"Gaben".equals(talentGroupName) && !"Ritualkenntnis".equals(talentGroupName) && !"Liturgiekenntnis".equals(talentGroupName)) {
 				if ("Sprachen und Schriften".equals(talentGroupName)) {
-					createGroupTable(document, "Sprachen", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName));
-					createGroupTable(document, "Schriften", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName));
+					createGroupTable(document, "Sprachen", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName).getObj("Sprachen"));
+					createGroupTable(document, "Schriften", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName).getObj("Schriften"));
 				} else {
 					createGroupTable(document, talentGroupName, talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName));
 				}
