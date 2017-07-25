@@ -146,7 +146,7 @@ public class InventorySheet extends Sheet {
 					triggerString.append(trigger.getInt("Aktionen"));
 					triggerString.append("A: ");
 				}
-				triggerString.append(trigger.getStringOrDefault("Beschreibung", ""));
+				triggerString.append(trigger.getStringOrDefault("Beschreibung", trigger.getString("Typ")));
 
 				final JSONArray spells = item.getArrOrDefault("Wirkende Sprüche", baseItem.getArr("Wirkende Sprüche"));
 				boolean first = true;
