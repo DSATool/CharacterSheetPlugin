@@ -238,7 +238,7 @@ public class AnimalSheet extends Sheet {
 
 			int i;
 			for (i = 0; i < types.size(); ++i) {
-				if (!"Kein".equals(types.get(i))) {
+				if (!"Kein".equals(types.get(i).get())) {
 					current = i;
 					addAnimal(document);
 				}
