@@ -183,6 +183,9 @@ public class SheetConfiguration extends HeroSelector {
 	 */
 	@Override
 	protected void reload() {
+		final MultipleSelectionModel<String> heroModel = list.getSelectionModel();
+		final int selectedHero = heroModel.getSelectedIndex();
+
 		final MultipleSelectionModel<Sheet> sheetControlModel = sheets.getSelectionModel();
 		final int selectedSheet = sheetControlModel.getSelectedIndex();
 
@@ -194,6 +197,7 @@ public class SheetConfiguration extends HeroSelector {
 
 		checkSheets();
 
+		heroModel.clearAndSelect(Math.max(0, selectedHero));
 		sheetControlModel.clearAndSelect(Math.max(0, selectedSheet));
 	}
 
