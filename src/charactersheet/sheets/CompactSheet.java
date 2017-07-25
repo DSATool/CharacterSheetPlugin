@@ -30,6 +30,7 @@ import boxtable.cell.Cell;
 import boxtable.cell.TableCell;
 import boxtable.cell.TextCell;
 import boxtable.common.HAlign;
+import boxtable.common.Text;
 import boxtable.event.EventType;
 import boxtable.table.Column;
 import boxtable.table.Table;
@@ -57,9 +58,13 @@ public class CompactSheet extends Sheet {
 	private final IntegerProperty additionalCloseCombatWeaponRows = new SimpleIntegerProperty(0);
 	private final IntegerProperty additionalRangedWeaponRows = new SimpleIntegerProperty(0);
 	private final IntegerProperty additionalTalentRows = new SimpleIntegerProperty(0);
+	private final BooleanProperty showSpells = new SimpleBooleanProperty(true);
+	private final IntegerProperty additionalSpellRows = new SimpleIntegerProperty(0);
 	private final BooleanProperty groupBasis = new SimpleBooleanProperty(true);
 	private final BooleanProperty markBasis = new SimpleBooleanProperty(false);
+
 	private BottomObserver bottom;
+
 	private final BooleanProperty showTotalArmor = new SimpleBooleanProperty(
 			!"Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart")));
 	private final BooleanProperty showZoneArmor = new SimpleBooleanProperty(
@@ -156,6 +161,8 @@ public class CompactSheet extends Sheet {
 				final String type = item.getStringOrDefault("Waffentyp:Primär",
 						item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen")).getString(0));
 				final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
+				final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArr("Waffenmeister"), type,
+						item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 
 				final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
@@ -164,14 +171,21 @@ public class CompactSheet extends Sheet {
 				final String pa = PA != null ? Integer.toString(PA) : "—";
 
 				final JSONObject TPKKValues = item.getObjOrDefault("Trefferpunkte/Körperkraft", baseWeapon.getObj("Trefferpunkte/Körperkraft"));
-				final Cell tpkk = new TextCell(Integer.toString(TPKKValues.getInt("Schwellenwert"))).addText("/")
-						.addText(Integer.toString(TPKKValues.getInt("Schadensschritte"))).setEquallySpaced(true);
+				final Cell tpkk = new TextCell(Integer.toString(TPKKValues.getInt("Schwellenwert")
+						+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schwellenwert", 0) : 0))).addText("/")
+								.addText(Integer.toString(TPKKValues.getInt("Schadensschritte") + (weaponMastery != null
+										? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schadensschritte", 0) : 0)))
+								.setEquallySpaced(true);
 
-				final Cell wm = new TextCell(Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0))).addText("/")
-						.addText(Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Parademodifikator", 0))).setEquallySpaced(true);
+				final Cell wm = new TextCell(Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0)
+						+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Attackemodifikator", 0) : 0))).addText("/")
+								.addText(Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Parademodifikator", 0)
+										+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Parademodifikator", 0) : 0)))
+								.setEquallySpaced(true);
 
 				final String ini = Util
-						.getSignedIntegerString(item.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0)));
+						.getSignedIntegerString(item.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0)
+								+ (weaponMastery != null ? weaponMastery.getIntOrDefault("Initiative:Modifikator", 0) : 0)));
 
 				final String distance = String.join("", item.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings());
 
@@ -309,25 +323,27 @@ public class CompactSheet extends Sheet {
 		table.addColumn(new Column(92, 92, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Fernkampfwaffen", 1);
 		final Cell tpTitle = SheetUtil.createTitleCell("TP", 1);
 		final Cell atTitle = SheetUtil.createTitleCell("AT", 1);
+		final Cell loadTitle = SheetUtil.createTitleCell("Lad.", 1);
 		final Cell distanceTitle = SheetUtil.createTitleCell("Entfernung", 5);
 		final Cell tpdistanceTitle = SheetUtil.createTitleCell("TP+", 5);
 		final Cell numTitle = SheetUtil.createTitleCell("Anz", 1);
-		table.addRow(nameTitle, tpTitle, atTitle, distanceTitle, tpdistanceTitle, numTitle);
+		table.addRow(nameTitle, tpTitle, atTitle, loadTitle, distanceTitle, tpdistanceTitle, numTitle);
 
 		final JSONArray items = hero.getObj("Besitz").getArr("Ausrüstung");
 		for (int i = 0; i < items.size(); ++i) {
@@ -348,12 +364,14 @@ public class CompactSheet extends Sheet {
 
 				final String at = Integer.toString(HeroUtil.getAT(hero, item, type, false, false, false));
 
+				final String load = Integer.toString(HeroUtil.getLoadTime(hero, item, type));
+
 				int j = 0;
 
 				final TextCell[] distances = new TextCell[5];
-				final JSONObject weaponDistances = item.getObjOrDefault("Reichweiten", baseWeapon.getObj("Reichweiten"));
 				for (final String distance : new String[] { "Sehr Nah", "Nah", "Mittel", "Weit", "Extrem Weit" }) {
-					distances[j] = new TextCell(Integer.toString(weaponDistances.getInt(distance)));
+					final int dist = HeroUtil.getDistance(hero, item, type, distance);
+					distances[j] = new TextCell(dist != Integer.MIN_VALUE ? Integer.toString(dist) : "—");
 					++j;
 				}
 
@@ -362,14 +380,16 @@ public class CompactSheet extends Sheet {
 
 				final JSONObject distanceTPs = item.getObjOrDefault("Trefferpunkte/Entfernung", baseWeapon.getObj("Trefferpunkte/Entfernung"));
 				for (final String distance : new String[] { "Sehr Nah", "Nah", "Mittel", "Weit", "Extrem Weit" }) {
-					tpdistance[j] = new TextCell(Util.getSignedIntegerString(distanceTPs.getInt(distance)));
+					final int dist = distanceTPs.getIntOrDefault(distance, Integer.MIN_VALUE);
+					tpdistance[j] = new TextCell(dist != Integer.MIN_VALUE ? Util.getSignedIntegerString(distanceTPs.getInt(distance)) : "—");
 					++j;
 				}
 
 				final JSONObject amount = item.getObjOrDefault("Anzahl", baseWeapon.getObjOrDefault("Anzahl", null));
 				final String num = amount == null ? " " : Integer.toString(amount.getIntOrDefault("Gesamt", 0));
 
-				table.addRow(name, tp, at, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0], tpdistance[1], tpdistance[2],
+				table.addRow(name, tp, at, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0], tpdistance[1],
+						tpdistance[2],
 						tpdistance[3], tpdistance[4], num);
 			}
 		}
@@ -445,6 +465,138 @@ public class CompactSheet extends Sheet {
 		bottom.bottom = table.render(document, 583, 6, bottom.bottom - 5, 10, 10);
 	}
 
+	private void addSpellTable(final PDDocument document) throws IOException {
+		final Table spellTable = new Table().setFiller(SheetUtil.stripe());
+		spellTable.addColumn(new Column(289, FontManager.serif, fontSize, HAlign.LEFT));
+		spellTable.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
+		spellTable.addColumn(new Column(289, FontManager.serif, fontSize, HAlign.CENTER));
+
+		SheetUtil.addTitle(spellTable, "Zauber");
+
+		Table table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+		table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
+		table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
+		table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
+		table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
+		table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+
+		final JSONObject spells = ResourceManager.getResource("data/Zauber");
+		final JSONObject actualSpells = hero.getObj("Zauber");
+
+		int rows = additionalSpellRows.get() + 1;
+
+		for (final String spellName : actualSpells.keySet()) {
+			final JSONObject spell = HeroUtil.findTalent(spellName)._1;
+			final JSONObject actualSpell = actualSpells.getObj(spellName);
+			for (final String repName : actualSpell.keySet()) {
+				if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
+					rows += actualSpell.getArr(repName).size();
+				} else {
+					++rows;
+				}
+			}
+		}
+
+		if (rows == 1) return;
+
+		int index = 0;
+
+		final Cell nameTitle = new TextCell("Zauber", FontManager.serifBold, 0, 8);
+		final Cell repTitle = new TextCell("Rep.", FontManager.serifBold, 0, 8);
+		final Cell challengeTitle = new TextCell("Probe", FontManager.serifBold, 0, 8);
+		final Cell traitTitle = new TextCell("Merk.", FontManager.serifBold, 0, 8).setHAlign(HAlign.CENTER);
+		final Cell valueTitle = new TextCell("ZfW", FontManager.serifBold, 0, 8);
+
+		table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
+
+		for (final String spellName : actualSpells.keySet()) {
+			final JSONObject spell = spells.getObj(spellName);
+			final JSONObject actualSpell = actualSpells.getObj(spellName);
+
+			for (final String repName : actualSpell.keySet()) {
+				final JSONObject rep = spell.getObj("Repräsentationen").getObjOrDefault(repName, spell);
+
+				final List<JSONObject> actualTalents = new LinkedList<>();
+				if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
+					final JSONArray choiceTalent = (JSONArray) actualSpells.getUnsafe(repName);
+					if (choiceTalent != null) {
+						for (int i = 0; i < choiceTalent.size(); ++i) {
+							actualTalents.add(choiceTalent.getObj(i));
+						}
+					}
+				} else {
+					actualTalents.add((JSONObject) actualSpell.getUnsafe(repName));
+				}
+
+				for (final JSONObject actualTalent : actualTalents) {
+					if (index >= rows / 2) {
+						spellTable.addCells(new TableCell(table), " ");
+						table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+						table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
+						table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
+						table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
+						table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
+						table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+						table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
+						index = 0;
+					}
+
+					String name = spellName;
+					if (spell.containsKey("Auswahl")) {
+						name = name + ": " + actualTalent.getStringOrDefault("Auswahl", "");
+					} else if (spell.containsKey("Freitext")) {
+						name = name + ": " + actualTalent.getStringOrDefault("Freitext", "");
+					}
+
+					final String challenge = DSAUtil.getChallengeString(rep.getArrOrDefault("Probe", spell.getArr("Probe")));
+
+					final TextCell traitString = new TextCell();
+					final JSONObject traits = ResourceManager.getResource("data/Merkmale");
+					final JSONArray actualTraits = rep.getArrOrDefault("Merkmale", spell.getArrOrDefault("Merkmale", null));
+					if (actualTraits != null) {
+						for (final String traitName : traits.keySet()) {
+							for (int i = 0; i < actualTraits.size(); ++i) {
+								if (traitName.equals(actualTraits.getString(i))) {
+									final Text current = new Text(traits.getObj(traitName).getStringOrDefault("Abkürzung", "X"));
+									traitString.addText(current);
+								}
+							}
+						}
+					}
+
+					String zfw = "—";
+					if (actualTalent.getBoolOrDefault("aktiviert", true)) {
+						zfw = actualTalent.getIntOrDefault("ZfW", 0).toString();
+					}
+
+					table.addCells(name, repName, challenge, traitString, zfw);
+
+					++index;
+				}
+			}
+		}
+
+		for (int i = 0; i < additionalSpellRows.get() || index < rows / 2; ++i) {
+			if (index >= rows / 2) {
+				spellTable.addCells(new TableCell(table), " ");
+				table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+				table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
+				table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
+				table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
+				table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
+				table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+				table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
+				index = 0;
+			}
+			table.addRow("", "", "", "", " ");
+			++index;
+		}
+
+		spellTable.addCells(new TableCell(table));
+
+		bottom.bottom = spellTable.render(document, 583, 6, bottom.bottom - 5, 10, 10);
+	}
+
 	private void addTalentsTable(final PDDocument document) throws IOException {
 		final Table talentsTable = new Table().setFiller(SheetUtil.stripe());
 		talentsTable.addColumn(new Column(191, FontManager.serif, fontSize, HAlign.LEFT));
@@ -457,8 +609,7 @@ public class CompactSheet extends Sheet {
 
 		Table table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
 		table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
-		table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
-		table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
+		table.addColumn(new Column(43, FontManager.serif, 8, HAlign.CENTER));
 		table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
 		table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
 
@@ -509,22 +660,22 @@ public class CompactSheet extends Sheet {
 
 			switch (talentGroupName) {
 			case "Nahkampftalente":
-				table.addRow(nameTitle, new TextCell("AT", FontManager.serifBold, 0, 8).addText("/").addText("PA").setEquallySpaced(true).setColSpan(2),
+				table.addRow(nameTitle, new TextCell("AT", FontManager.serifBold, 0, 8).addText("/").addText("PA").setEquallySpaced(true),
 						new TextCell("BE", FontManager.serifBold, 0, 8), tawTitle);
 				break;
 			case "Fernkampftalente":
-				table.addRow(nameTitle, new TextCell("FK", FontManager.serifBold, 0, 8).setColSpan(2), new TextCell("BE", FontManager.serifBold, 0, 8),
+				table.addRow(nameTitle, new TextCell("FK", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8),
 						tawTitle);
 				break;
 			case "Körperliche Talente":
-				table.addRow(nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8).setColSpan(2), new TextCell("BE", FontManager.serifBold, 0, 8),
+				table.addRow(nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8),
 						tawTitle);
 				break;
 			case "Sprachen und Schriften":
-				table.addRow(nameTitle, new TextCell("Kpl.", FontManager.serifBold, 0, 8), new TextCell("S", FontManager.serifBold, 0, 8), " ", tawTitle);
+				table.addRow(nameTitle, new TextCell("Kpl.", FontManager.serifBold, 0, 8), new TextCell("S", FontManager.serifBold, 0, 8), tawTitle);
 				break;
 			default:
-				table.addRow(nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8).setColSpan(2), " ", tawTitle);
+				table.addRow(nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), " ", tawTitle);
 				break;
 			}
 
@@ -580,8 +731,7 @@ public class CompactSheet extends Sheet {
 						talentsTable.addCells(new TableCell(table), " ");
 						table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
 						table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
-						table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
-						table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
+						table.addColumn(new Column(43, FontManager.serif, 8, HAlign.CENTER));
 						table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
 						table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
 						index = 0;
@@ -603,10 +753,10 @@ public class CompactSheet extends Sheet {
 							final int pa = PABase + actualTalent.getIntOrDefault("PA", 0);
 							paString = (pa < 10 ? "  " : "") + Integer.toString(pa);
 						}
-						special = new TextCell(atString).addText("/").addText(paString).setEquallySpaced(true).setColSpan(2);
+						special = new TextCell(atString).addText("/").addText(paString).setEquallySpaced(true);
 						break;
 					case "Fernkampftalente":
-						special = new TextCell(Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0))).setColSpan(2);
+						special = new TextCell(Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0)));
 						break;
 					case "Sprachen und Schriften":
 						special = new TextCell(talent.getInt("Komplexität").toString());
@@ -625,9 +775,9 @@ public class CompactSheet extends Sheet {
 							final JSONArray challenge = talent.getArr("Probe");
 							special = new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
 									.addText(challenge.getString(2))
-									.setEquallySpaced(true).setPadding(0, 1, 1, 0).setColSpan(2);
+									.setEquallySpaced(true).setPadding(0, 1, 1, 0);
 						} else {
-							special = new TextCell("—").setColSpan(2);
+							special = new TextCell("—");
 						}
 						break;
 					}
@@ -658,8 +808,10 @@ public class CompactSheet extends Sheet {
 					table.addCells(nameCell, special);
 					if ("Sprachen und Schriften".equals(talentGroupName)) {
 						table.addCells(language);
+					} else {
+						table.addCells(be);
 					}
-					table.addCells(be, taw);
+					table.addCells(taw);
 
 					if (index != 0 && groupBasis.get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
 						table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
@@ -682,11 +834,16 @@ public class CompactSheet extends Sheet {
 		}
 
 		for (int i = 0; i < additionalTalentRows.get() || index < rows / 3; ++i) {
-			table.addRow(" ", new TextCell(" ").setColSpan(2));
 			if (index >= rows / 3) {
 				talentsTable.addCells(new TableCell(table), " ");
+				table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+				table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
+				table.addColumn(new Column(43, FontManager.serif, 8, HAlign.CENTER));
+				table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
+				table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
 				index = 0;
 			}
+			table.addRow(" ");
 			++index;
 		}
 
@@ -892,6 +1049,9 @@ public class CompactSheet extends Sheet {
 			}
 			bottom.bottom = Math.min(bottom.bottom, smallBottom);
 			addTalentsTable(document);
+			if (showSpells.get()) {
+				addSpellTable(document);
+			}
 
 			endCreate(document);
 		}
@@ -906,6 +1066,8 @@ public class CompactSheet extends Sheet {
 		settings.addIntegerChoice("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows, 0, 30);
 		settings.addIntegerChoice("Zusätzliche Zeilen für Rüstung", additionalArmorRows, 0, 30);
 		settings.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 60);
+		settings.addBooleanChoice("Zauber", showSpells);
+		settings.addIntegerChoice("Zusätzliche Zeilen für Zauber", additionalSpellRows, 0, 60);
 		settings.addBooleanChoice("Basistalente gruppieren", groupBasis);
 		settings.addBooleanChoice("Basistalente markieren", markBasis);
 	}

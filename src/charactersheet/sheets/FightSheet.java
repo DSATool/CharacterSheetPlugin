@@ -180,6 +180,9 @@ public class FightSheet extends Sheet {
 						final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
 						final String ebe = Integer.toString(closeCombatTalents.getObj(type).getIntOrDefault("BEAdditiv", 0));
 
+						final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArr("Waffenmeister"), type,
+								item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
+
 						final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
 						final String at = fillAll ? Integer.toString(HeroUtil.getAT(hero, item, type, true, false, false)) : " ";
@@ -188,16 +191,21 @@ public class FightSheet extends Sheet {
 						final String pa = fillAll ? PA != null ? Integer.toString(PA) : "—" : " ";
 
 						final JSONObject TPKKValues = item.getObjOrDefault("Trefferpunkte/Körperkraft", baseWeapon.getObj("Trefferpunkte/Körperkraft"));
-						final String tpkkThreshold = Integer.toString(TPKKValues.getInt("Schwellenwert"));
-						final String tpkkStep = Integer.toString(TPKKValues.getInt("Schadensschritte"));
+						final String tpkkThreshold = Integer.toString(TPKKValues.getInt("Schwellenwert")
+								+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schwellenwert", 0) : 0));
+						final String tpkkStep = Integer.toString(TPKKValues.getInt("Schadensschritte")
+								+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schadensschritte", 0) : 0));
 						final TextCell tpkk = new TextCell(tpkkThreshold).addText("/").addText(tpkkStep).setEquallySpaced(true);
 
-						final String atMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0));
-						final String paMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Parademodifikator", 0));
+						final String atMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0)
+								+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Attackemodifikator", 0) : 0));
+						final String paMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Parademodifikator", 0)
+								+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Parademodifikator", 0) : 0));
 						final TextCell wm = new TextCell(atMod).addText("/").addText(paMod).setEquallySpaced(true);
 
 						final String ini = Util.getSignedIntegerString(
-								item.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0)));
+								item.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0))
+										+ (weaponMastery != null ? weaponMastery.getIntOrDefault("Initiative:Modifikator", 0) : 0));
 
 						final String distance = String.join("", item.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings());
 
@@ -301,6 +309,7 @@ public class FightSheet extends Sheet {
 						final String name = item.getStringOrDefault("Name", baseWeapon.getStringOrDefault("Name", ""));
 
 						final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
+
 						final String pa = defensiveMod != Integer.MIN_VALUE
 								? Util.getSignedIntegerString(defensiveMod + weaponModifier.getIntOrDefault("Parademodifikator", 0)) : "—";
 
@@ -600,16 +609,17 @@ public class FightSheet extends Sheet {
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(14.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
-		table.addColumn(new Column(12.6f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(12.3f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
+		table.addColumn(new Column(10.9f, FontManager.serif, 7, HAlign.CENTER));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
 
@@ -618,11 +628,12 @@ public class FightSheet extends Sheet {
 		final Cell ebeTitle = SheetUtil.createTitleCell("eBE", 1);
 		final Cell tpTitle = SheetUtil.createTitleCell("TP", 1);
 		final Cell atTitle = SheetUtil.createTitleCell("AT", 1);
+		final Cell loadTitle = SheetUtil.createTitleCell("Lad.", 1);
 		final Cell distanceTitle = SheetUtil.createTitleCell("Entfernung", 5);
 		final Cell tpdistanceTitle = SheetUtil.createTitleCell("TP+", 5);
 		final Cell numTitle = SheetUtil.createTitleCell("#", 1);
 		final Cell notesTitle = SheetUtil.createTitleCell("Besonderes", 1);
-		table.addRow(nameTitle, typeTitle, ebeTitle, tpTitle, atTitle, distanceTitle, tpdistanceTitle, numTitle, notesTitle);
+		table.addRow(nameTitle, typeTitle, ebeTitle, tpTitle, atTitle, loadTitle, distanceTitle, tpdistanceTitle, numTitle, notesTitle);
 
 		if (hero != null) {
 			int numAmmunition = 1;
@@ -647,12 +658,14 @@ public class FightSheet extends Sheet {
 
 						final String at = fillAll ? Integer.toString(HeroUtil.getAT(hero, item, type, false, false, false)) : " ";
 
+						final String load = Integer.toString(HeroUtil.getLoadTime(hero, item, type));
+
 						int j = 0;
 
 						final TextCell[] distances = new TextCell[5];
-						final JSONObject weaponDistances = item.getObjOrDefault("Reichweiten", baseWeapon.getObj("Reichweiten"));
 						for (final String distance : new String[] { "Sehr Nah", "Nah", "Mittel", "Weit", "Extrem Weit" }) {
-							distances[j] = new TextCell(Integer.toString(weaponDistances.getInt(distance)));
+							final int dist = HeroUtil.getDistance(hero, item, type, distance);
+							distances[j] = new TextCell(dist != Integer.MIN_VALUE ? Integer.toString(dist) : "—");
 							++j;
 						}
 
@@ -661,7 +674,8 @@ public class FightSheet extends Sheet {
 
 						final JSONObject distanceTPs = item.getObjOrDefault("Trefferpunkte/Entfernung", baseWeapon.getObj("Trefferpunkte/Entfernung"));
 						for (final String distance : new String[] { "Sehr Nah", "Nah", "Mittel", "Weit", "Extrem Weit" }) {
-							tpdistance[j] = new TextCell(Util.getSignedIntegerString(distanceTPs.getInt(distance)));
+							final int dist = distanceTPs.getIntOrDefault(distance, Integer.MIN_VALUE);
+							tpdistance[j] = new TextCell(dist != Integer.MIN_VALUE ? Util.getSignedIntegerString(distanceTPs.getInt(distance)) : "—");
 							++j;
 						}
 
@@ -689,7 +703,7 @@ public class FightSheet extends Sheet {
 
 						final String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
 
-						table.addRow(name, type, ebe, tp, at, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0],
+						table.addRow(name, type, ebe, tp, at, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0],
 								tpdistance[1], tpdistance[2], tpdistance[3], tpdistance[4], num, notes);
 					} else {
 						table.addRow("");
