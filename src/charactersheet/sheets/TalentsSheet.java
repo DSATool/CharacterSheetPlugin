@@ -71,6 +71,7 @@ public class TalentsSheet extends Sheet {
 	private final BooleanProperty markBasis = new SimpleBooleanProperty(false);
 	private final BooleanProperty primaryTalents = new SimpleBooleanProperty(false);
 	private final BooleanProperty showMetaTalents = new SimpleBooleanProperty(true);
+	private final BooleanProperty basicValuesInWeaponTalent = new SimpleBooleanProperty(true);
 
 	public TalentsSheet() {
 		super(771);
@@ -581,11 +582,15 @@ public class TalentsSheet extends Sheet {
 						pa = "—";
 					}
 					if (hero != null && fillAll) {
-						final int ATBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"),
-								hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Attacke-Basis"), false);
-						final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"),
-								hero.getObj("Eigenschaften"),
-								hero.getObj("Basiswerte").getObj("Parade-Basis"), false);
+						final int ATBase = basicValuesInWeaponTalent.get()
+								? HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"),
+										hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Attacke-Basis"), false)
+								: 0;
+						final int PABase = basicValuesInWeaponTalent.get()
+								? HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"),
+										hero.getObj("Eigenschaften"),
+										hero.getObj("Basiswerte").getObj("Parade-Basis"), false)
+								: 0;
 
 						if (actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
 							at = Integer.toString(ATBase + actualTalent.getIntOrDefault("AT", 0));
@@ -602,7 +607,7 @@ public class TalentsSheet extends Sheet {
 					table.addCells(new TextCell(at).addText("/").addText(pa).setEquallySpaced(true));
 				} else if (isFightGroup) {
 					String fk;
-					if (hero != null && fillAll) {
+					if (hero != null && fillAll && basicValuesInWeaponTalent.get()) {
 						final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"),
 								hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
 						if (actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
@@ -824,6 +829,7 @@ public class TalentsSheet extends Sheet {
 		settings.addBooleanChoice("Basistalente markieren", markBasis);
 		settings.addBooleanChoice("Leittalente anzeigen", primaryTalents);
 		settings.addBooleanChoice("Metatalente anzeigen", showMetaTalents);
+		settings.addBooleanChoice("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent);
 	}
 
 	@Override
