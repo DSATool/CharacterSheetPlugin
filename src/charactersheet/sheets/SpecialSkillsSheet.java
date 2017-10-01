@@ -193,14 +193,14 @@ public class SpecialSkillsSheet extends Sheet {
 			}
 		}
 
-		baseTable.render(document, 571, 12, bottom.bottom, 54, 10);
+		bottom.bottom = baseTable.render(document, 571, 12, bottom.bottom, 54, 10) - 5;
 	}
 
 	@Override
 	public void load() {
 		super.load();
-		settings.addBooleanChoice("Nur erlernte/verbilligte Sonderfertigkeiten", ownSkillsOnly);
-		settings.addIntegerChoice("Zusätzliche Zeilen Sonderfertigkeiten mit Auswahl", additionalChoiceRows, 0, 30);
+		settings.addBooleanChoice("Nur erlernte/verbilligte Sonderfertigkeiten anzeigen", ownSkillsOnly);
+		settings.addIntegerChoice("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", additionalChoiceRows, 0, 30);
 		final JSONObject skillGroupNames = ResourceManager.getResource("data/Sonderfertigkeiten");
 		for (final String skillGroupName : skillGroupNames.keySet()) {
 			skillGroups.put(skillGroupName, new SimpleBooleanProperty(true));
