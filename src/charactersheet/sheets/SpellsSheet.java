@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -198,34 +199,44 @@ public class SpellsSheet extends Sheet {
 		table.addRow(nameTitle, valueTitle, seTitle, complexityTitle, repTitle, challengeTitle, traitTitle, revTitle, specialisationTitle, modTitle, rangeTitle,
 				targetTitle, costTitle, castTimeTitle, durationTitle, descTitle);
 
-		final JSONObject spells = ResourceManager.getResource("data/Zauber");
+		final JSONObject talents = ResourceManager.getResource("data/Zauber");
 		final JSONObject actualSpells = hero == null ? null : hero.getObjOrDefault("Zauber", null);
 
-		for (final String name : spells.keySet()) {
-			final JSONObject spell = spells.getObj(name);
+		final Map<String, JSONObject> spells = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+		for (final String spellName : talents.keySet()) {
+			spells.put(spellName, talents.getObj(spellName));
+		}
+
+		for (final String spellName : spells.keySet()) {
+			final JSONObject spell = spells.get(spellName);
 			final JSONObject spellRepresentations = spell.getObj("Repräsentationen");
 			if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
-				if (actualSpells != null && actualSpells.containsKey(name)) {
-					final JSONObject actualSpell = actualSpells.getObj(name);
+				if (actualSpells != null && actualSpells.containsKey(spellName)) {
+					final JSONObject actualSpell = actualSpells.getObj(spellName);
+					final Map<String, JSONArray> orderedRepresentations = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
 					for (final String representation : spellRepresentations.keySet()) {
 						if (actualSpell.containsKey(representation)) {
-							final JSONArray choiceSpell = actualSpell.getArr(representation);
-							for (int i = 0; i < choiceSpell.size(); ++i) {
-								fillSpell(table, name, spell, representation, choiceSpell.getObj(i));
-							}
+							orderedRepresentations.put(representation, actualSpell.getArr(representation));
+						}
+					}
+					for (final String representation : orderedRepresentations.keySet()) {
+						final JSONArray choiceSpell = orderedRepresentations.get(representation);
+						for (int i = 0; i < choiceSpell.size(); ++i) {
+							fillSpell(table, spellName, spell, representation, choiceSpell.getObj(i));
 						}
 					}
 				}
 			} else {
-				if (actualSpells != null && actualSpells.containsKey(name)) {
-					final JSONObject actualSpell = actualSpells.getObj(name);
+				final Map<String, JSONObject> orderedRepresentations = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+				if (actualSpells != null && actualSpells.containsKey(spellName)) {
+					final JSONObject actualSpell = actualSpells.getObj(spellName);
 					for (final String representation : spellRepresentations.keySet()) {
 						if (actualSpell.containsKey(representation)) {
-							fillSpell(table, name, spell, representation, actualSpell.getObj(representation));
+							orderedRepresentations.put(representation, actualSpell.getObj(representation));
 						} else {
 							for (final String knownRepresentation : spellRepresentations.getObj(representation).getObj("Verbreitung").keySet()) {
 								if (representations.get(knownRepresentation).get()) {
-									fillSpell(table, name, spell, representation, null);
+									orderedRepresentations.put(representation, null);
 									break;
 								}
 							}
@@ -235,11 +246,14 @@ public class SpellsSheet extends Sheet {
 					for (final String representation : spellRepresentations.keySet()) {
 						for (final String knownRepresentation : spellRepresentations.getObj(representation).getObj("Verbreitung").keySet()) {
 							if (representations.get(knownRepresentation).get()) {
-								fillSpell(table, name, spell, representation, null);
+								orderedRepresentations.put(representation, null);
 								break;
 							}
 						}
 					}
+				}
+				for (final String representation : orderedRepresentations.keySet()) {
+					fillSpell(table, spellName, spell, representation, orderedRepresentations.get(representation));
 				}
 			}
 		}
