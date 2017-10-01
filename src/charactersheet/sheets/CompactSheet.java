@@ -42,6 +42,7 @@ import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.resources.Settings;
 import dsatool.util.ErrorLogger;
+import dsatool.util.Tuple;
 import dsatool.util.Util;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -509,70 +510,84 @@ public class CompactSheet extends Sheet {
 
 		table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
 
+		final Map<Tuple<String, String>, JSONValue> actual = new TreeMap<>((s1, s2) -> {
+			final int name = SheetUtil.comparator.compare(s1._1, s2._1);
+			if (name == 0) return SheetUtil.comparator.compare(s1._2, s2._2);
+			return name;
+		});
 		for (final String spellName : actualSpells.keySet()) {
 			final JSONObject spell = spells.getObj(spellName);
 			final JSONObject actualSpell = actualSpells.getObj(spellName);
 
 			for (final String repName : actualSpell.keySet()) {
-				final JSONObject rep = spell.getObj("Repräsentationen").getObjOrDefault(repName, spell);
-
-				final List<JSONObject> actualTalents = new LinkedList<>();
 				if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
-					final JSONArray choiceTalent = (JSONArray) actualSpells.getUnsafe(repName);
-					if (choiceTalent != null) {
-						for (int i = 0; i < choiceTalent.size(); ++i) {
-							actualTalents.add(choiceTalent.getObj(i));
-						}
-					}
+					actual.put(new Tuple<>(spellName, repName), actualSpells.getArr(repName));
 				} else {
-					actualTalents.add((JSONObject) actualSpell.getUnsafe(repName));
+					actual.put(new Tuple<>(spellName, repName), actualSpells.getObj(spellName));
+				}
+			}
+		}
+
+		for (final Tuple<String, String> spellNameRep : actual.keySet()) {
+			final JSONObject spell = spells.getObj(spellNameRep._1);
+			final JSONObject rep = spell.getObj(spellNameRep._2);
+
+			final List<JSONObject> actualTalents = new LinkedList<>();
+			if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
+				final JSONArray choiceTalent = (JSONArray) actual.get(spellNameRep);
+				if (choiceTalent != null) {
+					for (int i = 0; i < choiceTalent.size(); ++i) {
+						actualTalents.add(choiceTalent.getObj(i));
+					}
+				}
+			} else {
+				actualTalents.add((JSONObject) actual.get(spellNameRep));
+			}
+
+			for (final JSONObject actualTalent : actualTalents) {
+				if (index >= rows / 2) {
+					spellTable.addCells(new TableCell(table), " ");
+					table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+					table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
+					table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
+					table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
+					table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
+					table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+					table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
+					index = 0;
 				}
 
-				for (final JSONObject actualTalent : actualTalents) {
-					if (index >= rows / 2) {
-						spellTable.addCells(new TableCell(table), " ");
-						table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-						table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
-						table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
-						table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
-						table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
-						table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
-						table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
-						index = 0;
-					}
+				String name = spellNameRep._1;
+				if (spell.containsKey("Auswahl")) {
+					name = name + ": " + actualTalent.getStringOrDefault("Auswahl", "");
+				} else if (spell.containsKey("Freitext")) {
+					name = name + ": " + actualTalent.getStringOrDefault("Freitext", "");
+				}
 
-					String name = spellName;
-					if (spell.containsKey("Auswahl")) {
-						name = name + ": " + actualTalent.getStringOrDefault("Auswahl", "");
-					} else if (spell.containsKey("Freitext")) {
-						name = name + ": " + actualTalent.getStringOrDefault("Freitext", "");
-					}
+				final String challenge = DSAUtil.getChallengeString(rep.getArrOrDefault("Probe", spell.getArr("Probe")));
 
-					final String challenge = DSAUtil.getChallengeString(rep.getArrOrDefault("Probe", spell.getArr("Probe")));
-
-					final TextCell traitString = new TextCell();
-					final JSONObject traits = ResourceManager.getResource("data/Merkmale");
-					final JSONArray actualTraits = rep.getArrOrDefault("Merkmale", spell.getArrOrDefault("Merkmale", null));
-					if (actualTraits != null) {
-						for (final String traitName : traits.keySet()) {
-							for (int i = 0; i < actualTraits.size(); ++i) {
-								if (traitName.equals(actualTraits.getString(i))) {
-									final Text current = new Text(traits.getObj(traitName).getStringOrDefault("Abkürzung", "X"));
-									traitString.addText(current);
-								}
+				final TextCell traitString = new TextCell();
+				final JSONObject traits = ResourceManager.getResource("data/Merkmale");
+				final JSONArray actualTraits = rep.getArrOrDefault("Merkmale", spell.getArrOrDefault("Merkmale", null));
+				if (actualTraits != null) {
+					for (final String traitName : traits.keySet()) {
+						for (int i = 0; i < actualTraits.size(); ++i) {
+							if (traitName.equals(actualTraits.getString(i))) {
+								final Text current = new Text(traits.getObj(traitName).getStringOrDefault("Abkürzung", "X"));
+								traitString.addText(current);
 							}
 						}
 					}
-
-					String zfw = "—";
-					if (actualTalent.getBoolOrDefault("aktiviert", true)) {
-						zfw = actualTalent.getIntOrDefault("ZfW", 0).toString();
-					}
-
-					table.addCells(name, repName, challenge, traitString, zfw);
-
-					++index;
 				}
+
+				String zfw = "—";
+				if (actualTalent.getBoolOrDefault("aktiviert", true)) {
+					zfw = actualTalent.getIntOrDefault("ZfW", 0).toString();
+				}
+
+				table.addCells(name, spellNameRep._2, challenge, traitString, zfw);
+
+				++index;
 			}
 		}
 
@@ -623,7 +638,7 @@ public class CompactSheet extends Sheet {
 			final JSONObject actualTalentGroup = actualTalentGroups.getObj(talentGroupName);
 			for (final String talentName : actualTalentGroup.keySet()) {
 				final JSONObject talent = HeroUtil.findTalent(talentName)._1;
-				if (talent.containsKey("Auswahl") || talent.containsKey("Freitext")) {
+				if (talent != null && (talent.containsKey("Auswahl") || talent.containsKey("Freitext"))) {
 					rows += actualTalentGroup.getArr(talentName).size();
 				} else {
 					++rows;
@@ -640,9 +655,13 @@ public class CompactSheet extends Sheet {
 		final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"), hero.getObj("Eigenschaften"),
 				hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
 
-		for (final String talentGroupName : actualTalentGroups.keySet()) {
+		for (final String talentGroupName : talents.keySet()) {
 			final JSONObject talentGroup = talents.getObj(talentGroupName);
-			final JSONObject actualTalentGroup = actualTalentGroups.getObj(talentGroupName);
+			final JSONObject actualTalentGroup = actualTalentGroups.getObjOrDefault(talentGroupName, null);
+
+			if (actualTalentGroup == null) {
+				continue;
+			}
 
 			if (index >= rows / 3) {
 				talentsTable.addCells(new TableCell(table), " ");
