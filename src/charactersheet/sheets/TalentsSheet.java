@@ -39,8 +39,11 @@ import dsa41basis.util.DSAUtil;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
+import dsatool.util.ReactiveSpinner;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 import jsonant.value.JSONValue;
@@ -67,6 +70,8 @@ public class TalentsSheet extends Sheet {
 		return title.toString();
 	}
 
+	private final BooleanProperty ownTalentsOnly = new SimpleBooleanProperty(false);
+	private final IntegerProperty additionalTalentRows = new SimpleIntegerProperty(3);
 	private final BooleanProperty groupBasis = new SimpleBooleanProperty(true);
 	private final BooleanProperty markBasis = new SimpleBooleanProperty(false);
 	private final BooleanProperty primaryTalents = new SimpleBooleanProperty(false);
@@ -101,6 +106,7 @@ public class TalentsSheet extends Sheet {
 			metaTalents.put(talentName, talents.getObj(talentName));
 		}
 
+		int leftOut = 0;
 		for (final String talentName : metaTalents.keySet()) {
 			final JSONObject talent = metaTalents.get(talentName);
 
@@ -111,51 +117,57 @@ public class TalentsSheet extends Sheet {
 				numTalents += 1;
 			}
 
-			String tawString;
-			if (hero != null && fillAll) {
-				double taw = 0;
-				int min = Integer.MAX_VALUE;
-				int current;
-				for (int i = 0; i < calculation.size(); ++i) {
-					final JSONObject actualTalent = (JSONObject) HeroUtil.findActualTalent(hero, calculation.getString(i))._1;
-					final JSONObject currentTalent = HeroUtil.findTalent(calculation.getString(i))._1;
-					if (actualTalent == null && !currentTalent.getBoolOrDefault("Basis", false)
-							|| actualTalent != null && actualTalent.getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1) < 0) {
-						taw = Double.NEGATIVE_INFINITY;
-						break;
-					}
-					current = actualTalent != null ? actualTalent.getIntOrDefault("TaW", 0) : 0;
-					min = Math.min(min, current);
-					taw += current;
+			double taw = 0;
+			int min = Integer.MAX_VALUE;
+			int current;
+			for (int i = 0; i < calculation.size(); ++i) {
+				final JSONObject actualTalent = (JSONObject) HeroUtil.findActualTalent(hero, calculation.getString(i))._1;
+				final JSONObject currentTalent = HeroUtil.findTalent(calculation.getString(i))._1;
+				if (actualTalent == null && !currentTalent.getBoolOrDefault("Basis", false)
+						|| actualTalent != null && actualTalent.getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1) < 0) {
+					taw = Double.NEGATIVE_INFINITY;
+					break;
 				}
-				if (talent.containsKey("Berechnung:Auswahl")) {
-					final JSONArray choice = talent.getArr("Berechnung:Auswahl");
-					int choiceTaw = -1;
-					for (int i = 0; i < choice.size(); ++i) {
-						final JSONValue actualTalent = HeroUtil.findActualTalent(hero, choice.getString(i))._1;
-						final JSONObject currentTalent = HeroUtil.findTalent(choice.getString(i))._1;
-						if (currentTalent.containsKey("Auswahl") || currentTalent.containsKey("Freitext")) {
-							int max = -1;
-							for (int j = 0; j < actualTalent.size(); ++j) {
-								max = Math.max(max, ((JSONArray) actualTalent).getObj(j).getIntOrDefault("TaW", -1));
-							}
-							choiceTaw = Math.max(choiceTaw, Math.max(max, currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
-						} else {
-							if (actualTalent != null) {
-								choiceTaw = Math.max(choiceTaw,
-										((JSONObject) actualTalent).getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
-							} else if (choiceTaw == -1 && currentTalent.getBoolOrDefault("Basis", false)) {
-								choiceTaw = 0;
-							}
+				current = actualTalent != null ? actualTalent.getIntOrDefault("TaW", 0) : 0;
+				min = Math.min(min, current);
+				taw += current;
+			}
+			if (talent.containsKey("Berechnung:Auswahl")) {
+				final JSONArray choice = talent.getArr("Berechnung:Auswahl");
+				int choiceTaw = -1;
+				for (int i = 0; i < choice.size(); ++i) {
+					final JSONValue actualTalent = HeroUtil.findActualTalent(hero, choice.getString(i))._1;
+					final JSONObject currentTalent = HeroUtil.findTalent(choice.getString(i))._1;
+					if (currentTalent.containsKey("Auswahl") || currentTalent.containsKey("Freitext")) {
+						int max = -1;
+						for (int j = 0; j < actualTalent.size(); ++j) {
+							max = Math.max(max, ((JSONArray) actualTalent).getObj(j).getIntOrDefault("TaW", -1));
+						}
+						choiceTaw = Math.max(choiceTaw, Math.max(max, currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
+					} else {
+						if (actualTalent != null) {
+							choiceTaw = Math.max(choiceTaw,
+									((JSONObject) actualTalent).getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
+						} else if (choiceTaw == -1 && currentTalent.getBoolOrDefault("Basis", false)) {
+							choiceTaw = 0;
 						}
 					}
-					if (choiceTaw < 0) {
-						taw = Double.NEGATIVE_INFINITY;
-					} else {
-						min = Math.min(min, choiceTaw);
-						taw += choiceTaw;
-					}
 				}
+				if (choiceTaw < 0) {
+					taw = Double.NEGATIVE_INFINITY;
+				} else {
+					min = Math.min(min, choiceTaw);
+					taw += choiceTaw;
+				}
+			}
+
+			if (taw == Double.NEGATIVE_INFINITY && ownTalentsOnly.get()) {
+				++leftOut;
+				continue;
+			}
+
+			String tawString;
+			if (hero != null && fillAll) {
 				tawString = taw != Double.NEGATIVE_INFINITY ? Integer.toString(Math.min((int) Math.round(taw / numTalents), 2 * min)) : " ";
 			} else {
 				tawString = " ";
@@ -192,6 +204,12 @@ public class TalentsSheet extends Sheet {
 			calculationString.toString();
 
 			table.addRow(talentName, tawString, challengeCell, calculationString.toString());
+		}
+
+		if (ownTalentsOnly.get()) {
+			for (int i = 0; i < Math.min(leftOut, additionalTalentRows.get()); ++i) {
+				table.addRow("");
+			}
 		}
 
 		bottom.bottom = table.render(document, 419, 12, bottom.bottom, 72, 10) - 5;
@@ -445,6 +463,7 @@ public class TalentsSheet extends Sheet {
 			talents.put(talentName, talentGroup.getObj(talentName));
 		}
 
+		int leftOut = 0;
 		for (final String talentName : talents.keySet()) {
 			final JSONObject talent = talents.get(talentName);
 
@@ -471,6 +490,11 @@ public class TalentsSheet extends Sheet {
 			}
 
 			for (final JSONObject actualTalent : actualTalents) {
+				if (actualTalent == null && ownTalentsOnly.get()) {
+					++leftOut;
+					break;
+				}
+
 				TextCell nameCell;
 				final PDFont font = markBasis.get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic : FontManager.serif;
 				if (talent.containsKey("Sprachfamilien")) {
@@ -819,17 +843,30 @@ public class TalentsSheet extends Sheet {
 			basicTalent = talent.getBoolOrDefault("Basis", false);
 		}
 
+		if (ownTalentsOnly.get()) {
+			for (int i = 0; i < Math.min(leftOut, additionalTalentRows.get()); ++i) {
+				table.addRow("");
+			}
+		}
+
 		bottom.bottom = table.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
 	}
 
 	@Override
 	public void load() {
 		super.load();
+		settings.addBooleanChoice("Nur erlernte Talente anzeigen", ownTalentsOnly);
+		final ReactiveSpinner<Integer> talentRows = settings.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 15);
 		settings.addBooleanChoice("Basistalente gruppieren", groupBasis);
 		settings.addBooleanChoice("Basistalente markieren", markBasis);
 		settings.addBooleanChoice("Leittalente anzeigen", primaryTalents);
 		settings.addBooleanChoice("Metatalente anzeigen", showMetaTalents);
 		settings.addBooleanChoice("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent);
+
+		talentRows.setDisable(true);
+		ownTalentsOnly.addListener((o, oldV, newV) -> {
+			talentRows.setDisable(!newV);
+		});
 	}
 
 	@Override
