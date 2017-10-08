@@ -206,7 +206,7 @@ public class SheetConfiguration extends HeroSelector {
 		final FileChooser dialog = new FileChooser();
 
 		dialog.setTitle("Datei speichern");
-		dialog.setInitialFileName(hero != null ? hero.getObj("Biografie").getString("Vorname") : "Heldenbogen");
+		dialog.setInitialFileName((hero != null ? hero.getObj("Biografie").getString("Vorname") : "Heldenbogen") + ".pdf");
 		dialog.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("*.pdf", "*.pdf"));
 
 		final File file = dialog.showSaveDialog(null);
