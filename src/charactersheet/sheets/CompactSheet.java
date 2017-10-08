@@ -541,7 +541,7 @@ public class CompactSheet extends Sheet {
 					}
 				}
 			} else {
-				actualTalents.add((JSONObject) actual.get(spellNameRep));
+				actualTalents.add(((JSONObject) actual.get(spellNameRep)).getObj(spellNameRep._2));
 			}
 
 			for (final JSONObject actualTalent : actualTalents) {
