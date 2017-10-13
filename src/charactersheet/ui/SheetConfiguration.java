@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline;
 import org.controlsfx.control.CheckListView;
 
 import charactersheet.sheets.AnimalSheet;
@@ -125,8 +126,10 @@ public class SheetConfiguration extends HeroSelector {
 	}
 
 	private void create(final File file) {
+		Sheet.reset();
 		try (final PDDocument document = new PDDocument()) {
 			FontManager.initFonts(document);
+			document.getDocumentCatalog().setDocumentOutline(new PDDocumentOutline());
 			for (final Sheet sheet : sheets.getCheckModel().getCheckedItems()) {
 				sheet.setFill(!noFill.isSelected(), fillAll.isSelected());
 				try {

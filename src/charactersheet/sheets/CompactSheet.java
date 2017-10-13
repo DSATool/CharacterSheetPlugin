@@ -22,9 +22,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
 
 import boxtable.cell.Cell;
 import boxtable.cell.TableCell;
@@ -36,7 +34,6 @@ import boxtable.table.Column;
 import boxtable.table.Table;
 import charactersheet.util.FontManager;
 import charactersheet.util.SheetUtil;
-import charactersheet.util.SheetUtil.BottomObserver;
 import dsa41basis.util.DSAUtil;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
@@ -64,15 +61,13 @@ public class CompactSheet extends Sheet {
 	private final BooleanProperty groupBasis = new SimpleBooleanProperty(true);
 	private final BooleanProperty markBasis = new SimpleBooleanProperty(false);
 
-	private BottomObserver bottom;
-
 	private final BooleanProperty showTotalArmor = new SimpleBooleanProperty(
 			!"Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart")));
 	private final BooleanProperty showZoneArmor = new SimpleBooleanProperty(
 			"Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart")));
 
 	public CompactSheet() {
-		super(-1);
+		super(842);
 	}
 
 	private void addAttributesTable(final PDDocument document) throws IOException {
@@ -1041,10 +1036,7 @@ public class CompactSheet extends Sheet {
 	@Override
 	public void create(final PDDocument document) throws IOException {
 		if (hero != null) {
-			bottom = new BottomObserver(842);
-			final PDPage page = new PDPage(PDRectangle.A4);
-			// page.setMediaBox(new PDRectangle(6, 6, PDRectangle.A4.getWidth() - 12, PDRectangle.A4.getHeight() - 12));
-			document.addPage(page);
+			startCreate(document);
 
 			addBiographyTable(document);
 			addAttributesTable(document);

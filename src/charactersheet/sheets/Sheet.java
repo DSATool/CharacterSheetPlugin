@@ -23,6 +23,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem;
 
 import boxtable.event.TableEvent;
 import charactersheet.util.SheetUtil;
@@ -36,7 +37,16 @@ import jsonant.value.JSONObject;
 
 public abstract class Sheet implements HeroController {
 	protected static BottomObserver bottom;
-	protected static Consumer<TableEvent> header = null;
+	protected static Consumer<TableEvent> header;
+
+	static {
+		reset();
+	}
+
+	public static void reset() {
+		bottom = new BottomObserver(842);
+		header = null;
+	}
 
 	protected boolean fill;
 	protected boolean fillAll;
@@ -45,9 +55,10 @@ public abstract class Sheet implements HeroController {
 	protected final BooleanProperty separatePage = new SimpleBooleanProperty(true);
 	protected final BooleanProperty emptyPage = new SimpleBooleanProperty(false);
 	protected PDRectangle pageSize = PDRectangle.A4;
+
 	protected int height;
 
-	protected Sheet(int height) {
+	protected Sheet(final int height) {
 		this.height = height;
 	}
 
@@ -57,7 +68,7 @@ public abstract class Sheet implements HeroController {
 
 	public abstract void create(PDDocument document) throws IOException;
 
-	protected void endCreate(PDDocument document) {
+	protected void endCreate(final PDDocument document) {
 		if (emptyPage.get()) {
 			document.addPage(new PDPage(document.getPage(document.getNumberOfPages() - 1).getMediaBox()));
 		}
@@ -89,7 +100,7 @@ public abstract class Sheet implements HeroController {
 		bottom.bottom = oldBottom;
 	}
 
-	protected void startCreate(PDDocument document) throws IOException {
+	protected void startCreate(final PDDocument document) throws IOException {
 		if (separatePage.get() || !SheetUtil.matchesPageSize(document, pageSize)) {
 			final PDPage page = new PDPage(pageSize);
 			document.addPage(page);
@@ -99,7 +110,13 @@ public abstract class Sheet implements HeroController {
 				stream.close();
 			}
 		}
+
 		startCreate();
+
+		final PDOutlineItem bookmark = new PDOutlineItem();
+		bookmark.setDestination(document.getPage(document.getNumberOfPages() - 1));
+		bookmark.setTitle(toString());
+		document.getDocumentCatalog().getDocumentOutline().addLast(bookmark);
 	}
 
 	@Override

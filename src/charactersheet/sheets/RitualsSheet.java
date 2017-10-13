@@ -81,8 +81,6 @@ public class RitualsSheet extends Sheet {
 			header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll);
 		}
 
-		startCreate();
-
 		final Consumer<TableEvent> ritualHeader = header;
 		header = ritualHeader.andThen(event -> {
 			try {
@@ -154,16 +152,11 @@ public class RitualsSheet extends Sheet {
 		}
 
 		if (!landscapeTables.isEmpty()) {
-			if (separatePage.get() || !SheetUtil.matchesPageSize(document, SheetUtil.landscape)) {
-				final PDPage page = new PDPage(SheetUtil.landscape);
-				document.addPage(page);
-				final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
-				ritualHeader.accept(
-						new TableEvent(document, stream, 0, SheetUtil.landscape.getHeight(), SheetUtil.landscape.getWidth(), SheetUtil.landscape.getHeight()));
-				stream.close();
-				bottom = new BottomObserver(height);
-			}
+			pageSize = SheetUtil.landscape;
+		}
+		startCreate(document);
 
+		if (!landscapeTables.isEmpty()) {
 			if (commonRituals != null) {
 				bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
 				firstTable = false;
