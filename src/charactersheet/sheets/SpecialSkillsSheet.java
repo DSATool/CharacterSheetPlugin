@@ -41,9 +41,16 @@ import jsonant.value.JSONObject;
 
 public class SpecialSkillsSheet extends Sheet {
 
-	private final IntegerProperty additionalChoiceRows = new SimpleIntegerProperty(1);
-	private final float fontSize = 6;
+	private static Map<String, Object> emptyChoiceText = new HashMap<>();
+	static {
+		emptyChoiceText.put("Auswahl", "");
+		emptyChoiceText.put("Freitext", "");
+	}
+
 	private final BooleanProperty ownSkillsOnly = new SimpleBooleanProperty(false);
+	private final IntegerProperty additionalChoiceRows = new SimpleIntegerProperty(1);
+
+	private final float fontSize = 6;
 	private final Map<String, BooleanProperty> skillGroups = new HashMap<>();
 
 	public SpecialSkillsSheet() {
@@ -79,7 +86,7 @@ public class SpecialSkillsSheet extends Sheet {
 		String cheaper = " ";
 		if (fill) {
 			final int origCost = skill.getIntOrDefault("Kosten", 0);
-			final int newCost = new ProOrCon(name, hero, skill, actualSkill != null ? actualSkill : new JSONObject(null)).getCost();
+			final int newCost = new ProOrCon(name, hero, skill, actualSkill != null ? actualSkill : new JSONObject(emptyChoiceText, null)).getCost();
 			if (newCost != origCost) {
 				if (newCost == (origCost + 1) / 2) {
 					cheaper = "X";
@@ -104,13 +111,13 @@ public class SpecialSkillsSheet extends Sheet {
 		final Table baseTable = new Table();
 		baseTable.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		baseTable.addColumn(new Column(110, FontManager.serif, fontSize, HAlign.LEFT));
+		baseTable.addColumn(new Column(110, 110, FontManager.serif, 2, fontSize, HAlign.LEFT));
 		baseTable.addColumn(new Column(10, FontManager.serif, fontSize, HAlign.CENTER));
 		baseTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
 		baseTable.addColumn(new Column(10, FontManager.serif, fontSize, HAlign.CENTER));
 		baseTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
-		baseTable.addColumn(new Column(107, FontManager.serif, fontSize, HAlign.LEFT));
-		baseTable.addColumn(new Column(0, FontManager.serif, fontSize, HAlign.LEFT));
+		baseTable.addColumn(new Column(107, 107, FontManager.serif, 2, fontSize, HAlign.LEFT));
+		baseTable.addColumn(new Column(0, 0, FontManager.serif, 2, fontSize, HAlign.LEFT));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Fertigkeit", 1);
 		final Cell actualTitle = SheetUtil.createTitleCell("E", 1);
@@ -130,15 +137,7 @@ public class SpecialSkillsSheet extends Sheet {
 				continue;
 			}
 
-			final Table table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-
-			table.addColumn(new Column(110, 110, FontManager.serif, 2, fontSize, HAlign.LEFT));
-			table.addColumn(new Column(10, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(10, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(107, 107, FontManager.serif, 2, fontSize, HAlign.LEFT));
-			table.addColumn(new Column(0, 0, FontManager.serif, 2, fontSize, HAlign.LEFT));
+			final Table table = baseTable.duplicate().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
 
 			final JSONObject group = specialSkills.getObj(groupName);
 

@@ -67,7 +67,7 @@ public class CharacterSheet extends Sheet {
 	private final float rowFontSize = 7;
 
 	public CharacterSheet() {
-		super(770);
+		super(770, false);
 	}
 
 	private void addAPTable(final PDDocument document) throws IOException {

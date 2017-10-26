@@ -67,7 +67,7 @@ public class CompactSheet extends Sheet {
 			"Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart")));
 
 	public CompactSheet() {
-		super(842);
+		super(842, false);
 	}
 
 	private void addAttributesTable(final PDDocument document) throws IOException {
@@ -89,7 +89,7 @@ public class CompactSheet extends Sheet {
 
 		table.addCells("SO", HeroUtil.getCurrentValue(hero.getObj("Basiswerte").getObj("Sozialstatus"), false));
 
-		table.addCells("GS", HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Geschwindigkeit"), attributes,
+		table.addCells("GS", HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Geschwindigkeit"), actualAttributes,
 				hero.getObj("Basiswerte").getObj("Geschwindigkeit"), false));
 
 		final int woundThreshold = Math.round(HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Wundschwelle"), actualAttributes,
@@ -381,8 +381,22 @@ public class CompactSheet extends Sheet {
 					++j;
 				}
 
-				final JSONObject amount = item.getObjOrDefault("Anzahl", baseWeapon.getObjOrDefault("Anzahl", null));
-				final String num = amount == null ? " " : Integer.toString(amount.getIntOrDefault("Gesamt", 0));
+				String num = "1";
+				final String ammunitionType = item.getStringOrDefault("Geschoss:Typ", baseWeapon.getString("Geschoss:Typ"));
+				if ("Pfeile".equals(ammunitionType) || "Bolzen".equals(ammunitionType)) {
+					final JSONObject ammunitionTypes = ResourceManager.getResource("data/Geschosstypen");
+					final JSONObject ammunition = item.getObjOrDefault("Munition", baseWeapon.getObj("Munition"));
+					int amount = 0;
+					for (final String typeName : ammunitionTypes.keySet()) {
+						amount += ammunition.getObj(typeName).getIntOrDefault("Aktuell", 0);
+					}
+					num = Integer.toString(amount);
+				} else {
+					final JSONObject amount = item.getObjOrDefault("Anzahl", baseWeapon.getObjOrDefault("Anzahl", null));
+					if (amount != null) {
+						num = Integer.toString(amount.getIntOrDefault("Gesamt", 1));
+					}
+				}
 
 				table.addRow(name, tp, at, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0], tpdistance[1],
 						tpdistance[2],
@@ -542,12 +556,7 @@ public class CompactSheet extends Sheet {
 			for (final JSONObject actualTalent : actualTalents) {
 				if (index >= rows / 2) {
 					spellTable.addCells(new TableCell(table), " ");
-					table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-					table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
-					table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
-					table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
-					table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
-					table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+					table = table.duplicate();
 					table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
 					index = 0;
 				}
@@ -589,12 +598,7 @@ public class CompactSheet extends Sheet {
 		for (int i = 0; i < additionalSpellRows.get() || index < rows / 2; ++i) {
 			if (index >= rows / 2) {
 				spellTable.addCells(new TableCell(table), " ");
-				table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-				table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
-				table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
-				table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
-				table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
-				table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+				table = table.duplicate();
 				table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
 				index = 0;
 			}
@@ -660,12 +664,7 @@ public class CompactSheet extends Sheet {
 
 			if (index >= rows / 3) {
 				talentsTable.addCells(new TableCell(table), " ");
-				table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-				table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
-				table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
-				table.addColumn(new Column(21.5f, FontManager.serif, 8, HAlign.CENTER));
-				table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
-				table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+				table = table.duplicate();
 				index = 0;
 			}
 
@@ -712,6 +711,8 @@ public class CompactSheet extends Sheet {
 			final Map<String, JSONValue> actual = new TreeMap<>((s1, s2) -> {
 				final boolean firstIsBasis = talentGroup.getObj(s1).getBoolOrDefault("Basis", false);
 				if (groupBasis.get() && firstIsBasis != talentGroup.getObj(s2).getBoolOrDefault("Basis", false)) return firstIsBasis ? -1 : 1;
+				final boolean firstIsWriting = talentGroup.getObj(s1).getBoolOrDefault("Schrift", false);
+				if (firstIsWriting != talentGroup.getObj(s2).getBoolOrDefault("Schrift", false)) return firstIsWriting ? 1 : -1;
 				return SheetUtil.comparator.compare(s1, s2);
 			});
 			for (final String talentName : actualTalentGroup.keySet()) {
@@ -743,11 +744,7 @@ public class CompactSheet extends Sheet {
 				for (final JSONObject actualTalent : actualTalents) {
 					if (index >= rows / 3) {
 						talentsTable.addCells(new TableCell(table), " ");
-						table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-						table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
-						table.addColumn(new Column(43, FontManager.serif, 8, HAlign.CENTER));
-						table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
-						table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+						table = table.duplicate();
 						index = 0;
 					}
 
@@ -850,11 +847,7 @@ public class CompactSheet extends Sheet {
 		for (int i = 0; i < additionalTalentRows.get() || index < rows / 3; ++i) {
 			if (index >= rows / 3) {
 				talentsTable.addCells(new TableCell(table), " ");
-				table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-				table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
-				table.addColumn(new Column(43, FontManager.serif, 8, HAlign.CENTER));
-				table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
-				table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
+				table = table.duplicate();
 				index = 0;
 			}
 			table.addRow(" ");

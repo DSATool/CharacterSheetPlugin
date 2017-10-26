@@ -57,9 +57,15 @@ public abstract class Sheet implements HeroController {
 	protected PDRectangle pageSize = PDRectangle.A4;
 
 	protected int height;
+	private final boolean canBeSeparate;
 
 	protected Sheet(final int height) {
+		this(height, true);
+	}
+
+	protected Sheet(final int height, final boolean canBeSeparate) {
 		this.height = height;
+		this.canBeSeparate = canBeSeparate;
 	}
 
 	public boolean check() {
@@ -79,7 +85,9 @@ public abstract class Sheet implements HeroController {
 	}
 
 	public void load() {
-		settings.addBooleanChoice("Als eigenständigen Bogen drucken", separatePage);
+		if (canBeSeparate) {
+			settings.addBooleanChoice("Als eigenständigen Bogen drucken", separatePage);
+		}
 		settings.addBooleanChoice("Leerseite einfügen", emptyPage);
 		settings.addSeparator();
 	}

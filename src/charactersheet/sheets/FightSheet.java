@@ -679,7 +679,7 @@ public class FightSheet extends Sheet {
 							++j;
 						}
 
-						String num = " ";
+						String num = fillAll ? "1" : " ";
 						final String ammunitionType = item.getStringOrDefault("Geschoss:Typ", baseWeapon.getString("Geschoss:Typ"));
 						if ("Pfeile".equals(ammunitionType) || "Bolzen".equals(ammunitionType)) {
 							if (showAmmunition.get()) {
