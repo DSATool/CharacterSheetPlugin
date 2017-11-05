@@ -70,7 +70,7 @@ public class SpellsSheet extends Sheet {
 		final JSONObject duration = variant.getObjOrDefault("Zauberdauer", base.getObj("Zauberdauer"));
 		String durationString = "";
 		if (duration.containsKey("Multiplikativ")) {
-			durationString = SheetUtil.threeDecimalPlaces.format((duration.getDouble("Multiplikativ") - 1) * 100) + "%";
+			durationString = SheetUtil.threeDecimalPlacesSigned.format((duration.getDouble("Multiplikativ") - 1) * 100) + "%";
 		} else {
 			durationString = DSAUtil.getModificationString(duration, Units.TIME, true);
 			if (durationString.charAt(0) != '+') {
