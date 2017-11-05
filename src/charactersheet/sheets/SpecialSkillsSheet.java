@@ -31,6 +31,7 @@ import boxtable.table.Table;
 import charactersheet.util.FontManager;
 import charactersheet.util.SheetUtil;
 import dsa41basis.hero.ProOrCon;
+import dsa41basis.util.RequirementsUtil;
 import dsatool.resources.ResourceManager;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -70,23 +71,33 @@ public class SpecialSkillsSheet extends Sheet {
 		endCreate(document);
 	}
 
-	private void fillSkill(final Table table, String name, final JSONObject skill, final JSONObject actualSkill, final JSONObject cheaperSkill) {
+	private void fillSkill(final Table table, final String skillName, final JSONObject skill, final JSONObject actualSkill, final JSONObject cheaperSkill) {
 		if (ownSkillsOnly.get() && actualSkill == null && cheaperSkill == null) return;
 
+		String name = skillName;
 		if (skill.containsKey("Auswahl") || skill.containsKey("Freitext")) {
 			if (fill && actualSkill != null && (actualSkill.containsKey("Auswahl") || actualSkill.containsKey("Freitext"))) {
 				name += " (" + actualSkill.getStringOrDefault("Auswahl", "") + actualSkill.getStringOrDefault("Freitext", "") + ')';
+			} else if (fill && cheaperSkill != null && (cheaperSkill.containsKey("Auswahl") || cheaperSkill.containsKey("Freitext"))) {
+				name += " (" + cheaperSkill.getStringOrDefault("Auswahl", "") + cheaperSkill.getStringOrDefault("Freitext", "") + ')';
 			} else {
 				name += ": ";
 			}
 		}
 
-		final String actual = fill && actualSkill != null ? "X" : " ";
+		String actual = "";
+		if (fill && actualSkill != null) {
+			final JSONObject requirements = skill.getObjOrDefault("Voraussetzungen", null);
+			final String choice = actualSkill.getString("Auswahl");
+			final String text = actualSkill.getString("Freitext");
+			actual = RequirementsUtil.isRequirementFulfilled(hero, requirements, choice, text, false) ? "X" : "O";
+		}
 
 		String cheaper = " ";
 		if (fill) {
 			final int origCost = skill.getIntOrDefault("Kosten", 0);
-			final int newCost = new ProOrCon(name, hero, skill, actualSkill != null ? actualSkill : new JSONObject(emptyChoiceText, null)).getCost();
+			final int newCost = new ProOrCon(skillName, hero, skill,
+					actualSkill != null ? actualSkill : cheaperSkill != null ? cheaperSkill : new JSONObject(emptyChoiceText, null)).getCost();
 			if (newCost != origCost) {
 				if (newCost == (origCost + 1) / 2) {
 					cheaper = "X";
@@ -169,7 +180,22 @@ public class SpecialSkillsSheet extends Sheet {
 								final JSONArray cheaperChoiceSkills = cheaperSkills.getArr(name);
 								for (int i = 0; i < cheaperChoiceSkills.size(); ++i) {
 									final JSONObject cheaperSkill = cheaperChoiceSkills.getObj(i);
-									fillSkill(table, name, skill, null, cheaperSkill);
+									boolean found = false;
+									if (actualSkills.containsKey(name)) {
+										final JSONArray actualChoiceSkills = actualSkills.getArr(name);
+										for (int j = 0; j < actualChoiceSkills.size(); ++j) {
+											final JSONObject actualSkill = actualChoiceSkills.getObj(j);
+											if (skill.containsKey("Auswahl") && actualSkill.getString("Auswahl").equals(cheaperSkill.getString("Auswahl")) ||
+													skill.containsKey("Freitext")
+															&& actualSkill.getString("Freitext").equals(cheaperSkill.getString("Freitext"))) {
+												found = true;
+												break;
+											}
+										}
+									}
+									if (!found) {
+										fillSkill(table, name, skill, null, cheaperSkill);
+									}
 								}
 							}
 						}
