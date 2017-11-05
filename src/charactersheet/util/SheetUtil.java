@@ -56,7 +56,7 @@ public class SheetUtil {
 
 	public static DecimalFormat threeDecimalPlaces = new DecimalFormat("#.###");
 
-	public static DecimalFormat threeDecimalPlacesSigned = new DecimalFormat("+#.###");
+	public static DecimalFormat threeDecimalPlacesSigned = new DecimalFormat("+#.###;-#.###");
 
 	public static PDRectangle landscape = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
 
