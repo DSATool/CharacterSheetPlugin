@@ -349,7 +349,7 @@ public class FightSheet extends Sheet {
 	private void addEnergiesTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
-		table.addColumn(new Column(62, FontManager.serif, 10, HAlign.LEFT));
+		table.addColumn(new Column(61, FontManager.serif, 10, HAlign.LEFT));
 		table.addColumn(new Column(23, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(23, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(23, FontManager.serif, fontSize, HAlign.CENTER));
@@ -874,12 +874,13 @@ public class FightSheet extends Sheet {
 	private void addZonesTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
-		table.addColumn(new Column(63, FontManager.serif, 9, HAlign.LEFT));
-		table.addColumn(new Column(35, FontManager.serif, 9, HAlign.CENTER));
-		table.addColumn(new Column(30, FontManager.serif, 9, HAlign.CENTER));
-		table.addColumn(new Column(30, FontManager.serif, 9, HAlign.CENTER));
-		table.addColumn(new Column(58, FontManager.serif, 9, HAlign.CENTER));
-		table.addColumn(new Column(166, FontManager.serif, 9, HAlign.LEFT));
+		table.addColumn(new Column(61, FontManager.serif, 9, HAlign.LEFT));
+		table.addColumn(new Column(33, FontManager.serif, 9, HAlign.CENTER));
+		table.addColumn(new Column(28, FontManager.serif, 9, HAlign.CENTER));
+		table.addColumn(new Column(28, FontManager.serif, 9, HAlign.CENTER));
+		table.addColumn(new Column(53, FontManager.serif, 9, HAlign.CENTER));
+		table.addColumn(new Column(53, FontManager.serif, 9, HAlign.CENTER));
+		table.addColumn(new Column(156, FontManager.serif, 9, HAlign.LEFT));
 		table.addColumn(new Column(0, FontManager.serif, 9, HAlign.LEFT));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Trefferzonen", 1);
@@ -887,9 +888,10 @@ public class FightSheet extends Sheet {
 		final Cell paTitle = SheetUtil.createTitleCell("PA", 1);
 		final Cell rangedTitle = SheetUtil.createTitleCell("FK", 1);
 		final Cell chanceTitle = SheetUtil.createTitleCell("Zufall(W20)", 1);
+		final Cell healingTitle = SheetUtil.createTitleCell("Heilung", 1);
 		final Cell firstTitle = SheetUtil.createTitleCell("Erste/zweite/dritte Wunde", 1);
 		final Cell thirdTitle = SheetUtil.createTitleCell("Dritte Wunde zusätzlich", 1);
-		table.addRow(nameTitle, difficultyTitle, paTitle, rangedTitle, chanceTitle, firstTitle, thirdTitle);
+		table.addRow(nameTitle, difficultyTitle, paTitle, rangedTitle, chanceTitle, healingTitle, firstTitle, thirdTitle);
 
 		final JSONObject zones = ResourceManager.getResource("data/Wunden").getObj("Zonenwunden");
 
@@ -898,11 +900,15 @@ public class FightSheet extends Sheet {
 			final Integer difficulty = zone.getIntOrDefault("Ansage", null);
 			final Integer pa = zone.getIntOrDefault("Parade", null);
 			final Integer ranged = zone.getIntOrDefault("Fernkampf", null);
-			final JSONObject chance = zone.getObj("Zufall");
-			final JSONObject first = zone.getObj("Allgemein");
-			final JSONObject third = zone.getObj("Dritte Wunde");
+			final JSONObject chance = zone.getObjOrDefault("Zufall", null);
+			final JSONArray healing = zone.getArrOrDefault("Heilung", null);
+			final JSONObject first = zone.getObjOrDefault("Allgemein", null);
+			final JSONObject third = zone.getObjOrDefault("Dritte Wunde", null);
 			table.addRow(zoneName, difficulty != null ? Util.getSignedIntegerString(difficulty) : "—", pa != null ? Util.getSignedIntegerString(pa) : "—",
 					ranged != null ? Util.getSignedIntegerString(ranged) : "—", chance != null ? chance.getStringOrDefault("Text", "—") : "—",
+					healing != null ? new TextCell(Util.getSignedIntegerString(healing.getInt(0))).addText("/")
+							.addText(Util.getSignedIntegerString(healing.getInt(1))).addText("/").addText(Util.getSignedIntegerString(healing.getInt(2)))
+							.setEquallySpaced(true) : "—",
 					first != null ? first.getStringOrDefault("Text", " ") : " ", third != null ? third.getStringOrDefault("Text", " ") : " ");
 		}
 
