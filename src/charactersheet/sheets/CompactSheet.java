@@ -530,7 +530,7 @@ public class CompactSheet extends Sheet {
 
 			for (final String repName : actualSpell.keySet()) {
 				if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
-					actual.put(new Tuple<>(spellName, repName), actualSpells.getArr(repName));
+					actual.put(new Tuple<>(spellName, repName), actualSpell.getArr(repName));
 				} else {
 					actual.put(new Tuple<>(spellName, repName), actualSpells.getObj(spellName));
 				}
@@ -658,7 +658,7 @@ public class CompactSheet extends Sheet {
 			final JSONObject talentGroup = talents.getObj(talentGroupName);
 			final JSONObject actualTalentGroup = actualTalentGroups.getObjOrDefault(talentGroupName, null);
 
-			if (actualTalentGroup == null) {
+			if (actualTalentGroup == null || actualTalentGroup.size() == 0) {
 				continue;
 			}
 
