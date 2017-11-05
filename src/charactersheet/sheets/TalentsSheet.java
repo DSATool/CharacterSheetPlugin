@@ -21,6 +21,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -546,7 +547,7 @@ public class TalentsSheet extends Sheet {
 						}
 					}
 				} else {
-					final String name = talentName;
+					final String name = talentName.replace(" (Schrift)", "");
 					nameCell = new TextCell(name);
 					nameCell.setFont(font);
 
@@ -762,7 +763,7 @@ public class TalentsSheet extends Sheet {
 				}
 
 				if (isLanguage && talent.containsKey("Schriften")) {
-					table.addCells(String.join(", ", talent.getArr("Schriften").getStrings()));
+					table.addCells(talent.getArr("Schriften").getStrings().stream().map(s -> s.replace(" (Schrift)", "")).collect(Collectors.joining(", ")));
 				} else if (isWriting) {
 					final JSONObject languages = ResourceManager.getResource("data/Talente").getObj("Sprachen und Schriften");
 					boolean first = true;
