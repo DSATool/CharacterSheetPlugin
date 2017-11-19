@@ -17,6 +17,7 @@ package charactersheet.sheets;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -67,20 +68,22 @@ public class AnimalSheet extends Sheet {
 	@FXML
 	private VBox animalsBox;
 
-	private final List<Node> animalControls = new LinkedList<>();
-	private final List<StringProperty> types = new LinkedList<>();
-	private final List<IntegerProperty> additionalAttacks = new LinkedList<>();
-	private final List<IntegerProperty> additionalProConRows = new LinkedList<>();
-	private final List<IntegerProperty> additionalArmorRows = new LinkedList<>();
-	private final List<IntegerProperty> additionalInventoryRows = new LinkedList<>();
-	private final List<BooleanProperty> ownSkillsOnly = new LinkedList<>();
-	private final List<BooleanProperty> showProsCons = new LinkedList<>();
-	private final List<BooleanProperty> showArmor = new LinkedList<>();
-	private final List<BooleanProperty> showSkills = new LinkedList<>();
-	private final List<BooleanProperty> showInventory = new LinkedList<>();
+	private final List<Node> animalControls = new ArrayList<>();
+	private final List<StringProperty> types = new ArrayList<>();
+	private final List<IntegerProperty> additionalAttacks = new ArrayList<>();
+	private final List<IntegerProperty> additionalProConRows = new ArrayList<>();
+	private final List<IntegerProperty> additionalArmorRows = new ArrayList<>();
+	private final List<IntegerProperty> additionalInventoryRows = new ArrayList<>();
+	private final List<BooleanProperty> ownSkillsOnly = new ArrayList<>();
+	private final List<BooleanProperty> showProsCons = new ArrayList<>();
+	private final List<BooleanProperty> showArmor = new ArrayList<>();
+	private final List<BooleanProperty> showSkills = new ArrayList<>();
+	private final List<BooleanProperty> showInventory = new ArrayList<>();
 
 	private JSONArray animals = null;
+
 	private JSONObject animal = null;
+
 	private boolean isMagical;
 	private boolean isHorse;
 	private int current = 0;
@@ -99,110 +102,44 @@ public class AnimalSheet extends Sheet {
 		}
 	}
 
-	private void addAnimal(final PDDocument document) throws IOException {
-		final Table baseTable = new Table();
-		baseTable.addEventHandler(EventType.BEGIN_PAGE, header);
-		baseTable.addColumn(new Column(267, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
-		baseTable.addColumn(new Column(304, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
-
-		final String type = types.get(current).get();
-		SheetUtil.addTitle(baseTable, type);
-
-		animal = animals == null ? null : current < animals.size() ? animals.getObj(current) : null;
-		isMagical = "Vertrautentier".equals(type);
-		isHorse = "Reittier".equals(type);
-
-		baseTable.addRow(new TableCell(getBiographyTable()).setColSpan(2));
-
-		final Table rightTable = new Table().setBorder(0, 0, 0, 0);
-		rightTable.addColumn(new Column(304, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
-		final Cell emptyDesc = new TextCell(" ", FontManager.serif, 6, 6);
-		rightTable.addRow(emptyDesc);
-		if (isMagical) {
-			rightTable.addRow(new TableCell(getAPRkWTable()));
-			rightTable.addRow(new TextCell());
-		}
-		if (showProsCons.get(current).get()) {
-			rightTable.addRow(new TableCell(getProsConsTable()));
-			rightTable.addRow(new TextCell());
-		}
-		rightTable.addRow(new TableCell(getAttacksTable()));
-		rightTable.addRow(new Cell());
-		if (showArmor.get(current).get()) {
-			rightTable.addRow(new TableCell(getHorseArmorTable()));
-			rightTable.addRow(new TextCell());
-		}
-
-		final Table leftTable = new Table().setBorder(0, 0, 0, 0);
-		leftTable.addColumn(new Column(102, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
-		leftTable.addColumn(new Column(158, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
-		leftTable.addColumn(new Column(7, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
-		if (isHorse) {
-			leftTable.addRow(new TableCell(getHorseStatsTable()).setColSpan(2));
-			leftTable.addRow(new ImageCell(new File(Util.getAppDir() + "/resources/images/zones/animals/Pferd.jpg")).setColSpan(2).setHAlign(HAlign.CENTER)
-					.setVAlign(VAlign.TOP).setMinHeight(rightTable.getHeight(304) - 86).setPadding(1, 0, 0, 0)).setBorder(0, 0, 0, 0);
-			leftTable.addRow(new TextCell(" ", FontManager.serif, 0.5f, 0.5f).setColSpan(3));
-		} else {
-			leftTable.addRow(new TableCell(getAttributesTable()), new TableCell(getBaseValuesTable()));
-			leftTable.addRow(new TextCell());
-		}
-
-		baseTable.addRow(new TableCell(leftTable), new TableCell(rightTable));
-
-		if (isMagical) {
-			baseTable.addRow(new TableCell(getRitualsTable()).setColSpan(2));
-			baseTable.addRow(new TextCell());
-		}
-
-		if (showSkills.get(current).get()) {
-			baseTable.addRow(new TableCell(isHorse ? getHorseSkillsTable() : getSkillsTable()).setColSpan(2));
-			baseTable.addRow(new TextCell());
-		}
-
-		if (showInventory.get(current).get()) {
-			baseTable.addRow(new TableCell(getInventoryTable()).setColSpan(2));
-		}
-
-		bottom.bottom = baseTable.render(document, 571, 12, bottom.bottom, 54, 10) - 5;
-	}
-
-	public TitledPane addAnimal(final String type) {
+	public TitledPane addAnimal(final String type, final JSONObject settings) {
 		final TitledPane control = new TitledPane();
 		animalControls.add(control);
 		animalsBox.getChildren().add(animalsBox.getChildren().size() - 1, control);
-		final SettingsPage settings = new SettingsPage();
-		control.setContent(settings.getControl());
+		final SettingsPage settingsPage = new SettingsPage();
+		control.setContent(settingsPage.getControl());
 		control.setText("Weiteres Tier");
-		final StringProperty typeProperty = new SimpleStringProperty(type);
+		final StringProperty typeProperty = new SimpleStringProperty(settings.getStringOrDefault("Typ", type));
 		types.add(typeProperty);
-		settings.addStringChoice("Typ", typeProperty, sheetTypes);
-		final IntegerProperty attacks = new SimpleIntegerProperty(2);
+		settingsPage.addStringChoice("Typ", typeProperty, sheetTypes);
+		final IntegerProperty attacks = new SimpleIntegerProperty(settings.getIntOrDefault("Zusätzliche Zeilen für Angriffe", 2));
 		additionalAttacks.add(attacks);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Angriffe", attacks, 0, 10);
-		final BooleanProperty proCons = new SimpleBooleanProperty(true);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Angriffe", attacks, 0, 10);
+		final BooleanProperty proCons = new SimpleBooleanProperty(settings.getBoolOrDefault("Vor-/Nachteile", true));
 		showProsCons.add(proCons);
-		settings.addBooleanChoice("Vor-/Nachteile", proCons);
-		final IntegerProperty numProCons = new SimpleIntegerProperty("Vertrautentier".equals(type) ? 2 : 3);
+		settingsPage.addBooleanChoice("Vor-/Nachteile", proCons);
+		final IntegerProperty numProCons = new SimpleIntegerProperty(
+				settings.getIntOrDefault("Zusätzliche Zeilen für Vor-/Nachteile", "Vertrautentier".equals(type) ? 2 : 3));
 		additionalProConRows.add(numProCons);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Vor-/Nachteile", numProCons, 0, 20);
-		final BooleanProperty armor = new SimpleBooleanProperty("Reittier".equals(type));
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Vor-/Nachteile", numProCons, 0, 20);
+		final BooleanProperty armor = new SimpleBooleanProperty(settings.getBoolOrDefault("Rüstung", "Reittier".equals(type)));
 		showArmor.add(armor);
-		settings.addBooleanChoice("Rüstung", armor);
-		final IntegerProperty numArmor = new SimpleIntegerProperty(3);
+		settingsPage.addBooleanChoice("Rüstung", armor);
+		final IntegerProperty numArmor = new SimpleIntegerProperty(settings.getIntOrDefault("Zusätzliche Zeilen für Rüstung", 3));
 		additionalArmorRows.add(numArmor);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Rüstung", numArmor, 0, 20);
-		final BooleanProperty skills = new SimpleBooleanProperty(true);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Rüstung", numArmor, 0, 20);
+		final BooleanProperty skills = new SimpleBooleanProperty(settings.getBoolOrDefault("Fertigkeiten", true));
 		showSkills.add(skills);
-		settings.addBooleanChoice("Fertigkeiten", skills);
-		final BooleanProperty ownSkills = new SimpleBooleanProperty(true);
+		settingsPage.addBooleanChoice("Fertigkeiten", skills);
+		final BooleanProperty ownSkills = new SimpleBooleanProperty(settings.getBoolOrDefault("Nur erlernbare Fertigkeiten", true));
 		ownSkillsOnly.add(ownSkills);
-		settings.addBooleanChoice("Nur erlernbare Fertigkeiten", ownSkills);
-		final BooleanProperty inventory = new SimpleBooleanProperty(true);
+		settingsPage.addBooleanChoice("Nur erlernbare Fertigkeiten", ownSkills);
+		final BooleanProperty inventory = new SimpleBooleanProperty(settings.getBoolOrDefault("Inventar", true));
 		showInventory.add(inventory);
-		settings.addBooleanChoice("Inventar", inventory);
-		final IntegerProperty numInventory = new SimpleIntegerProperty(40);
+		settingsPage.addBooleanChoice("Inventar", inventory);
+		final IntegerProperty numInventory = new SimpleIntegerProperty(settings.getIntOrDefault("Zusätzliche Zeilen für Inventar", 40));
 		additionalInventoryRows.add(numInventory);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Inventar", numInventory, 0, 200);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Inventar", numInventory, 0, 200);
 
 		final ContextMenu menu = new ContextMenu();
 		final MenuItem removeItem = new MenuItem("Entfernen");
@@ -227,20 +164,84 @@ public class AnimalSheet extends Sheet {
 		return control;
 	}
 
+	private void addAnimalTable(final PDDocument document) throws IOException {
+		final Table baseTable = new Table();
+		baseTable.addEventHandler(EventType.BEGIN_PAGE, header);
+		baseTable.addColumn(new Column(267, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
+		baseTable.addColumn(new Column(304, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
+
+		final String type = types.get(current).get();
+		SheetUtil.addTitle(baseTable, type);
+
+		animal = animals == null ? null : current < animals.size() ? animals.getObj(current) : null;
+		isMagical = "Vertrautentier".equals(type);
+		isHorse = "Reittier".equals(type);
+
+		baseTable.addRow(new TableCell(getBiographyTable()).setColSpan(2));
+
+		final Table rightTable = new Table().setBorder(0, 0, 0, 0);
+		rightTable.addColumn(new Column(304, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
+		final Cell emptyDesc = new TextCell(" ", FontManager.serif, 6, 6);
+		rightTable.addRow(emptyDesc);
+		if (isMagical) {
+			rightTable.addRow(new TableCell(getAPRkWTable()));
+			rightTable.addRow("");
+		}
+		if (showProsCons.get(current).get()) {
+			rightTable.addRow(new TableCell(getProsConsTable()));
+			rightTable.addRow("");
+		}
+		rightTable.addRow(new TableCell(getAttacksTable()));
+		rightTable.addRow("");
+		if (showArmor.get(current).get()) {
+			rightTable.addRow(new TableCell(getHorseArmorTable()));
+			rightTable.addRow("");
+		}
+
+		final Table leftTable = new Table().setBorder(0, 0, 0, 0);
+		leftTable.addColumn(new Column(102, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
+		leftTable.addColumn(new Column(158, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
+		leftTable.addColumn(new Column(7, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
+		if (isHorse) {
+			leftTable.addRow(new TableCell(getHorseStatsTable()).setColSpan(2));
+			leftTable.addRow(new ImageCell(new File(Util.getAppDir() + "/resources/images/zones/animals/Pferd.jpg")).setColSpan(2).setHAlign(HAlign.CENTER)
+					.setVAlign(VAlign.TOP).setMinHeight(rightTable.getHeight(304) - 86).setPadding(1, 0, 0, 0)).setBorder(0, 0, 0, 0);
+			leftTable.addRow(new TextCell(" ", FontManager.serif, 0.5f, 0.5f).setColSpan(3));
+		} else {
+			leftTable.addRow(new TableCell(getAttributesTable()), new TableCell(getBaseValuesTable()));
+			leftTable.addRow("");
+		}
+
+		baseTable.addRow(new TableCell(leftTable), new TableCell(rightTable));
+
+		if (isMagical) {
+			baseTable.addRow(new TableCell(getRitualsTable()).setColSpan(2));
+			baseTable.addRow("");
+		}
+
+		if (showSkills.get(current).get()) {
+			baseTable.addRow(new TableCell(isHorse ? getHorseSkillsTable() : getSkillsTable()).setColSpan(2));
+			baseTable.addRow("");
+		}
+
+		if (showInventory.get(current).get()) {
+			baseTable.addRow(new TableCell(getInventoryTable()).setColSpan(2));
+		}
+
+		bottom.bottom = baseTable.render(document, 571, 12, bottom.bottom, 54, 10) - 5;
+	}
+
 	@Override
 	public void create(final PDDocument document) throws IOException {
 		if (types.size() > 0) {
-			if (separatePage.get()) {
-				header = SheetUtil.createHeader("Tierbrief", true, false, false, hero, fill, fillAll);
-			}
+			header = SheetUtil.createHeader("Tierbrief", true, false, false, hero, fill, fillAll);
 
 			startCreate(document);
 
-			int i;
-			for (i = 0; i < types.size(); ++i) {
+			for (int i = 0; i < types.size(); ++i) {
 				if (!"Kein".equals(types.get(i).get())) {
 					current = i;
-					addAnimal(document);
+					addAnimalTable(document);
 				}
 			}
 
@@ -764,7 +765,7 @@ public class AnimalSheet extends Sheet {
 					final String notes = item.getStringOrDefault("Anmerkungen", "");
 					tables[i].addRow(name, notes);
 				} else {
-					tables[i].addRow(new Cell());
+					tables[i].addRow("");
 				}
 			}
 		}
@@ -843,6 +844,45 @@ public class AnimalSheet extends Sheet {
 		return table;
 	}
 
+	@Override
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		settings.put("Leerseite einfügen", emptyPage.get());
+		final JSONObject namedAnimals = new JSONObject(settings);
+		final JSONArray additional = new JSONArray(settings);
+		for (int i = 0; i < types.size(); ++i) {
+			if (!"Kein".equals(types.get(i).get())) {
+				final JSONObject animal = animals == null ? null : i < animals.size() ? animals.getObj(i) : null;
+				JSONObject setting;
+				if (animal != null) {
+					setting = new JSONObject(namedAnimals);
+					namedAnimals.put(animal.getObj("Biografie").getStringOrDefault("Name", ""), setting);
+				} else {
+					setting = new JSONObject(additional);
+					additional.add(setting);
+				}
+				setting.put("Typ", types.get(i).get());
+				setting.put("Zusätzliche Zeilen für Angriffe", additionalAttacks.get(i).get());
+				setting.put("Vor-/Nachteile", showProsCons.get(i).get());
+				setting.put("Zusätzliche Zeilen für Vor-/Nachteile", additionalProConRows.get(i).get());
+				setting.put("Rüstung", showArmor.get(i).get());
+				setting.put("Zusätzliche Zeilen für Rüstung", additionalArmorRows.get(i).get());
+				setting.put("Fertigkeiten", showSkills.get(i).get());
+				setting.put("Nur erlernbare Fertigkeiten", ownSkillsOnly.get(i).get());
+				setting.put("Inventar", showInventory.get(i).get());
+				setting.put("Zusätzliche Zeilen für Inventar", additionalInventoryRows.get(i).get());
+			}
+		}
+		if (namedAnimals.size() != 0) {
+			settings.put("Tiere", namedAnimals);
+		}
+		if (additional.size() != 0) {
+			settings.put("Zusätzlich", additional);
+		}
+		return settings;
+	}
+
 	private Table getSkillsTable() {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
@@ -889,28 +929,35 @@ public class AnimalSheet extends Sheet {
 	}
 
 	@Override
-	public void setHero(final JSONObject hero) {
-		super.setHero(hero);
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
 
-		settings.clear();
+		settingsPage.clear();
 		super.load();
-		settings.addNode(animalsBox);
+		settingsPage.addNode(animalsBox);
 
 		animalsBox.getChildren().remove(0, animalsBox.getChildren().size() - 1);
+		animalControls.clear();
 		types.clear();
 		additionalAttacks.clear();
 		showProsCons.clear();
 		additionalProConRows.clear();
+		showArmor.clear();
+		additionalArmorRows.clear();
 		showSkills.clear();
+		ownSkillsOnly.clear();
 		showInventory.clear();
 		additionalInventoryRows.clear();
 
 		animals = hero != null ? hero.getArrOrDefault("Tiere", null) : null;
 		if (animals != null) {
+			final JSONObject namedAnimals = settings.getObjOrDefault("Tiere", new JSONObject(null));
 			for (int i = 0; i < animals.size(); ++i) {
 				final JSONObject animal = animals.getObj(i);
-				final TitledPane control = addAnimal(animal.getObj("Biografie").getStringOrDefault("Typ", "Tier"));
-				control.setText(animal.getObj("Biografie").getStringOrDefault("Name", ""));
+				final String name = animal.getObj("Biografie").getStringOrDefault("Name", "");
+				final String type = animal.getObj("Biografie").getStringOrDefault("Typ", "Tier");
+				final TitledPane control = addAnimal(type, namedAnimals.getObjOrDefault(name, new JSONObject(null)));
+				control.setText(name);
 				control.setContextMenu(null);
 			}
 		}

@@ -58,7 +58,6 @@ import jsonant.value.JSONObject;
 public class RitualsSheet extends Sheet {
 	private static JSONObject apport;
 
-	private boolean firstTable = true;
 	private final BooleanProperty ownRitualsOnly = new SimpleBooleanProperty(false);
 
 	private final float fontSize = 7;
@@ -77,18 +76,7 @@ public class RitualsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		if (separatePage.get()) {
-			header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll);
-		}
-
-		final Consumer<TableEvent> ritualHeader = header;
-		header = ritualHeader.andThen(event -> {
-			try {
-				bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, 536, 59, 10) - 5;
-			} catch (final IOException e) {
-				ErrorLogger.logError(e);
-			}
-		});
+		header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll);
 
 		final JSONObject rituals = ResourceManager.getResource("data/Rituale");
 		final JSONObject ritualGroupData = ResourceManager.getResource("data/Ritualgruppen");
@@ -96,9 +84,6 @@ public class RitualsSheet extends Sheet {
 		apport = rituals.getObj("Allgemeine Rituale").getObj("Apport");
 
 		final JSONArray items = hero != null ? hero.getObj("Besitz").getArrOrDefault("Ausrüstung", null) : null;
-
-		ritualKnowledgeTable = getRitualKnowledgeTable(false);
-		firstTable = true;
 
 		final List<Table> landscapeTables = new ArrayList<>();
 		final List<Table> portraitTables = new ArrayList<>();
@@ -151,63 +136,85 @@ public class RitualsSheet extends Sheet {
 			}
 		}
 
-		if (!landscapeTables.isEmpty()) {
+		if (SheetUtil.matchesPageSize(document, PDRectangle.A4)) {
+			pageSize = PDRectangle.A4;
+			height = 771;
+		} else {
 			pageSize = SheetUtil.landscape;
 		}
+
 		startCreate(document);
 
-		if (!landscapeTables.isEmpty()) {
-			if (commonRituals != null) {
-				bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
-				firstTable = false;
-				bottom.bottom = commonRituals.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable.getHeight(818), 10) - 5;
-			}
+		boolean firstTable = true;
 
-			for (final Table table : landscapeTables) {
-				if (firstTable) {
-					bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
-					firstTable = false;
-				}
-				table.addEventHandler(EventType.BEGIN_PAGE, header);
-				bottom.bottom = table.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable.getHeight(818), 10) - 5;
+		ritualKnowledgeTable = getRitualKnowledgeTable(pageSize != SheetUtil.landscape);
+
+		if (commonRituals != null) {
+			firstTable = false;
+			if (pageSize == SheetUtil.landscape) {
+				bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
+				bottom.bottom = commonRituals.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable.getHeight(818), 10) - 5;
+			} else {
+				bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
+				bottom.bottom = commonRituals.render(document, 571, 12, bottom.bottom, 77 + ritualKnowledgeTable.getHeight(571), 10) - 5;
 			}
 		}
 
-		if (!portraitTables.isEmpty()) {
-			firstTable = true;
-			ritualKnowledgeTable = getRitualKnowledgeTable(true);
+		final Consumer<TableEvent> ritualHeader = header;
 
+		for (int i = 0; i < 2; ++i) {
 			header = ritualHeader.andThen(event -> {
 				try {
-					bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, 771, 72, 10) - 5;
+					if (pageSize == SheetUtil.landscape) {
+						bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, 536, 59, 10) - 5;
+					} else {
+						bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, 771, 72, 10) - 5;
+					}
 				} catch (final IOException e) {
 					ErrorLogger.logError(e);
 				}
 			});
 
-			if (separatePage.get() || !SheetUtil.matchesPageSize(document, PDRectangle.A4)) {
-				final PDPage page = new PDPage(PDRectangle.A4);
-				document.addPage(page);
-				final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
-				ritualHeader.accept(new TableEvent(document, stream, 0, PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight()));
-				stream.close();
-				bottom = new BottomObserver(771);
-			}
-
-			if (landscapeTables.isEmpty() && commonRituals != null) {
-				bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
-				firstTable = false;
-				bottom.bottom = commonRituals.render(document, 571, 12, bottom.bottom, 77 + ritualKnowledgeTable.getHeight(571), 10) - 5;
-			}
-
-			for (final Table table : portraitTables) {
-				if (firstTable) {
-					bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
-					firstTable = false;
+			if (pageSize == SheetUtil.landscape) {
+				if (!SheetUtil.matchesPageSize(document, SheetUtil.landscape)) {
+					final PDPage page = new PDPage(SheetUtil.landscape);
+					document.addPage(page);
+					final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
+					ritualHeader.accept(new TableEvent(document, stream, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
+					stream.close();
+					bottom = new BottomObserver(536);
 				}
-				table.addEventHandler(EventType.BEGIN_PAGE, header);
-				bottom.bottom = table.render(document, 571, 12, bottom.bottom, 77 + ritualKnowledgeTable.getHeight(571), 10) - 5;
+				for (final Table table : landscapeTables) {
+					if (firstTable) {
+						bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
+						firstTable = false;
+					}
+					table.addEventHandler(EventType.BEGIN_PAGE, header);
+					bottom.bottom = table.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable.getHeight(818), 10) - 5;
+				}
+			} else {
+				if (!SheetUtil.matchesPageSize(document, PDRectangle.A4)) {
+					final PDPage page = new PDPage(PDRectangle.A4);
+					document.addPage(page);
+					final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
+					ritualHeader.accept(new TableEvent(document, stream, 0, PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight()));
+					stream.close();
+					bottom = new BottomObserver(771);
+				}
+				for (final Table table : portraitTables) {
+					if (firstTable) {
+						bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
+						firstTable = false;
+					}
+					table.addEventHandler(EventType.BEGIN_PAGE, header);
+					bottom.bottom = table.render(document, 571, 12, bottom.bottom, 77 + ritualKnowledgeTable.getHeight(571), 10) - 5;
+				}
 			}
+
+			pageSize = pageSize == SheetUtil.landscape ? PDRectangle.A4 : SheetUtil.landscape;
+			ritualKnowledgeTable = getRitualKnowledgeTable(pageSize != SheetUtil.landscape);
+
+			firstTable = true;
 		}
 
 		endCreate(document);
@@ -728,6 +735,30 @@ public class RitualsSheet extends Sheet {
 		}
 	}
 
+	private List<String> getRequiredKnowledges(final String groupName) {
+		final List<String> requiredKnowledges = new LinkedList<>();
+		final JSONObject ritualGroups = ResourceManager.getResource("data/Rituale");
+		final JSONObject group = ritualGroups.getObjOrDefault(groupName, new JSONObject(null));
+		for (final String ritual : group.keySet()) {
+			final JSONObject preconditions = group.getObj(ritual).getObjOrDefault("Voraussetzungen", null);
+			final JSONObject knowledges = preconditions != null
+					? preconditions.getObj("Vorteile/Nachteile/Sonderfertigkeiten").getObj("Muss").getObjOrDefault("Ritualkenntnis", null) : null;
+			final JSONObject required = knowledges != null ? knowledges.getObj("Auswahl") : null;
+			if (required != null && required.containsKey("Muss")) {
+				requiredKnowledges.add(required.getString("Muss"));
+			} else if (required != null && required.containsKey("Wahl")) {
+				final JSONArray choice = required.getArr("Wahl");
+				for (int i = 0; i < choice.size(); ++i) {
+					requiredKnowledges.add(choice.getString(i));
+				}
+			} else {
+				requiredKnowledges.clear();
+				break;
+			}
+		}
+		return requiredKnowledges;
+	}
+
 	private Table getRitualKnowledgeTable(final boolean portrait) {
 		final int numCols = portrait ? 4 : 6;
 
@@ -834,6 +865,25 @@ public class RitualsSheet extends Sheet {
 		return table;
 	}
 
+	@Override
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		settings.put("Leerseite einfügen", emptyPage.get());
+		settings.put("Nur erlernte/verbilligte Rituale", ownRitualsOnly.get());
+		final JSONObject groups = new JSONObject(settings);
+		for (final String name : ritualGroupCounts.keySet()) {
+			final Property<?> ritualGroupCount = ritualGroupCounts.get(name);
+			if (ritualGroupCount instanceof IntegerProperty) {
+				groups.put(name, ((IntegerProperty) ritualGroupCount).get());
+			} else {
+				groups.put(name, ((BooleanProperty) ritualGroupCount).get());
+			}
+		}
+		settings.put("Gruppen", groups);
+		return settings;
+	}
+
 	private void ifHas(final String key, final JSONObject actualGroup, final Consumer<JSONObject> function) {
 		DSAUtil.foreach(o -> true, (name, ritual) -> {
 			if (ritual.containsKey(key) && !"Apport".equals(name)) {
@@ -847,93 +897,84 @@ public class RitualsSheet extends Sheet {
 	@Override
 	public void load() {
 		super.load();
-		settings.addBooleanChoice("Nur erlernte/verbilligte Rituale", ownRitualsOnly);
+		settingsPage.addBooleanChoice("Nur erlernte/verbilligte Rituale", ownRitualsOnly);
 		final JSONObject ritualGroupData = ResourceManager.getResource("data/Ritualgruppen");
 		for (final String ritualGroupName : ritualGroupData.keySet()) {
 			if (ritualGroupData.getObj(ritualGroupName).getString("Ritualobjekt") != null) {
 				final IntegerProperty property = new SimpleIntegerProperty(0);
 				ritualGroupCounts.put(ritualGroupName, property);
-				settings.addIntegerChoice("Zusätzliche Tabellen für " + ritualGroupName, property, 0, 5);
+				settingsPage.addIntegerChoice("Zusätzliche Tabellen für " + ritualGroupName, property, 0, 5);
 			} else {
 				final BooleanProperty property = new SimpleBooleanProperty(false);
 				ritualGroupCounts.put(ritualGroupName, property);
-				settings.addBooleanChoice(ritualGroupName, property);
+				settingsPage.addBooleanChoice(ritualGroupName, property);
 			}
 		}
 	}
 
 	@Override
-	public void setHero(final JSONObject hero) {
-		super.setHero(hero);
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		ownRitualsOnly.set(settings.getBoolOrDefault("Nur erlernte/verbilligte Rituale", false));
 
-		for (final String key : ritualGroupCounts.keySet()) {
-			final Object property = ritualGroupCounts.get(key);
-			if (property instanceof IntegerProperty) {
-				((IntegerProperty) property).set(0);
-			} else if (property instanceof BooleanProperty) {
-				((BooleanProperty) property).set(false);
-			}
-		}
-		if (hero != null) {
-			final JSONObject ritualGroups = ResourceManager.getResource("data/Rituale");
-			final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", null);
-			for (final String key : ritualGroupCounts.keySet()) {
-				final List<String> requiredKnowledges = new LinkedList<>();
-				final JSONObject group = ritualGroups.getObj(key);
-				for (final String ritual : group.keySet()) {
-					final JSONObject preconditions = group.getObj(ritual).getObjOrDefault("Voraussetzungen", null);
-					final JSONObject knowledges = preconditions != null
-							? preconditions.getObj("Vorteile/Nachteile/Sonderfertigkeiten").getObj("Muss").getObjOrDefault("Ritualkenntnis", null) : null;
-					final JSONObject required = knowledges != null ? knowledges.getObj("Auswahl") : null;
-					if (required != null && required.containsKey("Muss")) {
-						requiredKnowledges.add(required.getString("Muss"));
-					} else if (required != null && required.containsKey("Wahl")) {
-						final JSONArray choice = required.getArr("Wahl");
-						for (int i = 0; i < choice.size(); ++i) {
-							requiredKnowledges.add(choice.getString(i));
-						}
+		final JSONObject groups = settings.getObjOrDefault("Gruppen", new JSONObject(null));
+		for (final String name : ritualGroupCounts.keySet()) {
+			final Property<?> ritualGroupCount = ritualGroupCounts.get(name);
+			if (ritualGroupCount instanceof IntegerProperty) {
+				int value = 0;
+				if (groups.containsKey(name) && groups.getInt(name) != null) {
+					value = groups.getInt(name);
+				} else if ("Stabzauber".equals(name)) {
+					value = 0;
+				} else if (hero != null) {
+					final List<String> requiredKnowledges = getRequiredKnowledges(name);
+					if (requiredKnowledges.isEmpty()) {
+						value = 1;
 					} else {
-						requiredKnowledges.clear();
-						break;
-					}
-				}
-				if (requiredKnowledges.isEmpty()) {
-					final Object property = ritualGroupCounts.get(key);
-					if (property instanceof IntegerProperty) {
-						((IntegerProperty) property).set(1);
-					} else if (property instanceof BooleanProperty) {
-						((BooleanProperty) property).set(true);
-					}
-				} else if (ritualKnowledges != null) {
-					for (int i = 0; i < ritualKnowledges.size(); ++i) {
-						if (requiredKnowledges.contains(ritualKnowledges.getObj(i).getString("Auswahl"))) {
-							final Object property = ritualGroupCounts.get(key);
-							if (property instanceof IntegerProperty) {
-								((IntegerProperty) property).set(1);
-							} else if (property instanceof BooleanProperty) {
-								((BooleanProperty) property).set(true);
+						final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", new JSONArray(null));
+						for (int i = 0; i < ritualKnowledges.size(); ++i) {
+							if (requiredKnowledges.contains(ritualKnowledges.getObj(i).getString("Auswahl"))) {
+								value = 1;
+								break;
 							}
-							break;
 						}
 					}
 				}
-			}
-			if (hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen")) {
-				((BooleanProperty) ritualGroupCounts.get("Zauberzeichen")).set(true);
-				((BooleanProperty) ritualGroupCounts.get("Bann- und Schutzkreise")).set(true);
+				((IntegerProperty) ritualGroupCount).set(groups.getIntOrDefault(name, value));
 			} else {
-				((BooleanProperty) ritualGroupCounts.get("Zauberzeichen")).set(false);
-				((BooleanProperty) ritualGroupCounts.get("Bann- und Schutzkreise")).set(false);
-			}
-			if (hero.getObj("Zauber").containsKey("Invocatio minor") || hero.getObj("Zauber").containsKey("Invocatio maior")) {
-				((BooleanProperty) ritualGroupCounts.get("Bann- und Schutzkreise")).set(true);
-			}
-			((BooleanProperty) ritualGroupCounts.get("Elfenlieder")).set(false);
-			if (hero.getObj("Vorteile").containsKey("Zweistimmiger Gesang")) {
-				((BooleanProperty) ritualGroupCounts.get("Elfenlieder")).set(true);
+				boolean value = false;
+				if (groups.containsKey(name) && groups.getBool(name) != null) {
+					value = groups.getBool(name);
+				} else if (hero != null) {
+					switch (name) {
+					case "Zauberzeichen":
+						value = hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen");
+						break;
+					case "Bann- und Schutzkreise":
+						value = hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen") || hero.getObj("Zauber").containsKey("Invocatio minor")
+								|| hero.getObj("Zauber").containsKey("Invocatio maior");
+						break;
+					case "Elfenlieder":
+						value = hero.getObj("Vorteile").containsKey("Zweistimmiger Gesang");
+						break;
+					default:
+						final List<String> requiredKnowledges = getRequiredKnowledges(name);
+						if (requiredKnowledges.isEmpty()) {
+							value = true;
+						} else {
+							final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", new JSONArray(null));
+							for (int i = 0; i < ritualKnowledges.size(); ++i) {
+								if (requiredKnowledges.contains(ritualKnowledges.getObj(i).getString("Auswahl"))) {
+									value = true;
+									break;
+								}
+							}
+						}
+					}
+				}
+				((BooleanProperty) ritualGroupCount).set(value);
 			}
 		}
-		((IntegerProperty) ritualGroupCounts.get("Stabzauber")).set(0);
 	}
 
 	@Override

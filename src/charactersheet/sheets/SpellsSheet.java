@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
 
 import boxtable.cell.Cell;
 import boxtable.cell.TextCell;
@@ -57,7 +56,7 @@ public class SpellsSheet extends Sheet {
 
 	public SpellsSheet() {
 		super(536);
-		pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
+		pageSize = SheetUtil.landscape;
 	}
 
 	private void addSpoMo(final Table table, final String name, final JSONObject variant, final JSONObject base) {
@@ -87,9 +86,7 @@ public class SpellsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		if (separatePage.get()) {
-			header = SheetUtil.createHeader("Zauberbrief", true, true, false, hero, fill, fillAll);
-		}
+		header = SheetUtil.createHeader("Zauberbrief", true, true, false, hero, fill, fillAll);
 
 		startCreate(document);
 
@@ -463,18 +460,49 @@ public class SpellsSheet extends Sheet {
 	}
 
 	@Override
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		final JSONArray reps = new JSONArray(settings);
+		for (final String name : representations.keySet()) {
+			if (representations.get(name).get()) {
+				reps.add(name);
+			}
+		}
+		settings.put("Repräsentationen", reps);
+		settings.put("Zusätzliche Zeilen für Zauber", additionalRows.get());
+		settings.put("Spontane Modifikationen", spoMoTable.get());
+		settings.put("Merkmale", traitTable.get());
+		settings.put("Zielobjekte", targetTable.get());
+		return settings;
+	}
+
+	@Override
 	public void load() {
 		super.load();
 		final JSONObject representationNames = ResourceManager.getResource("data/Repraesentationen");
 		for (final String representationName : representationNames.keySet()) {
 			representations.put(representationName, new SimpleBooleanProperty(false));
 			final JSONObject representation = representationNames.getObj(representationName);
-			settings.addBooleanChoice("Repräsentation " + representation.getStringOrDefault("Name", "unbekannt"), representations.get(representationName));
+			settingsPage.addBooleanChoice("Repräsentation " + representation.getStringOrDefault("Name", "unbekannt"), representations.get(representationName));
 		}
-		settings.addIntegerChoice("Zusätzliche Zeilen für Zauber", additionalRows, 0, 60);
-		settings.addBooleanChoice("Spontane Modifikationen", spoMoTable);
-		settings.addBooleanChoice("Merkmale", traitTable);
-		settings.addBooleanChoice("Zielobjekte", targetTable);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Zauber", additionalRows, 0, 60);
+		settingsPage.addBooleanChoice("Spontane Modifikationen", spoMoTable);
+		settingsPage.addBooleanChoice("Merkmale", traitTable);
+		settingsPage.addBooleanChoice("Zielobjekte", targetTable);
+	}
+
+	@Override
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		final JSONArray reps = settings.getArrOrDefault("Repräsentationen", new JSONArray(null));
+		for (final String name : representations.keySet()) {
+			representations.get(name).set(reps.contains(name));
+		}
+		additionalRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Zauber", 5));
+		spoMoTable.set(settings.getBoolOrDefault("Spontane Modifikationen", true));
+		traitTable.set(settings.getBoolOrDefault("Merkmale", true));
+		targetTable.set(settings.getBoolOrDefault("Zielobjekte", true));
 	}
 
 	@Override

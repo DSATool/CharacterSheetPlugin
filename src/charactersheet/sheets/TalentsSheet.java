@@ -324,9 +324,7 @@ public class TalentsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		if (separatePage.get()) {
-			header = SheetUtil.createHeader("Talentbrief", true, true, false, hero, fill, fillAll);
-		}
+		header = SheetUtil.createHeader("Talentbrief", true, true, false, hero, fill, fillAll);
 
 		startCreate(document);
 
@@ -344,15 +342,20 @@ public class TalentsSheet extends Sheet {
 			}
 		}
 
+		float metaBottom = bottom.bottom;
+
 		if (showMetaTalents.get()) {
 			final float currentBottom = bottom.bottom;
 			addMetaTable(document);
+			metaBottom = bottom.bottom;
 			bottom.bottom = currentBottom;
 		}
 
 		if (hero != null) {
 			addSpecialTable(document);
 		}
+
+		bottom.bottom = Math.min(metaBottom, bottom.bottom);
 
 		endCreate(document);
 	}
@@ -854,15 +857,32 @@ public class TalentsSheet extends Sheet {
 	}
 
 	@Override
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		settings.put("Leerseite einfügen", emptyPage.get());
+		settings.put("Nur erlernte Talente anzeigen", ownTalentsOnly.get());
+		if (ownTalentsOnly.get()) {
+			settings.put("Zusätzliche Zeilen für Talente", additionalTalentRows.get());
+		}
+		settings.put("Basistalente gruppieren", groupBasis.get());
+		settings.put("Basistalente markieren", markBasis.get());
+		settings.put("Leittalente anzeigen", primaryTalents.get());
+		settings.put("Metatalente anzeigen", showMetaTalents.get());
+		settings.put("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent.get());
+		return settings;
+	}
+
+	@Override
 	public void load() {
 		super.load();
-		settings.addBooleanChoice("Nur erlernte Talente anzeigen", ownTalentsOnly);
-		final ReactiveSpinner<Integer> talentRows = settings.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 15);
-		settings.addBooleanChoice("Basistalente gruppieren", groupBasis);
-		settings.addBooleanChoice("Basistalente markieren", markBasis);
-		settings.addBooleanChoice("Leittalente anzeigen", primaryTalents);
-		settings.addBooleanChoice("Metatalente anzeigen", showMetaTalents);
-		settings.addBooleanChoice("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent);
+		settingsPage.addBooleanChoice("Nur erlernte Talente anzeigen", ownTalentsOnly);
+		final ReactiveSpinner<Integer> talentRows = settingsPage.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 15);
+		settingsPage.addBooleanChoice("Basistalente gruppieren", groupBasis);
+		settingsPage.addBooleanChoice("Basistalente markieren", markBasis);
+		settingsPage.addBooleanChoice("Leittalente anzeigen", primaryTalents);
+		settingsPage.addBooleanChoice("Metatalente anzeigen", showMetaTalents);
+		settingsPage.addBooleanChoice("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent);
 
 		talentRows.setDisable(true);
 		ownTalentsOnly.addListener((o, oldV, newV) -> {
@@ -871,9 +891,15 @@ public class TalentsSheet extends Sheet {
 	}
 
 	@Override
-	public void setHero(final JSONObject hero) {
-		super.setHero(hero);
-		primaryTalents.set(hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht"));
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		ownTalentsOnly.set(settings.getBoolOrDefault("Nur erlernte Talente anzeigen", false));
+		additionalTalentRows.set(settings.getIntOrDefault("Nur erlernte Talente anzeigen", 3));
+		groupBasis.set(settings.getBoolOrDefault("Basistalente gruppieren", true));
+		markBasis.set(settings.getBoolOrDefault("Basistalente markieren", false));
+		primaryTalents.set(settings.getBoolOrDefault("Leittalente anzeigen", hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht")));
+		showMetaTalents.set(settings.getBoolOrDefault("Metatalente anzeigen", true));
+		basicValuesInWeaponTalent.set(settings.getBoolOrDefault("Basiswerte bei AT/PA-Verteilung berücksichtigen", true));
 	}
 
 	@Override

@@ -493,24 +493,41 @@ public class ClericSheet extends Sheet {
 	}
 
 	@Override
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		settings.put("Leerseite einfügen", emptyPage.get());
+		settings.put("Gottheit", deity.get());
+		settings.put("Modifikationen", modTable.get());
+		settings.put("Kategorien", categoriesTable.get());
+		return settings;
+	}
+
+	@Override
 	public void load() {
 		super.load();
 		final Set<String> deities = ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").keySet();
 		deity.set(deities.iterator().next());
-		settings.addStringChoice("Gottheit", deity, deities);
-		settings.addBooleanChoice("Modifikationen", modTable);
-		settings.addBooleanChoice("Kategorien", categoriesTable);
+		settingsPage.addStringChoice("Gottheit", deity, deities);
+		settingsPage.addBooleanChoice("Modifikationen", modTable);
+		settingsPage.addBooleanChoice("Kategorien", categoriesTable);
 	}
 
 	@Override
-	public void setHero(final JSONObject hero) {
-		super.setHero(hero);
-		if (HeroUtil.isClerical(hero, true)) {
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		if (settings.containsKey("Gottheit")) {
+			deity.set(settings.getString("Gottheit"));
+		} else if (HeroUtil.isClerical(hero, true)) {
 			final JSONArray liturgyKnowledge = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Liturgiekenntnis", null);
 			if (liturgyKnowledge != null && liturgyKnowledge.size() > 0) {
 				deity.set(liturgyKnowledge.getObj(0).getString("Auswahl"));
 			}
+		} else {
+			deity.set(null);
 		}
+		modTable.set(settings.getBoolOrDefault("Modifikationen", true));
+		categoriesTable.set(settings.getBoolOrDefault("Kategorien", true));
 	}
 
 	@Override

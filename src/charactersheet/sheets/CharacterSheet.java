@@ -45,6 +45,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.control.Button;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
@@ -479,7 +480,7 @@ public class CharacterSheet extends Sheet {
 									value = actualProOrCon.getIntOrDefault("Stufe", 0).toString();
 								}
 								cost = Integer
-										.toString((int) Math.round(proOrCon.getDoubleOrDefault("Kosten", 0.0 * actualProOrCon.getIntOrDefault("Stufe", 0))));
+										.toString((int) Math.round(proOrCon.getDoubleOrDefault("Kosten", 0.0) * actualProOrCon.getIntOrDefault("Stufe", 0)));
 							} else {
 								cost = proOrCon.getIntOrDefault("Kosten", 0).toString();
 							}
@@ -520,9 +521,7 @@ public class CharacterSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		if (separatePage.get()) {
-			header = SheetUtil.createHeader("Heldenbrief", false, false, false, hero, fill, fillAll);
-		}
+		header = SheetUtil.createHeader("Heldenbrief", false, false, false, hero, fill, fillAll);
 
 		startCreate(document);
 
@@ -549,28 +548,69 @@ public class CharacterSheet extends Sheet {
 	}
 
 	@Override
-	public void load() {
-		super.load();
-		settings.addIntegerChoice("Zusätzliche Zeilen für Vorteile", additionalProRows, 0, 30);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Nachteile", additionalConRows, 0, 30);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Verbindungen", additionalConnectionRows, 0, 30);
-		settings.addBooleanChoice("Alter", showAge);
-		settings.addBooleanChoice("Geburtstag", showBirthday);
-		settings.addBooleanChoice("Bankguthaben", showBankMoney);
-		settings.addBooleanChoice("Astralenergie", showAsP);
-		settings.addBooleanChoice("Karmaenergie", showKaP);
-		settings.addBooleanChoice("Vorteile", showPros);
-		settings.addBooleanChoice("Nachteile", showCons);
-		settings.addBooleanChoice("Verbindungen", showConnections);
-		settings.addBooleanChoice("Bild anzeigen", showImage);
-		settings.addFileChoice("Bild", image, "*.jpg, *.png, *.gif", Arrays.asList("*.jpg", "*.png", "*.gif"));
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		settings.put("Leerseite einfügen", emptyPage.get());
+		settings.put("Zusätzliche Zeilen für Vorteile", additionalProRows.get());
+		settings.put("Zusätzliche Zeilen für Nachteile", additionalConRows.get());
+		settings.put("Zusätzliche Zeilen für Verbindungen", additionalConnectionRows.get());
+		settings.put("Alter", showAge.get());
+		settings.put("Geburtstag", showBirthday.get());
+		settings.put("Bankguthaben", showBankMoney.get());
+		settings.put("Astralenergie", showAsP.get());
+		settings.put("Karmaenergie", showKaP.get());
+		settings.put("Vorteile", showPros.get());
+		settings.put("Nachteile", showCons.get());
+		settings.put("Verbindungen", showConnections.get());
+		settings.put("Bild anzeigen", showImage.get());
+		if (showImage.get()) {
+			settings.put("Bild", image.get().getAbsolutePath());
+		}
+		return settings;
 	}
 
 	@Override
-	public void setHero(final JSONObject hero) {
-		super.setHero(hero);
-		showAsP.set(HeroUtil.isMagical(hero));
-		showKaP.set(HeroUtil.isClerical(hero, false));
+	public void load() {
+		super.load();
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Vorteile", additionalProRows, 0, 30);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Nachteile", additionalConRows, 0, 30);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Verbindungen", additionalConnectionRows, 0, 30);
+		settingsPage.addBooleanChoice("Alter", showAge);
+		settingsPage.addBooleanChoice("Geburtstag", showBirthday);
+		settingsPage.addBooleanChoice("Bankguthaben", showBankMoney);
+		settingsPage.addBooleanChoice("Astralenergie", showAsP);
+		settingsPage.addBooleanChoice("Karmaenergie", showKaP);
+		settingsPage.addBooleanChoice("Vorteile", showPros);
+		settingsPage.addBooleanChoice("Nachteile", showCons);
+		settingsPage.addBooleanChoice("Verbindungen", showConnections);
+		settingsPage.addBooleanChoice("Bild anzeigen", showImage);
+		final Button imageButton = settingsPage.addFileChoice("Bild", image, "*.jpg, *.png, *.gif", Arrays.asList("*.jpg", "*.png", "*.gif"));
+
+		showImage.addListener((o, oldV, newV) -> {
+			imageButton.setDisable(!newV);
+		});
+	}
+
+	@Override
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		additionalProRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Vorteile", 5));
+		additionalConRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Nachteile", 5));
+		additionalConnectionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Verbindungen", 5));
+		showAge.set(settings.getBoolOrDefault("Alter", false));
+		showBirthday.set(settings.getBoolOrDefault("Geburtstag", false));
+		showBankMoney.set(settings.getBoolOrDefault("Bankguthaben", false));
+		showAsP.set(settings.getBoolOrDefault("Astralenergie", HeroUtil.isMagical(hero)));
+		showKaP.set(settings.getBoolOrDefault("Karmaenergie", HeroUtil.isClerical(hero, false)));
+		showPros.set(settings.getBoolOrDefault("Vorteile", true));
+		showCons.set(settings.getBoolOrDefault("Nachteile", true));
+		showConnections.set(settings.getBoolOrDefault("Verbindungen", false));
+		showImage.set(settings.getBoolOrDefault("Bild anzeigen", false));
+		image.set(new File(settings.getStringOrDefault("Bild", "Keines")));
+		if (!image.get().exists()) {
+			image.set(null);
+		}
 	}
 
 	@Override

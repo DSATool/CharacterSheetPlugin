@@ -1062,18 +1062,52 @@ public class CompactSheet extends Sheet {
 	}
 
 	@Override
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Leerseite einfügen", emptyPage.get());
+		settings.put("Gesamtrüstung", showTotalArmor.get());
+		settings.put("Zonenrüstung", showZoneArmor.get());
+		settings.put("Zusätzliche Zeilen für Nahkampfwaffen", additionalCloseCombatWeaponRows.get());
+		settings.put("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows.get());
+		settings.put("Zusätzliche Zeilen für Rüstung", additionalArmorRows.get());
+		settings.put("Zusätzliche Zeilen für Talente", additionalTalentRows.get());
+		settings.put("Zauber", showSpells.get());
+		settings.put("Zusätzliche Zeilen für Zauber", additionalSpellRows.get());
+		settings.put("Basistalente gruppieren", groupBasis.get());
+		settings.put("Basistalente markieren", markBasis.get());
+		return settings;
+	}
+
+	@Override
 	public void load() {
 		super.load();
-		settings.addBooleanChoice("Gesamtrüstung", showTotalArmor);
-		settings.addBooleanChoice("Zonenrüstung", showZoneArmor);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Nahkampfwaffen", additionalCloseCombatWeaponRows, 0, 30);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows, 0, 30);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Rüstung", additionalArmorRows, 0, 30);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 60);
-		settings.addBooleanChoice("Zauber", showSpells);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Zauber", additionalSpellRows, 0, 60);
-		settings.addBooleanChoice("Basistalente gruppieren", groupBasis);
-		settings.addBooleanChoice("Basistalente markieren", markBasis);
+		settingsPage.addBooleanChoice("Gesamtrüstung", showTotalArmor);
+		settingsPage.addBooleanChoice("Zonenrüstung", showZoneArmor);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Nahkampfwaffen", additionalCloseCombatWeaponRows, 0, 30);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows, 0, 30);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Rüstung", additionalArmorRows, 0, 30);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 60);
+		settingsPage.addBooleanChoice("Zauber", showSpells);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Zauber", additionalSpellRows, 0, 60);
+		settingsPage.addBooleanChoice("Basistalente gruppieren", groupBasis);
+		settingsPage.addBooleanChoice("Basistalente markieren", markBasis);
+	}
+
+	@Override
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		showTotalArmor.set(
+				settings.getBoolOrDefault("Gesamtrüstung", !"Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart"))));
+		showZoneArmor.set(
+				settings.getBoolOrDefault("Zonenrüstung", "Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart"))));
+		additionalCloseCombatWeaponRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Nahkampfwaffen", 0));
+		additionalRangedWeaponRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Fernkampfwaffen", 0));
+		additionalArmorRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Rüstung", 0));
+		additionalTalentRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Talente", 0));
+		showSpells.set(settings.getBoolOrDefault("Zauber", true));
+		additionalSpellRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Zauber", 0));
+		groupBasis.set(settings.getBoolOrDefault("Basistalente gruppieren", true));
+		markBasis.set(settings.getBoolOrDefault("Basistalente markieren", false));
 	}
 
 	@Override

@@ -51,7 +51,7 @@ public abstract class Sheet implements HeroController {
 	protected boolean fill;
 	protected boolean fillAll;
 	protected JSONObject hero;
-	protected final SettingsPage settings = new SettingsPage();
+	protected final SettingsPage settingsPage = new SettingsPage();
 	protected final BooleanProperty separatePage = new SimpleBooleanProperty(true);
 	protected final BooleanProperty emptyPage = new SimpleBooleanProperty(false);
 	protected PDRectangle pageSize = PDRectangle.A4;
@@ -81,15 +81,22 @@ public abstract class Sheet implements HeroController {
 	}
 
 	public Node getControl() {
-		return settings.getControl();
+		return settingsPage.getControl();
 	}
+
+	public abstract JSONObject getSettings(JSONObject parent);
 
 	public void load() {
 		if (canBeSeparate) {
-			settings.addBooleanChoice("Als eigenständigen Bogen drucken", separatePage);
+			settingsPage.addBooleanChoice("Als eigenständigen Bogen drucken", separatePage);
 		}
-		settings.addBooleanChoice("Leerseite einfügen", emptyPage);
-		settings.addSeparator();
+		settingsPage.addBooleanChoice("Leerseite einfügen", emptyPage);
+		settingsPage.addSeparator();
+	}
+
+	public void loadSettings(final JSONObject settings) {
+		separatePage.set(settings.getBoolOrDefault("Als eigenständigen Bogen drucken", true));
+		emptyPage.set(settings.getBoolOrDefault("Leerseite einfügen", false));
 	}
 
 	public void setFill(final boolean fill, final boolean fillAll) {
@@ -100,18 +107,17 @@ public abstract class Sheet implements HeroController {
 	@Override
 	public void setHero(final JSONObject hero) {
 		this.hero = hero;
-	}
-
-	protected void startCreate() {
-		final float oldBottom = separatePage.get() ? height : bottom.bottom;
-		bottom = new BottomObserver(height);
-		bottom.bottom = oldBottom;
+		loadSettings(hero != null && hero.containsKey("Heldenbogen") ? hero.getObj("Heldenbogen").getObjOrDefault(toString(), new JSONObject(null))
+				: new JSONObject(null));
 	}
 
 	protected void startCreate(final PDDocument document) throws IOException {
+		float oldBottom = bottom.bottom;
+
 		if (separatePage.get() || !SheetUtil.matchesPageSize(document, pageSize)) {
 			final PDPage page = new PDPage(pageSize);
 			document.addPage(page);
+			oldBottom = height;
 			if (header != null) {
 				final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
 				header.accept(new TableEvent(document, stream, 0, pageSize.getHeight(), pageSize.getWidth(), pageSize.getHeight()));
@@ -119,7 +125,8 @@ public abstract class Sheet implements HeroController {
 			}
 		}
 
-		startCreate();
+		bottom = new BottomObserver(height);
+		bottom.bottom = oldBottom;
 
 		final PDOutlineItem bookmark = new PDOutlineItem();
 		bookmark.setDestination(document.getPage(document.getNumberOfPages() - 1));

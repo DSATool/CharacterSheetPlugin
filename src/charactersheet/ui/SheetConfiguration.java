@@ -64,12 +64,15 @@ public class SheetConfiguration extends HeroSelector {
 	@FXML
 	private RadioButton fillAll;
 	@FXML
+	private RadioButton fill;
+	@FXML
 	private RadioButton noFill;
-	private final Map<Sheet, Node> sheetControls = new HashMap<>();
 	@FXML
 	private CheckListView<Sheet> sheets;
 	@FXML
 	private StackPane tabArea;
+
+	private final Map<Sheet, Node> sheetControls = new HashMap<>();
 
 	private JSONObject hero;
 
@@ -115,9 +118,11 @@ public class SheetConfiguration extends HeroSelector {
 	}
 
 	private void checkSheets() {
+		final JSONObject settings = hero != null ? hero.getObjOrDefault("Heldenbogen", null) : null;
 		for (final HeroController controller : controllers) {
 			final Sheet sheet = (Sheet) controller;
-			if (sheet.check()) {
+			final boolean checked = settings != null ? settings.containsKey(sheet.toString()) : sheet.check();
+			if (checked) {
 				sheets.getCheckModel().check(sheet);
 			} else {
 				sheets.getCheckModel().clearCheck(sheet);
@@ -209,12 +214,30 @@ public class SheetConfiguration extends HeroSelector {
 		final FileChooser dialog = new FileChooser();
 
 		dialog.setTitle("Datei speichern");
-		dialog.setInitialFileName((hero != null ? hero.getObj("Biografie").getString("Vorname") : "Heldenbogen") + ".pdf");
 		dialog.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("*.pdf", "*.pdf"));
+
+		String name = (hero != null ? hero.getObj("Biografie").getString("Vorname") : "Heldenbogen") + ".pdf";
+		if (hero != null && hero.containsKey("Heldenbogen") && hero.getObj("Heldenbogen").containsKey("Datei")) {
+			final File file = new File(hero.getObj("Heldenbogen").getString("Datei"));
+			dialog.setInitialDirectory(file.getParentFile());
+			name = file.getName();
+		}
+		dialog.setInitialFileName(name);
 
 		final File file = dialog.showSaveDialog(null);
 		if (file != null) {
 			create(file);
+			if (hero != null) {
+				final JSONObject settings = new JSONObject(hero);
+				settings.put("Ausfüllen", noFill.isSelected() ? "Nicht" : fillAll.isSelected() ? "Alles" : "Unveränderliches");
+				settings.put("Datei", file.getAbsolutePath());
+				for (final Sheet sheet : sheets.getItems()) {
+					if (sheets.getCheckModel().isChecked(sheet)) {
+						settings.put(sheet.toString(), sheet.getSettings(settings));
+					}
+				}
+				hero.put("Heldenbogen", settings);
+			}
 		}
 	}
 
@@ -222,6 +245,20 @@ public class SheetConfiguration extends HeroSelector {
 	protected void setHero(final int index) {
 		super.setHero(index);
 		hero = heroes.get(index);
+		if (hero != null && hero.containsKey("Heldenbogen")) {
+			final String filled = hero.getObj("Heldenbogen").getStringOrDefault("Ausfüllen", "Unveränderliches");
+			switch (filled) {
+			case "Nicht":
+				noFill.setSelected(true);
+				break;
+			case "Alles":
+				fillAll.setSelected(true);
+				break;
+			default:
+				fill.setSelected(true);
+				break;
+			}
+		}
 		checkSheets();
 	}
 

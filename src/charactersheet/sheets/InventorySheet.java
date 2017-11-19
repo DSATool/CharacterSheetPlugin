@@ -120,7 +120,7 @@ public class InventorySheet extends Sheet {
 					item = item.getObj("Artefakt");
 				}
 				final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
-				final String actualType = item.getStringOrDefault("Typ", baseItem.getString("Typ"));
+				final String actualType = item.getStringOrDefault("Typ", baseItem.getStringOrDefault("Typ", ""));
 				final String type = types.getOrDefault(actualType, "");
 				String loads = "—";
 				switch (actualType) {
@@ -377,9 +377,7 @@ public class InventorySheet extends Sheet {
 			height = 771;
 		}
 
-		if (separatePage.get()) {
-			header = SheetUtil.createHeader("Ausrüstungsbrief", true, showAttributes.get(), false, hero, fill, fillAll);
-		}
+		header = SheetUtil.createHeader("Ausrüstungsbrief", true, showAttributes.get(), false, hero, fill, fillAll);
 
 		startCreate(document);
 
@@ -403,19 +401,54 @@ public class InventorySheet extends Sheet {
 	}
 
 	@Override
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		settings.put("Leerseite einfügen", emptyPage.get());
+		settings.put("Eigenschaften anzeigen", showAttributes.get());
+		settings.put("Kleidung", showClothing.get());
+		settings.put("Zusätzliche Zeilen für Kleidung", additionalClothingRows.get());
+		settings.put("Wertgegenstände", showValuables.get());
+		settings.put("Zusätzliche Zeilen für Wertgegenstände", additionalValuablesRows.get());
+		settings.put("Tränke", showPotions.get());
+		settings.put("Zusätzliche Zeilen für Tränke", additionalPotionRows.get());
+		settings.put("Artefakte", showArtifacts.get());
+		settings.put("Zusätzliche Zeilen für Artefakte", additionalArtifactRows.get());
+		settings.put("Inventar", showInventory.get());
+		settings.put("Zusätzliche Zeilen für Inventar", additionalInventoryRows.get());
+		return settings;
+	}
+
+	@Override
 	public void load() {
 		super.load();
-		settings.addBooleanChoice("Eigenschaften anzeigen", showAttributes);
-		settings.addBooleanChoice("Kleidung", showClothing);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Kleidung", additionalClothingRows, 0, 200);
-		settings.addBooleanChoice("Wertgegenstände", showValuables);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Wertgegenstände", additionalValuablesRows, 0, 200);
-		settings.addBooleanChoice("Tränke", showPotions);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Tränke", additionalPotionRows, 0, 200);
-		settings.addBooleanChoice("Artefakte", showArtifacts);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Artefakte", additionalArtifactRows, 0, 200);
-		settings.addBooleanChoice("Inventar", showInventory);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Inventar", additionalInventoryRows, 0, 200);
+		settingsPage.addBooleanChoice("Eigenschaften anzeigen", showAttributes);
+		settingsPage.addBooleanChoice("Kleidung", showClothing);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Kleidung", additionalClothingRows, 0, 200);
+		settingsPage.addBooleanChoice("Wertgegenstände", showValuables);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Wertgegenstände", additionalValuablesRows, 0, 200);
+		settingsPage.addBooleanChoice("Tränke", showPotions);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Tränke", additionalPotionRows, 0, 200);
+		settingsPage.addBooleanChoice("Artefakte", showArtifacts);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Artefakte", additionalArtifactRows, 0, 200);
+		settingsPage.addBooleanChoice("Inventar", showInventory);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Inventar", additionalInventoryRows, 0, 200);
+	}
+
+	@Override
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		showAttributes.set(settings.getBoolOrDefault("Eigenschaften anzeigen", false));
+		showClothing.set(settings.getBoolOrDefault("Kleidung", true));
+		additionalClothingRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Kleidung", 20));
+		showValuables.set(settings.getBoolOrDefault("Wertgegenstände", false));
+		additionalValuablesRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Wertgegenstände", 0));
+		showPotions.set(settings.getBoolOrDefault("Tränke", false));
+		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Tränke", 0));
+		showArtifacts.set(settings.getBoolOrDefault("Artefakte", true));
+		additionalArtifactRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Artefakte", 5));
+		showInventory.set(settings.getBoolOrDefault("Inventar", true));
+		additionalInventoryRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Inventar", 60));
 	}
 
 	@Override

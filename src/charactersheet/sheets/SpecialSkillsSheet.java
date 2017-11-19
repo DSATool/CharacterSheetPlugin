@@ -16,6 +16,7 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,10 +34,10 @@ import charactersheet.util.SheetUtil;
 import dsa41basis.hero.ProOrCon;
 import dsa41basis.util.RequirementsUtil;
 import dsatool.resources.ResourceManager;
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
@@ -48,11 +49,10 @@ public class SpecialSkillsSheet extends Sheet {
 		emptyChoiceText.put("Freitext", "");
 	}
 
-	private final BooleanProperty ownSkillsOnly = new SimpleBooleanProperty(false);
 	private final IntegerProperty additionalChoiceRows = new SimpleIntegerProperty(1);
 
 	private final float fontSize = 6;
-	private final Map<String, BooleanProperty> skillGroups = new HashMap<>();
+	private final Map<String, StringProperty> skillGroups = new HashMap<>();
 
 	public SpecialSkillsSheet() {
 		super(788);
@@ -60,9 +60,7 @@ public class SpecialSkillsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		if (separatePage.get()) {
-			header = SheetUtil.createHeader("Sonderfertigkeiten", true, false, false, hero, fill, fillAll);
-		}
+		header = SheetUtil.createHeader("Sonderfertigkeiten", true, false, false, hero, fill, fillAll);
 
 		startCreate(document);
 
@@ -71,8 +69,9 @@ public class SpecialSkillsSheet extends Sheet {
 		endCreate(document);
 	}
 
-	private void fillSkill(final Table table, final String skillName, final JSONObject skill, final JSONObject actualSkill, final JSONObject cheaperSkill) {
-		if (ownSkillsOnly.get() && actualSkill == null && cheaperSkill == null) return;
+	private void fillSkill(final Table table, final boolean ownSkills, final String skillName, final JSONObject skill, final JSONObject actualSkill,
+			final JSONObject cheaperSkill) {
+		if (ownSkills && actualSkill == null && cheaperSkill == null) return;
 
 		String name = skillName;
 		if (skill.containsKey("Auswahl") || skill.containsKey("Freitext")) {
@@ -144,7 +143,7 @@ public class SpecialSkillsSheet extends Sheet {
 		final JSONObject specialSkills = ResourceManager.getResource("data/Sonderfertigkeiten");
 
 		for (final String groupName : specialSkills.keySet()) {
-			if (!skillGroups.get(groupName).get()) {
+			if ("Keine".equals(skillGroups.get(groupName).get())) {
 				continue;
 			}
 
@@ -161,6 +160,8 @@ public class SpecialSkillsSheet extends Sheet {
 				cheaperSkills = hero.getObj("Verbilligte Sonderfertigkeiten");
 			}
 
+			final boolean ownSkills = "Eigene".equals(skillGroups.get(groupName).get());
+
 			for (final String name : group.keySet()) {
 				final JSONObject skill = group.getObj(name);
 				if (!skill.containsKey("Auswahl") || !skill.containsKey("Freitext")) {
@@ -172,7 +173,7 @@ public class SpecialSkillsSheet extends Sheet {
 								final JSONArray actualChoiceSkills = actualSkills.getArr(name);
 								for (int i = 0; i < actualChoiceSkills.size(); ++i) {
 									final JSONObject actualSkill = actualChoiceSkills.getObj(i);
-									fillSkill(table, name, skill, actualSkill, null);
+									fillSkill(table, ownSkills, name, skill, actualSkill, null);
 								}
 							}
 							if (cheaperSkills.containsKey(name)) {
@@ -194,19 +195,19 @@ public class SpecialSkillsSheet extends Sheet {
 										}
 									}
 									if (!found) {
-										fillSkill(table, name, skill, null, cheaperSkill);
+										fillSkill(table, ownSkills, name, skill, null, cheaperSkill);
 									}
 								}
 							}
 						}
 						for (int i = !exists && additionalChoiceRows.get() == 0 ? -1 : 0; i < additionalChoiceRows.get(); ++i) {
-							fillSkill(table, name, skill, null, null);
+							fillSkill(table, ownSkills, name, skill, null, null);
 						}
 					} else {
 						if (hero != null && fill) {
-							fillSkill(table, name, skill, actualSkills.getObjOrDefault(name, null), cheaperSkills.getObjOrDefault(name, null));
+							fillSkill(table, ownSkills, name, skill, actualSkills.getObjOrDefault(name, null), cheaperSkills.getObjOrDefault(name, null));
 						} else {
-							fillSkill(table, name, skill, null, null);
+							fillSkill(table, ownSkills, name, skill, null, null);
 						}
 					}
 				}
@@ -222,14 +223,58 @@ public class SpecialSkillsSheet extends Sheet {
 	}
 
 	@Override
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		settings.put("Leerseite einfügen", emptyPage.get());
+		settings.put("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", additionalChoiceRows.get());
+		final JSONObject groups = new JSONObject(settings);
+		for (final String name : skillGroups.keySet()) {
+			groups.put(name, skillGroups.get(name).get());
+		}
+		settings.put("Gruppen", groups);
+		return settings;
+	}
+
+	@Override
 	public void load() {
 		super.load();
-		settings.addBooleanChoice("Nur erlernte/verbilligte Sonderfertigkeiten anzeigen", ownSkillsOnly);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", additionalChoiceRows, 0, 30);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", additionalChoiceRows, 0, 30);
+
+		final boolean[] lock = new boolean[] { false };
+
+		final StringProperty showGroups = new SimpleStringProperty("");
+		settingsPage.addStringChoice("Sonderfertigkeiten anzeigen", showGroups, Arrays.asList("Alle", "Eigene", "Keine", ""));
+		showGroups.addListener((o, oldV, newV) -> {
+			if (!"".equals(newV)) {
+				lock[0] = true;
+				for (final StringProperty group : skillGroups.values()) {
+					group.setValue(newV);
+				}
+				lock[0] = false;
+			}
+		});
+
 		final JSONObject skillGroupNames = ResourceManager.getResource("data/Sonderfertigkeiten");
 		for (final String skillGroupName : skillGroupNames.keySet()) {
-			skillGroups.put(skillGroupName, new SimpleBooleanProperty(true));
-			settings.addBooleanChoice(skillGroupName, skillGroups.get(skillGroupName));
+			skillGroups.put(skillGroupName, new SimpleStringProperty("Schwarze Gaben".equals(skillGroupName) ? "Eigene" : "Alle"));
+			final StringProperty group = skillGroups.get(skillGroupName);
+			settingsPage.addStringChoice(skillGroupName, skillGroups.get(skillGroupName), Arrays.asList("Alle", "Eigene", "Keine"));
+			group.addListener((o, oldV, newV) -> {
+				if (!lock[0]) {
+					showGroups.setValue("");
+				}
+			});
+		}
+	}
+
+	@Override
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		additionalChoiceRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", 1));
+		final JSONObject groups = settings.getObjOrDefault("Gruppen", new JSONObject(null));
+		for (final String name : skillGroups.keySet()) {
+			skillGroups.get(name).set(groups.getStringOrDefault(name, name.equals("Schwarze Gaben") ? "Eigene" : "Alle"));
 		}
 	}
 

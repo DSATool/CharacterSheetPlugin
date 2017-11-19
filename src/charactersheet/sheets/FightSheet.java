@@ -917,9 +917,7 @@ public class FightSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		if (separatePage.get()) {
-			header = SheetUtil.createHeader("Kampfbrief", true, false, true, hero, fill, fillAll);
-		}
+		header = SheetUtil.createHeader("Kampfbrief", true, false, true, hero, fill, fillAll);
 
 		startCreate(document);
 
@@ -959,18 +957,28 @@ public class FightSheet extends Sheet {
 	}
 
 	@Override
-	public void load() {
-		super.load();
-		settings.addBooleanChoice("Nahkampfwaffen", showCloseCombatWeapons);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Nahkampfwaffen", additionalCloseCombatWeaponRows, 0, 30);
-		settings.addBooleanChoice("Fernkampfwaffen", showRangedCombatWeapons);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows, 0, 30);
-		settings.addBooleanChoice("Geschosstypen", showAmmunition);
-		settings.addBooleanChoice("Waffenloser Kampf", showInfight);
-		settings.addBooleanChoice("Schilde/Parierwaffen", showDefensiveWeapons);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Schilde/Parierwaffen", additionalDefensiveWeaponRows, 0, 30);
-		settings.addBooleanChoice("Zonenrüstung", showZoneArmor);
-		settings.addIntegerChoice("Zusätzliche Zeilen für Rüstung", additionalArmorRows, 0, 30);
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		settings.put("Leerseite einfügen", emptyPage.get());
+		settings.put("Nahkampfwaffen", showCloseCombatWeapons.get());
+		settings.put("Zusätzliche Zeilen für Nahkampfwaffen", additionalCloseCombatWeaponRows.get());
+		settings.put("Fernkampfwaffen", showRangedCombatWeapons.get());
+		settings.put("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows.get());
+		settings.put("Geschosstypen", showAmmunition.get());
+		settings.put("Waffenloser Kampf", showInfight.get());
+		settings.put("Schilde/Parierwaffen", showDefensiveWeapons.get());
+		settings.put("Zusätzliche Zeilen für Schilde/Parierwaffen", additionalDefensiveWeaponRows.get());
+		settings.put("Zonenrüstung", showZoneArmor.get());
+		settings.put("Zusätzliche Zeilen für Rüstung", additionalArmorRows.get());
+		settings.put("Bild für Zonenrüstung", zoneImage.get());
+		settings.put("Ausweichen", showEvasion.get());
+		settings.put("Lebensenergie/Ausdauer", showEnergies.get());
+		settings.put("Trefferzonen", showZoneTable.get());
+		return settings;
+	}
+
+	private List<String> getZoneImages() {
 		final List<String> zoneImages = new ArrayList<>();
 		for (final File file : new File(Util.getAppDir() + "/resources/images/zones/").listFiles()) {
 			if (file.isFile()) {
@@ -978,6 +986,23 @@ public class FightSheet extends Sheet {
 			}
 		}
 		zoneImages.add(0, "Keines");
+		return zoneImages;
+	}
+
+	@Override
+	public void load() {
+		super.load();
+		settingsPage.addBooleanChoice("Nahkampfwaffen", showCloseCombatWeapons);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Nahkampfwaffen", additionalCloseCombatWeaponRows, 0, 30);
+		settingsPage.addBooleanChoice("Fernkampfwaffen", showRangedCombatWeapons);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows, 0, 30);
+		settingsPage.addBooleanChoice("Geschosstypen", showAmmunition);
+		settingsPage.addBooleanChoice("Waffenloser Kampf", showInfight);
+		settingsPage.addBooleanChoice("Schilde/Parierwaffen", showDefensiveWeapons);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Schilde/Parierwaffen", additionalDefensiveWeaponRows, 0, 30);
+		settingsPage.addBooleanChoice("Zonenrüstung", showZoneArmor);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Rüstung", additionalArmorRows, 0, 30);
+		final List<String> zoneImages = getZoneImages();
 		if (zoneImages.contains("Amazone.jpg")) {
 			zoneImage.set("Amazone.jpg");
 		} else if (zoneImages.size() > 1) {
@@ -985,10 +1010,39 @@ public class FightSheet extends Sheet {
 		} else {
 			zoneImage.set("Keines");
 		}
-		settings.addStringChoice("Bild für Zonenrüstung", zoneImage, zoneImages);
-		settings.addBooleanChoice("Ausweichen", showEvasion);
-		settings.addBooleanChoice("Lebensenergie/Ausdauer", showEnergies);
-		settings.addBooleanChoice("Trefferzonen", showZoneTable);
+		settingsPage.addStringChoice("Bild für Zonenrüstung", zoneImage, zoneImages);
+		settingsPage.addBooleanChoice("Ausweichen", showEvasion);
+		settingsPage.addBooleanChoice("Lebensenergie/Ausdauer", showEnergies);
+		settingsPage.addBooleanChoice("Trefferzonen", showZoneTable);
+	}
+
+	@Override
+	public void loadSettings(final JSONObject settings) {
+		super.loadSettings(settings);
+		showCloseCombatWeapons.set(settings.getBoolOrDefault("Nahkampfwaffen", true));
+		additionalCloseCombatWeaponRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Nahkampfwaffen", 5));
+		showRangedCombatWeapons.set(settings.getBoolOrDefault("Fernkampfwaffen", true));
+		additionalRangedWeaponRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Fernkampfwaffen", 5));
+		showAmmunition.set(settings.getBoolOrDefault("Geschosstypen", true));
+		showInfight.set(settings.getBoolOrDefault("Waffenloser Kampf", true));
+		showDefensiveWeapons.set(settings.getBoolOrDefault("Schilde/Parierwaffen", true));
+		additionalDefensiveWeaponRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Schilde/Parierwaffen", 5));
+		showZoneArmor.set(settings.getBoolOrDefault("Zonenrüstung", true));
+		additionalArmorRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Rüstung", 5));
+		zoneImage.set(settings.getStringOrDefault("Bild für Zonenrüstung", "Keines"));
+		if (!new File(Util.getAppDir() + "/resources/images/zones/" + zoneImage.get()).exists()) {
+			final List<String> zoneImages = getZoneImages();
+			if (zoneImages.contains("Amazone.jpg")) {
+				zoneImage.set("Amazone.jpg");
+			} else if (zoneImages.size() > 1) {
+				zoneImage.set(zoneImages.get(1));
+			} else {
+				zoneImage.set("Keines");
+			}
+		}
+		showEvasion.set(settings.getBoolOrDefault("Ausweichen", true));
+		showEnergies.set(settings.getBoolOrDefault("Lebensenergie/Ausdauer", true));
+		showZoneTable.set(settings.getBoolOrDefault("Trefferzonen", true));
 	}
 
 	@Override
