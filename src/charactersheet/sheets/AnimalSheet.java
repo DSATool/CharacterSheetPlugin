@@ -955,11 +955,21 @@ public class AnimalSheet extends Sheet {
 			for (int i = 0; i < animals.size(); ++i) {
 				final JSONObject animal = animals.getObj(i);
 				final String name = animal.getObj("Biografie").getStringOrDefault("Name", "");
-				final String type = animal.getObj("Biografie").getStringOrDefault("Typ", "Tier");
-				final TitledPane control = addAnimal(type, namedAnimals.getObjOrDefault(name, new JSONObject(null)));
+				final JSONObject setting = namedAnimals.getObjOrDefault(name, new JSONObject(null));
+				final String type = setting.getStringOrDefault("Typ", animal.getObj("Biografie").getStringOrDefault("Typ", "Tier"));
+				final TitledPane control = addAnimal(type, setting);
 				control.setText(name);
 				control.setContextMenu(null);
 			}
+		}
+
+		final JSONArray additional = settings.getArrOrDefault("Zusätzlich", new JSONArray(null));
+		for (int i = 0; i < additional.size(); ++i) {
+			final JSONObject setting = additional.getObj(i);
+			final String type = setting.getStringOrDefault("Typ", "Tier");
+			final TitledPane control = addAnimal(type, setting);
+			control.setText(type);
+			control.setContextMenu(null);
 		}
 	}
 
