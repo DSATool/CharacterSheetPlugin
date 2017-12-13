@@ -89,10 +89,10 @@ public class CompactSheet extends Sheet {
 
 		table.addCells("SO", HeroUtil.getCurrentValue(hero.getObj("Basiswerte").getObj("Sozialstatus"), false));
 
-		table.addCells("GS", HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Geschwindigkeit"), actualAttributes,
+		table.addCells("GS", HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Geschwindigkeit"), hero,
 				hero.getObj("Basiswerte").getObj("Geschwindigkeit"), false));
 
-		final int woundThreshold = Math.round(HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Wundschwelle"), actualAttributes,
+		final int woundThreshold = Math.round(HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Wundschwelle"), hero,
 				hero.getObj("Basiswerte").getObj("Wundschwelle"), false));
 		table.addCells("WS", woundThreshold);
 
@@ -219,15 +219,13 @@ public class CompactSheet extends Sheet {
 			table.addColumn(new Column(291.5f / 11, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0.5f, 0.5f, 0.5f, 0.5f));
 		}
 
-		final JSONObject attributes = hero.getObj("Eigenschaften");
-
 		final JSONObject derivedValues = ResourceManager.getResource("data/Basiswerte");
 		String[] derivedNames = new String[] { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Initiative-Basis" };
 		String[] derivedLabels = new String[] { "AT-Basis", "PA-Basis", "FK-Basis", "INI-Basis" };
 		for (int i = 0; i < 4; ++i) {
 			final String derivedName = derivedNames[i];
 			final JSONObject derivedValue = derivedValues.getObj(derivedName);
-			table.addCells(derivedLabels[i], HeroUtil.deriveValue(derivedValue, attributes, hero.getObj("Basiswerte").getObj(derivedName), false));
+			table.addCells(derivedLabels[i], HeroUtil.deriveValue(derivedValue, hero, hero.getObj("Basiswerte").getObj(derivedName), false));
 		}
 
 		derivedNames = new String[] { "Lebensenergie", "Ausdauer", "Magieresistenz", "Astralenergie", "Karmaenergie" };
@@ -238,7 +236,7 @@ public class CompactSheet extends Sheet {
 			final JSONObject actualValue = hero.getObj("Basiswerte").getObjOrDefault(derivedName, null);
 			String value;
 			if (actualValue != null) {
-				value = Integer.toString(HeroUtil.deriveValue(derivedValue, attributes, actualValue, false));
+				value = Integer.toString(HeroUtil.deriveValue(derivedValue, hero, actualValue, false));
 			} else {
 				value = "—";
 			}
@@ -647,11 +645,11 @@ public class CompactSheet extends Sheet {
 
 		int index = 0;
 
-		final int ATBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"), hero.getObj("Eigenschaften"),
+		final int ATBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"), hero,
 				hero.getObj("Basiswerte").getObj("Attacke-Basis"), true);
-		final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero.getObj("Eigenschaften"),
+		final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero,
 				hero.getObj("Basiswerte").getObj("Parade-Basis"), true);
-		final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"), hero.getObj("Eigenschaften"),
+		final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"), hero,
 				hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
 
 		for (final String talentGroupName : talents.keySet()) {

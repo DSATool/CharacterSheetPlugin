@@ -238,16 +238,20 @@ public class CharacterSheet extends Sheet {
 		final Bordered resultDesc = new TextCell("Ergebnis", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		table.addRow(emptyDesc, emptyDesc, curDesc, modDesc, resultDesc);
 
-		JSONObject attributes = null;
-		if (hero != null) {
-			attributes = hero.getObj("Eigenschaften");
-		}
-
 		final JSONObject derivedValues = ResourceManager.getResource("data/Basiswerte");
-		for (final String derivedName : new String[] { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Initiative-Basis" }) {
+		for (final String derivedName : new String[] { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Initiative-Basis", "Artefaktkontrolle" }) {
 			final JSONObject derivedValue = derivedValues.getObj(derivedName);
 			final StringBuilder derivation = new StringBuilder("(");
 			derivation.append(String.join("+", derivedValue.getArr("Eigenschaften").getStrings()));
+			if (derivedValue.containsKey("Basiswerte")) {
+				final JSONArray basicValues = derivedValue.getArr("Basiswerte");
+				for (int i = 0; i < basicValues.size(); ++i) {
+					if (derivation.length() > 0) {
+						derivation.append('+');
+					}
+					derivation.append(derivedValues.getObj(basicValues.getString(i)).getStringOrDefault("Abkürzung", basicValues.getString(i)));
+				}
+			}
 			derivation.append(')');
 			if (derivedValue.containsKey("Multiplikator")) {
 				final double multiplier = derivedValue.getDouble("Multiplikator");
@@ -261,9 +265,9 @@ public class CharacterSheet extends Sheet {
 			}
 			if (hero != null && fill) {
 				final JSONObject actualValue = hero.getObj("Basiswerte").getObj(derivedName);
-				final String cur = Integer.toString(HeroUtil.deriveValue(derivedValue, attributes, actualValue, false));
+				final String cur = Integer.toString(HeroUtil.deriveValue(derivedValue, hero, actualValue, false));
 				final String mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
-				final String result = SheetUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, attributes));
+				final String result = SheetUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, hero));
 				table.addRow(derivedName, new TextCell(derivation.toString()).setPadding(0, 0, 2, 0), cur, mod, result);
 			} else {
 				table.addRow(derivedName, new TextCell(derivation.toString()).setPadding(0, 0, 2, 0));
@@ -273,13 +277,13 @@ public class CharacterSheet extends Sheet {
 		double woundThreshold = 0;
 		int woundModifier = 0;
 		if (hero != null) {
-			woundThreshold = HeroUtil.deriveValueRaw(derivedValues.getObj("Wundschwelle"), attributes);
+			woundThreshold = HeroUtil.deriveValueRaw(derivedValues.getObj("Wundschwelle"), hero);
 			final JSONObject woundObj = hero.getObj("Basiswerte").getObj("Wundschwelle");
 			woundModifier = woundObj.getIntOrDefault("Modifikator", 0);
 		}
-		for (int i = 1; i < 5; ++i) {
+		for (int i = 1; i < 4; ++i) {
 			final String name = Integer.toString(i) + ". Wundschwelle";
-			final String derivation = (i % 2 == 1 ? i + "/2 " : i == 4 ? "2 " : "") + "KO";
+			final String derivation = (i % 2 == 1 ? i + "/2 " : "") + "KO";
 			if (hero != null && fill) {
 				final String cur = Integer.toString((int) Math.round(i * woundThreshold + woundModifier));
 				final String mod = Util.getSignedIntegerString(woundModifier);
@@ -292,7 +296,7 @@ public class CharacterSheet extends Sheet {
 
 		if (hero != null && fill) {
 			final JSONObject velocityObj = hero.getObj("Basiswerte").getObj("Geschwindigkeit");
-			final int velocity = HeroUtil.deriveValue(derivedValues.getObj("Geschwindigkeit"), attributes, velocityObj, false);
+			final int velocity = HeroUtil.deriveValue(derivedValues.getObj("Geschwindigkeit"), hero, velocityObj, false);
 			final int velocityModifier = velocityObj.getIntOrDefault("Modifikator", 0);
 			final Bordered cur = new TextCell(Integer.toString(velocity)).setBorder(1, 1, 1, 1);
 			final String mod = Util.getSignedIntegerString(velocityModifier);
@@ -324,11 +328,6 @@ public class CharacterSheet extends Sheet {
 		final Bordered resultDesc = new TextCell("Start", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		final Bordered curDesc = new TextCell("Akt.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		table.addRow(emptyDesc, emptyDesc, buyDesc, permDesc, modDesc, resultDesc, curDesc);
-
-		JSONObject attributes = null;
-		if (hero != null) {
-			attributes = hero.getObj("Eigenschaften");
-		}
 
 		final JSONObject derivedValues = ResourceManager.getResource("data/Basiswerte");
 		for (final String derivedName : new String[] { "Lebensenergie", "Ausdauer", "Magieresistenz", "Astralenergie", "Karmaenergie" }) {
@@ -364,13 +363,13 @@ public class CharacterSheet extends Sheet {
 				if (actualValue != null) {
 					if (derivedValue.containsKey("Zukauf:Maximum")) {
 						final String buy = actualValue.getIntOrDefault("Kauf", 0).toString();
-						final String max = Integer.toString(HeroUtil.deriveValue(derivedValue.getObj("Zukauf:Maximum"), attributes, null, false));
+						final String max = Integer.toString(HeroUtil.deriveValue(derivedValue.getObj("Zukauf:Maximum"), hero, null, false));
 						buyable = new TextCell(buy).addText("/").addText(max).setEquallySpaced(true);
 					}
 					final String perm = actualValue.getIntOrDefault("Permanent", 0).toString();
 					final String mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
-					final String result = SheetUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, attributes));
-					final TextCell cur = new TextCell(Integer.toString(HeroUtil.deriveValue(derivedValue, attributes, actualValue, false)));
+					final String result = SheetUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, hero));
+					final TextCell cur = new TextCell(Integer.toString(HeroUtil.deriveValue(derivedValue, hero, actualValue, false)));
 					if ("Lebensenergie".equals(derivedName)) {
 						cur.setBorder(1, 1, 1, 1);
 					}

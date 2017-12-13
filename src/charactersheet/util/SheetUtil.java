@@ -208,7 +208,7 @@ public class SheetUtil {
 				}
 				final JSONObject derivedValues = ResourceManager.getResource("data/Basiswerte");
 				for (final String value : new String[] { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Initiative-Basis" }) {
-					table.addCells(value, hero != null && fill ? HeroUtil.deriveValue(derivedValues.getObj(value), actualAttributes, hero.getObj(value), false)
+					table.addCells(value, hero != null && fill ? HeroUtil.deriveValue(derivedValues.getObj(value), hero, hero.getObj(value), false)
 							+ baseValues.getObj(value).getIntOrDefault("Modifikator", 0) : " ");
 				}
 				table.addCells("\u00A0\u00A0\u00A0+4\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0+2");

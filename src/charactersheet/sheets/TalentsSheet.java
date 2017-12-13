@@ -611,12 +611,11 @@ public class TalentsSheet extends Sheet {
 					}
 					if (hero != null && fillAll) {
 						final int ATBase = basicValuesInWeaponTalent.get()
-								? HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"),
-										hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Attacke-Basis"), false)
+								? HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"), hero,
+										hero.getObj("Basiswerte").getObj("Attacke-Basis"), false)
 								: 0;
 						final int PABase = basicValuesInWeaponTalent.get()
-								? HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"),
-										hero.getObj("Eigenschaften"),
+								? HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero,
 										hero.getObj("Basiswerte").getObj("Parade-Basis"), false)
 								: 0;
 
@@ -636,8 +635,8 @@ public class TalentsSheet extends Sheet {
 				} else if (isFightGroup) {
 					String fk;
 					if (hero != null && fillAll && basicValuesInWeaponTalent.get()) {
-						final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"),
-								hero.getObj("Eigenschaften"), hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
+						final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"), hero,
+								hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
 						if (actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
 							fk = Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0));
 						} else if (talent.getBoolOrDefault("Basis", false)) {

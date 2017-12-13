@@ -190,11 +190,14 @@ public class FightSheet extends Sheet {
 						final Integer PA = HeroUtil.getPA(hero, item, type, false, false);
 						final String pa = fillAll ? PA != null ? Integer.toString(PA) : "—" : " ";
 
-						final JSONObject TPKKValues = item.getObjOrDefault("Trefferpunkte/Körperkraft", baseWeapon.getObj("Trefferpunkte/Körperkraft"));
-						final String tpkkThreshold = Integer.toString(TPKKValues.getInt("Schwellenwert")
+						final JSONObject TPKKValues = item.getObjOrDefault("Trefferpunkte/Körperkraft",
+								baseWeapon.getObjOrDefault("Trefferpunkte/Körperkraft", null));
+						final int threshold = TPKKValues != null ? TPKKValues.getIntOrDefault("Schwellenwert", Integer.MIN_VALUE) : Integer.MIN_VALUE;
+						final int step = TPKKValues != null ? TPKKValues.getIntOrDefault("Schadensschritte", Integer.MIN_VALUE) : Integer.MIN_VALUE;
+						final String tpkkThreshold = threshold == Integer.MIN_VALUE ? "—" : Integer.toString(threshold
 								+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schwellenwert", 0) : 0));
-						final String tpkkStep = Integer.toString(TPKKValues.getInt("Schadensschritte")
-								+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schadensschritte", 0) : 0));
+						final String tpkkStep = step == Integer.MIN_VALUE ? "—" : Integer.toString(
+								step + (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schadensschritte", 0) : 0));
 						final TextCell tpkk = new TextCell(tpkkThreshold).addText("/").addText(tpkkStep).setEquallySpaced(true);
 
 						final String atMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0)
@@ -256,7 +259,7 @@ public class FightSheet extends Sheet {
 
 		if (hero != null) {
 			final JSONObject skills = hero.getObj("Sonderfertigkeiten");
-			final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero.getObj("Eigenschaften"),
+			final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero,
 					hero.getObj("Basiswerte").getObj("Parade-Basis"), false);
 			final int shieldMod = skills.containsKey("Waffenmeister (Schild)") ? 7
 					: skills.containsKey("Schildkampf II") ? 5 : skills.containsKey("Schildkampf I") ? 3 : skills.containsKey("Linkhand") ? 1 : 0;
@@ -407,14 +410,14 @@ public class FightSheet extends Sheet {
 		}
 
 		if (hero != null && fill) {
-			final int lep = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Lebensenergie"), hero.getObj("Eigenschaften"),
+			final int lep = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Lebensenergie"), hero,
 					hero.getObj("Basiswerte").getObj("Lebensenergie"), false);
 			final String maxLeP = Integer.toString(lep);
 			final String halfLeP = Integer.toString((int) Math.round(lep / 2.0));
 			final String thirdLeP = Integer.toString((int) Math.round(lep / 3.0));
 			final String quarterLeP = Integer.toString((int) Math.round(lep / 4.0));
 
-			final int aup = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Ausdauer"), hero.getObj("Eigenschaften"),
+			final int aup = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Ausdauer"), hero,
 					hero.getObj("Basiswerte").getObj("Ausdauer"), false);
 			final String maxAuP = Integer.toString(aup);
 			final String halfAuP = Integer.toString((int) Math.round(aup / 2.0));
@@ -457,7 +460,7 @@ public class FightSheet extends Sheet {
 		if (hero != null && fill) {
 			int result = 0;
 
-			final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero.getObj("Eigenschaften"),
+			final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero,
 					hero.getObj("Basiswerte").getObj("Parade-Basis"), true);
 			result = PABase;
 			final String pa = Integer.toString(PABase);
