@@ -175,20 +175,22 @@ public class FightSheet extends Sheet {
 					}
 					if (fill) {
 						final String name = item.getStringOrDefault("Name", baseWeapon.getStringOrDefault("Name", ""));
-						final String type = item.getStringOrDefault("Waffentyp:Primär",
-								item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen")).getString(0));
+
+						final JSONArray types = item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
+						final String type = item.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : "");
 						final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
-						final String ebe = Integer.toString(closeCombatTalents.getObj(type).getIntOrDefault("BEAdditiv", 0));
+						final String ebe = Integer.toString(closeCombatTalents.getObjOrDefault(type, new JSONObject(null)).getIntOrDefault("BEAdditiv", 0));
 
 						final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArr("Waffenmeister"), type,
 								item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 
 						final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
-						final String at = fillAll ? Integer.toString(HeroUtil.getAT(hero, item, type, true, false, false)) : " ";
+						final Integer atValue = HeroUtil.getAT(hero, item, type, true, false, false);
+						final String at = fillAll && atValue != null ? Integer.toString(atValue) : " ";
 
-						final Integer PA = HeroUtil.getPA(hero, item, type, false, false);
-						final String pa = fillAll ? PA != null ? Integer.toString(PA) : "—" : " ";
+						final Integer paValue = HeroUtil.getPA(hero, item, type, false, false);
+						final String pa = fillAll ? paValue != null ? Integer.toString(paValue) : "—" : " ";
 
 						final JSONObject TPKKValues = item.getObjOrDefault("Trefferpunkte/Körperkraft",
 								baseWeapon.getObjOrDefault("Trefferpunkte/Körperkraft", null));
@@ -653,13 +655,14 @@ public class FightSheet extends Sheet {
 					if (fill) {
 						final String name = item.getStringOrDefault("Name", baseWeapon.getStringOrDefault("Name", ""));
 
-						final String type = item.getStringOrDefault("Waffentyp:Primär",
-								item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen")).getString(0));
-						final String ebe = Integer.toString(rangedCombatTalents.getObj(type).getIntOrDefault("BEAdditiv", 0));
+						final JSONArray types = item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
+						final String type = item.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : "");
+						final String ebe = Integer.toString(rangedCombatTalents.getObjOrDefault(type, new JSONObject(null)).getIntOrDefault("BEAdditiv", 0));
 
 						final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
-						final String at = fillAll ? Integer.toString(HeroUtil.getAT(hero, item, type, false, false, false)) : " ";
+						final Integer atValue = HeroUtil.getAT(hero, item, type, false, false, false);
+						final String at = fillAll && atValue != null ? Integer.toString(atValue) : " ";
 
 						final String load = Integer.toString(HeroUtil.getLoadTime(hero, item, type));
 

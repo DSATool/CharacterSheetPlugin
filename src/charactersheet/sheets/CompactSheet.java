@@ -154,24 +154,28 @@ public class CompactSheet extends Sheet {
 				}
 				final String name = item.getStringOrDefault("Name", baseWeapon.getStringOrDefault("Name", ""));
 
-				final String type = item.getStringOrDefault("Waffentyp:Primär",
-						item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen")).getString(0));
+				final JSONArray types = item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
+				final String type = item.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : "");
 				final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
 				final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArr("Waffenmeister"), type,
 						item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 
 				final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
-				final String at = Integer.toString(HeroUtil.getAT(hero, item, type, true, false, false));
-				final Integer PA = HeroUtil.getPA(hero, item, type, false, false);
-				final String pa = PA != null ? Integer.toString(PA) : "—";
+				final Integer atValue = HeroUtil.getAT(hero, item, type, true, false, false);
+				final String at = atValue != null ? Integer.toString(atValue) : "";
+				final Integer paValue = HeroUtil.getPA(hero, item, type, false, false);
+				final String pa = paValue != null ? Integer.toString(paValue) : "—";
 
-				final JSONObject TPKKValues = item.getObjOrDefault("Trefferpunkte/Körperkraft", baseWeapon.getObj("Trefferpunkte/Körperkraft"));
-				final Cell tpkk = new TextCell(Integer.toString(TPKKValues.getInt("Schwellenwert")
-						+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schwellenwert", 0) : 0))).addText("/")
-								.addText(Integer.toString(TPKKValues.getInt("Schadensschritte") + (weaponMastery != null
-										? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schadensschritte", 0) : 0)))
-								.setEquallySpaced(true);
+				final JSONObject TPKKValues = item.getObjOrDefault("Trefferpunkte/Körperkraft",
+						baseWeapon.getObjOrDefault("Trefferpunkte/Körperkraft", null));
+				final int threshold = TPKKValues != null ? TPKKValues.getIntOrDefault("Schwellenwert", Integer.MIN_VALUE) : Integer.MIN_VALUE;
+				final int step = TPKKValues != null ? TPKKValues.getIntOrDefault("Schadensschritte", Integer.MIN_VALUE) : Integer.MIN_VALUE;
+				final String tpkkThreshold = threshold == Integer.MIN_VALUE ? "—" : Integer.toString(threshold
+						+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schwellenwert", 0) : 0));
+				final String tpkkStep = step == Integer.MIN_VALUE ? "—" : Integer.toString(
+						step + (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schadensschritte", 0) : 0));
+				final Cell tpkk = new TextCell(tpkkThreshold).addText("/").addText(tpkkStep).setEquallySpaced(true);
 
 				final Cell wm = new TextCell(Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0)
 						+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Attackemodifikator", 0) : 0))).addText("/")
@@ -356,7 +360,8 @@ public class CompactSheet extends Sheet {
 
 				final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
-				final String at = Integer.toString(HeroUtil.getAT(hero, item, type, false, false, false));
+				final Integer atValue = HeroUtil.getAT(hero, item, type, false, false, false);
+				final String at = atValue != null ? Integer.toString(atValue) : "";
 
 				final String load = Integer.toString(HeroUtil.getLoadTime(hero, item, type));
 
