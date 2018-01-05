@@ -221,7 +221,15 @@ public class FightSheet extends Sheet {
 						} else {
 							bf = "—";
 						}
-						final String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
+
+						String defaultNotes = " ";
+						if (baseWeapon.containsKey("Bannschwert") && baseWeapon.getObj("Bannschwert").getObj("Rituale").containsKey("Bannschwert")) {
+							defaultNotes = "Bannschwert";
+							if (baseWeapon.getObj("Bannschwert").getObj("Rituale").containsKey("Apport")) {
+								defaultNotes += ", Apport";
+							}
+						}
+						final String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", defaultNotes));
 
 						table.addRow(name, type, ebe, tp, at, pa, tpkk, wm, ini, distance, bf, notes);
 					} else {

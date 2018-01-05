@@ -280,7 +280,16 @@ public class InventorySheet extends Sheet {
 				if (hero != null && fill && !equipment.isEmpty()) {
 					final JSONObject item = equipment.poll();
 					final String name = item.getStringOrDefault("Name", "Unbenannt");
-					final String notes = item.getStringOrDefault("Anmerkungen", "");
+
+					String defaultNotes = " ";
+					if (item.containsKey("Bannschwert") && item.getObj("Bannschwert").getObj("Rituale").containsKey("Bannschwert")) {
+						defaultNotes = "Bannschwert";
+						if (item.getObj("Bannschwert").getObj("Rituale").containsKey("Apport")) {
+							defaultNotes += ", Apport";
+						}
+					}
+
+					final String notes = item.getStringOrDefault("Anmerkungen", defaultNotes);
 					tables[i].addRow(name, notes);
 				} else {
 					tables[i].addRow("");
