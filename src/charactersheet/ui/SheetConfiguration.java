@@ -139,7 +139,7 @@ public class SheetConfiguration extends HeroSelector {
 				sheet.setFill(!noFill.isSelected(), fillAll.isSelected());
 				try {
 					sheet.create(document);
-				} catch (final IOException e) {
+				} catch (final Exception e) {
 					ErrorLogger.logError(e);
 				}
 			}

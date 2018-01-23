@@ -241,7 +241,11 @@ public class AnimalSheet extends Sheet {
 			for (int i = 0; i < types.size(); ++i) {
 				if (!"Kein".equals(types.get(i).get())) {
 					current = i;
-					addAnimalTable(document);
+					try {
+						addAnimalTable(document);
+					} catch (final Exception e) {
+						ErrorLogger.logError(e);
+					}
 				}
 			}
 

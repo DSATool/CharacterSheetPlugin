@@ -37,6 +37,7 @@ import dsa41basis.util.DSAUtil;
 import dsa41basis.util.DSAUtil.Units;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
+import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -90,7 +91,11 @@ public class SpellsSheet extends Sheet {
 
 		startCreate(document);
 
-		createTable(document);
+		try {
+			createTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
 
 		float left = 12;
 
@@ -99,19 +104,31 @@ public class SpellsSheet extends Sheet {
 
 		if (spoMoTable.get()) {
 			bottom.bottom = bottom.bottom > currentBottom ? height : currentBottom;
-			left = createSpoMoTable(document, left);
+			try {
+				left = createSpoMoTable(document, left);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 			minBottom = Math.min(minBottom, bottom.bottom);
 		}
 
 		if (traitTable.get()) {
 			bottom.bottom = bottom.bottom > currentBottom ? height : currentBottom;
-			left = createTraitTable(document, left);
+			try {
+				left = createTraitTable(document, left);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 			minBottom = Math.min(minBottom, bottom.bottom);
 		}
 
 		if (targetTable.get()) {
 			bottom.bottom = bottom.bottom > currentBottom ? height : currentBottom;
-			left = createTargetTable(document, left);
+			try {
+				left = createTargetTable(document, left);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 			minBottom = Math.min(minBottom, bottom.bottom);
 		}
 

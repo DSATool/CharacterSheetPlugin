@@ -89,12 +89,17 @@ public class SpecialSkillsSheet extends Sheet {
 			final JSONObject requirements = skill.getObjOrDefault("Voraussetzungen", null);
 			final String choice = actualSkill.getString("Auswahl");
 			final String text = actualSkill.getString("Freitext");
-			actual = RequirementsUtil.isRequirementFulfilled(hero, requirements, choice, text, false) ? "X" : "O";
+			if (skill.getBoolOrDefault("Abgestuft", false)) {
+				actual = actualSkill.getIntOrDefault("Stufe", 1).toString();
+			} else {
+				actual = "X";
+			}
+			actual = RequirementsUtil.isRequirementFulfilled(hero, requirements, choice, text, false) ? actual : "O";
 		}
 
 		String cheaper = " ";
-		if (fill) {
-			final int origCost = skill.getIntOrDefault("Kosten", 0);
+		if (fill && skill.containsKey("Kosten")) {
+			final int origCost = skill.getInt("Kosten");
 			final int newCost = new ProOrCon(skillName, hero, skill,
 					actualSkill != null ? actualSkill : cheaperSkill != null ? cheaperSkill : new JSONObject(emptyChoiceText, null)).getCost();
 			if (newCost != origCost) {

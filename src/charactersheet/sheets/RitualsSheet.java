@@ -101,14 +101,18 @@ public class RitualsSheet extends Sheet {
 						if (item.containsKey(ritualObjectName)) {
 							item = item.getObj(ritualObjectName);
 						}
-						final Tuple<Table, Boolean> table = createTable(document, ritualGroupName, rituals.getObj(ritualGroupName), ritualGroup, item,
-								baseItem);
-						if (table._1.getNumRows() > 2) {
-							if (table._2) {
-								portraitTables.add(table._1);
-							} else {
-								landscapeTables.add(table._1);
+						try {
+							final Tuple<Table, Boolean> table = createTable(document, ritualGroupName, rituals.getObj(ritualGroupName), ritualGroup, item,
+									baseItem);
+							if (table._1.getNumRows() > 2) {
+								if (table._2) {
+									portraitTables.add(table._1);
+								} else {
+									landscapeTables.add(table._1);
+								}
 							}
+						} catch (final Exception e) {
+							ErrorLogger.logError(e);
 						}
 					}
 				}
@@ -122,15 +126,19 @@ public class RitualsSheet extends Sheet {
 					tables = ((BooleanProperty) ritualGroupCount).get() ? 1 : 0;
 				}
 				for (int i = 0; i < tables; ++i) {
-					final Tuple<Table, Boolean> table = createTable(document, ritualGroupName, rituals.getObj(ritualGroupName), ritualGroup, null, null);
-					if ("Allgemeine Rituale".equals(ritualGroupName)) {
-						commonRituals = table._1;
-					} else if (table._1.getNumRows() > 2) {
-						if (table._2) {
-							portraitTables.add(table._1);
-						} else {
-							landscapeTables.add(table._1);
+					try {
+						final Tuple<Table, Boolean> table = createTable(document, ritualGroupName, rituals.getObj(ritualGroupName), ritualGroup, null, null);
+						if ("Allgemeine Rituale".equals(ritualGroupName)) {
+							commonRituals = table._1;
+						} else if (table._1.getNumRows() > 2) {
+							if (table._2) {
+								portraitTables.add(table._1);
+							} else {
+								landscapeTables.add(table._1);
+							}
 						}
+					} catch (final Exception e) {
+						ErrorLogger.logError(e);
 					}
 				}
 			}

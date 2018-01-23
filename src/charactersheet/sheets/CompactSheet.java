@@ -1034,30 +1034,90 @@ public class CompactSheet extends Sheet {
 		if (hero != null) {
 			startCreate(document);
 
-			addBiographyTable(document);
-			addAttributesTable(document);
-			addDerivedValuesTable(document);
-			addProsAndConsTable(document);
-			addSpecialSkillsTable(document);
+			try {
+				addBiographyTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
+			try {
+				addAttributesTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
+			try {
+				addDerivedValuesTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
+			try {
+				addProsAndConsTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
+			try {
+				addSpecialSkillsTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
 			final float smallTop = bottom.bottom;
-			addCloseCombatTable(document);
-			addRangedCombatTable(document);
+
+			try {
+				addCloseCombatTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
+			try {
+				addRangedCombatTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
 			final float smallBottom = bottom.bottom;
 			bottom.bottom = smallTop;
-			addInfightTable(document);
+
+			try {
+				addInfightTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
 			final float secondBottom = bottom.bottom;
 			bottom.bottom = smallTop;
 			if (showTotalArmor.get()) {
-				addTotalArmorTable(document);
+				try {
+					addTotalArmorTable(document);
+				} catch (final Exception e) {
+					ErrorLogger.logError(e);
+				}
 			}
 			bottom.bottom = Math.min(secondBottom, bottom.bottom);
 			if (showZoneArmor.get()) {
-				addZoneArmorTable(document);
+				try {
+					addZoneArmorTable(document);
+				} catch (final Exception e) {
+					ErrorLogger.logError(e);
+				}
 			}
 			bottom.bottom = Math.min(bottom.bottom, smallBottom);
-			addTalentsTable(document);
+
+			try {
+				addTalentsTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
+
 			if (showSpells.get()) {
-				addSpellTable(document);
+				try {
+					addSpellTable(document);
+				} catch (final Exception e) {
+					ErrorLogger.logError(e);
+				}
 			}
 
 			endCreate(document);

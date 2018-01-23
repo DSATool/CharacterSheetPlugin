@@ -328,10 +328,23 @@ public class ClericSheet extends Sheet {
 
 		startCreate(document);
 
-		addStatusTable(document);
-		addMiraclesTable(document);
+		try {
+			addStatusTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
 
-		fillLiturgies(document);
+		try {
+			addMiraclesTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+
+		try {
+			fillLiturgies(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
 
 		float left = 12;
 
@@ -340,13 +353,21 @@ public class ClericSheet extends Sheet {
 
 		if (modTable.get()) {
 			bottom.bottom = currentBottom;
-			left = addModificationTable(document, left);
+			try {
+				left = addModificationTable(document, left);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 			minBottom = Math.min(minBottom, bottom.bottom);
 		}
 
 		if (categoriesTable.get()) {
 			bottom.bottom = currentBottom;
-			left = addCategoriesTable(document, left);
+			try {
+				left = addCategoriesTable(document, left);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 			minBottom = Math.min(minBottom, bottom.bottom);
 		}
 

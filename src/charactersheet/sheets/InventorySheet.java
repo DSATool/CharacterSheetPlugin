@@ -33,6 +33,7 @@ import charactersheet.util.FontManager;
 import charactersheet.util.SheetUtil;
 import dsa41basis.util.DSAUtil;
 import dsa41basis.util.DSAUtil.Units;
+import dsatool.util.ErrorLogger;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -391,19 +392,43 @@ public class InventorySheet extends Sheet {
 		startCreate(document);
 
 		if (showClothing.get()) {
-			addClothingTable(document);
+			try {
+				addClothingTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showValuables.get()) {
-			addValuablesTable(document);
+			try {
+				addValuablesTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showPotions.get()) {
-			addPotionsTable(document);
+			try {
+				addPotionsTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showArtifacts.get()) {
-			addArtifactsTable(document);
+			try {
+				addArtifactsTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showInventory.get()) {
-			addInventoryTable(document);
+			try {
+				addInventoryTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
 		endCreate(document);

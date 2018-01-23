@@ -38,6 +38,7 @@ import charactersheet.util.SheetUtil;
 import dsa41basis.util.DSAUtil;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
+import dsatool.util.ErrorLogger;
 import dsatool.util.Util;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -524,23 +525,72 @@ public class CharacterSheet extends Sheet {
 
 		startCreate(document);
 
-		addBiographyTable(document);
-		addAttributesTable(document);
-		addDerivedValuesTable(document);
+		try {
+			addBiographyTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+
+		try {
+			addAttributesTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+
+		try {
+			addDerivedValuesTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+
 		if (showImage.get()) {
-			addImageTable(document);
+			try {
+				addImageTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
-		addMoneyTable(document);
-		addEnergiesTable(document);
-		addAPTable(document);
+
+		try {
+			addMoneyTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+
+		try {
+			addEnergiesTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+
+		try {
+			addAPTable(document);
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+
 		if (showPros.get()) {
-			addProOrConTable(document, "Vorteil");
+			try {
+				addProOrConTable(document, "Vorteil");
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showCons.get()) {
-			addProOrConTable(document, "Nachteil");
+			try {
+				addProOrConTable(document, "Nachteil");
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showConnections.get()) {
-			addConnectionsTable(document);
+			try {
+				addConnectionsTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
 		endCreate(document);

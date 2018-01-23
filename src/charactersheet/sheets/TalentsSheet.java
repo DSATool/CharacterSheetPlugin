@@ -334,10 +334,23 @@ public class TalentsSheet extends Sheet {
 		for (final String talentGroupName : talentGroups.keySet()) {
 			if (!"Gaben".equals(talentGroupName) && !"Ritualkenntnis".equals(talentGroupName) && !"Liturgiekenntnis".equals(talentGroupName)) {
 				if ("Sprachen und Schriften".equals(talentGroupName)) {
-					createGroupTable(document, "Sprachen", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName).getObj("Sprachen"));
-					createGroupTable(document, "Schriften", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName).getObj("Schriften"));
+					try {
+						createGroupTable(document, "Sprachen", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName).getObj("Sprachen"));
+					} catch (final Exception e) {
+						ErrorLogger.logError(e);
+					}
+
+					try {
+						createGroupTable(document, "Schriften", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName).getObj("Schriften"));
+					} catch (final Exception e) {
+						ErrorLogger.logError(e);
+					}
 				} else {
-					createGroupTable(document, talentGroupName, talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName));
+					try {
+						createGroupTable(document, talentGroupName, talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName));
+					} catch (final Exception e) {
+						ErrorLogger.logError(e);
+					}
 				}
 			}
 		}
@@ -346,13 +359,21 @@ public class TalentsSheet extends Sheet {
 
 		if (showMetaTalents.get()) {
 			final float currentBottom = bottom.bottom;
-			addMetaTable(document);
+			try {
+				addMetaTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 			metaBottom = bottom.bottom;
 			bottom.bottom = currentBottom;
 		}
 
 		if (hero != null) {
-			addSpecialTable(document);
+			try {
+				addSpecialTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
 		bottom.bottom = Math.min(metaBottom, bottom.bottom);

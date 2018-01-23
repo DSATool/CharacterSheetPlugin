@@ -936,35 +936,85 @@ public class FightSheet extends Sheet {
 		startCreate(document);
 
 		if (showCloseCombatWeapons.get()) {
-			addCloseCombatTable(document);
+			try {
+				addCloseCombatTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showRangedCombatWeapons.get()) {
-			addRangedCombatTable(document);
+			try {
+				addRangedCombatTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showAmmunition.get()) {
-			addAmmunitionTable(document);
+			try {
+				addAmmunitionTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		final float shortTablesTop = bottom.bottom;
+
 		if (showInfight.get()) {
-			addInfightTable(document);
+			try {
+				addInfightTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showDefensiveWeapons.get()) {
-			addDefensiveWeaponsTable(document);
+			try {
+				addDefensiveWeaponsTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showZoneArmor.get()) {
-			addZoneArmorTable(document);
+			try {
+				addZoneArmorTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showEvasion.get()) {
-			addEvasionTable(document);
+			try {
+				addEvasionTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showEnergies.get()) {
-			addEnergiesTable(document);
+			try {
+				addEnergiesTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showZoneArmor.get()) {
-			addZoneImage(document, shortTablesTop);
+			try {
+				addZoneImage(document, shortTablesTop);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
+
 		if (showZoneTable.get()) {
-			addZonesTable(document);
+			try {
+				addZonesTable(document);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
 		endCreate(document);
