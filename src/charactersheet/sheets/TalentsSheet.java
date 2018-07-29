@@ -16,6 +16,7 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,11 +41,12 @@ import dsa41basis.util.DSAUtil;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
-import dsatool.util.ReactiveSpinner;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 import jsonant.value.JSONValue;
@@ -76,7 +78,7 @@ public class TalentsSheet extends Sheet {
 	private final BooleanProperty groupBasis = new SimpleBooleanProperty(true);
 	private final BooleanProperty markBasis = new SimpleBooleanProperty(false);
 	private final BooleanProperty primaryTalents = new SimpleBooleanProperty(false);
-	private final BooleanProperty showMetaTalents = new SimpleBooleanProperty(true);
+	private final StringProperty showMetaTalents = new SimpleStringProperty("Alle");
 	private final BooleanProperty basicValuesInWeaponTalent = new SimpleBooleanProperty(true);
 
 	public TalentsSheet() {
@@ -162,7 +164,7 @@ public class TalentsSheet extends Sheet {
 				}
 			}
 
-			if (taw == Double.NEGATIVE_INFINITY && ownTalentsOnly.get()) {
+			if (taw == Double.NEGATIVE_INFINITY && showMetaTalents.get().equals("Aktivierte")) {
 				++leftOut;
 				continue;
 			}
@@ -207,7 +209,7 @@ public class TalentsSheet extends Sheet {
 			table.addRow(talentName, tawString, challengeCell, calculationString.toString());
 		}
 
-		if (ownTalentsOnly.get()) {
+		if (showMetaTalents.get().equals("Aktivierte")) {
 			for (int i = 0; i < Math.min(leftOut, additionalTalentRows.get()); ++i) {
 				table.addRow("");
 			}
@@ -318,7 +320,7 @@ public class TalentsSheet extends Sheet {
 		}
 
 		if (table.getNumRows() > 2) {
-			bottom.bottom = table.render(document, 152, showMetaTalents.get() ? 431 : 12, bottom.bottom, 72, 10) - 5;
+			bottom.bottom = table.render(document, 152, !showMetaTalents.get().equals("Keine") ? 431 : 12, bottom.bottom, 72, 10) - 5;
 		}
 	}
 
@@ -357,7 +359,7 @@ public class TalentsSheet extends Sheet {
 
 		float metaBottom = bottom.bottom;
 
-		if (showMetaTalents.get()) {
+		if (!showMetaTalents.get().equals("Keine")) {
 			final float currentBottom = bottom.bottom;
 			try {
 				addMetaTable(document);
@@ -897,16 +899,17 @@ public class TalentsSheet extends Sheet {
 	public void load() {
 		super.load();
 		settingsPage.addBooleanChoice("Nur erlernte Talente anzeigen", ownTalentsOnly);
-		final ReactiveSpinner<Integer> talentRows = settingsPage.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 15);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 15);
 		settingsPage.addBooleanChoice("Basistalente gruppieren", groupBasis);
 		settingsPage.addBooleanChoice("Basistalente markieren", markBasis);
 		settingsPage.addBooleanChoice("Leittalente anzeigen", primaryTalents);
-		settingsPage.addBooleanChoice("Metatalente anzeigen", showMetaTalents);
+		settingsPage.addStringChoice("Metatalente anzeigen", showMetaTalents, Arrays.asList("Alle", "Aktivierte", "Keine"));
 		settingsPage.addBooleanChoice("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent);
 
-		talentRows.setDisable(true);
 		ownTalentsOnly.addListener((o, oldV, newV) -> {
-			talentRows.setDisable(!newV);
+			if (!showMetaTalents.get().equals("Keine")) {
+				showMetaTalents.set(newV ? "Aktivierte" : "Alle");
+			}
 		});
 	}
 
@@ -918,7 +921,7 @@ public class TalentsSheet extends Sheet {
 		groupBasis.set(settings.getBoolOrDefault("Basistalente gruppieren", true));
 		markBasis.set(settings.getBoolOrDefault("Basistalente markieren", false));
 		primaryTalents.set(settings.getBoolOrDefault("Leittalente anzeigen", hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht")));
-		showMetaTalents.set(settings.getBoolOrDefault("Metatalente anzeigen", true));
+		showMetaTalents.set(settings.getStringOrDefault("Metatalente anzeigen", "Alle"));
 		basicValuesInWeaponTalent.set(settings.getBoolOrDefault("Basiswerte bei AT/PA-Verteilung berücksichtigen", true));
 	}
 
