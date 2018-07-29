@@ -165,7 +165,7 @@ public class SpecialSkillsSheet extends Sheet {
 				cheaperSkills = hero.getObj("Verbilligte Sonderfertigkeiten");
 			}
 
-			final boolean ownSkills = "Eigene".equals(skillGroups.get(groupName).get());
+			final boolean ownSkills = "Erlernte".equals(skillGroups.get(groupName).get());
 
 			for (final String name : group.keySet()) {
 				final JSONObject skill = group.getObj(name);
@@ -249,7 +249,7 @@ public class SpecialSkillsSheet extends Sheet {
 		final boolean[] lock = new boolean[] { false };
 
 		final StringProperty showGroups = new SimpleStringProperty("");
-		settingsPage.addStringChoice("Sonderfertigkeiten anzeigen", showGroups, Arrays.asList("Alle", "Eigene", "Keine", ""));
+		settingsPage.addStringChoice("Sonderfertigkeiten anzeigen", showGroups, Arrays.asList("Alle", "Erlernte", "Keine", ""));
 		showGroups.addListener((o, oldV, newV) -> {
 			if (!"".equals(newV)) {
 				lock[0] = true;
@@ -262,9 +262,9 @@ public class SpecialSkillsSheet extends Sheet {
 
 		final JSONObject skillGroupNames = ResourceManager.getResource("data/Sonderfertigkeiten");
 		for (final String skillGroupName : skillGroupNames.keySet()) {
-			skillGroups.put(skillGroupName, new SimpleStringProperty("Schwarze Gaben".equals(skillGroupName) ? "Eigene" : "Alle"));
+			skillGroups.put(skillGroupName, new SimpleStringProperty("Schwarze Gaben".equals(skillGroupName) ? "Erlernte" : "Alle"));
 			final StringProperty group = skillGroups.get(skillGroupName);
-			settingsPage.addStringChoice(skillGroupName, skillGroups.get(skillGroupName), Arrays.asList("Alle", "Eigene", "Keine"));
+			settingsPage.addStringChoice(skillGroupName, skillGroups.get(skillGroupName), Arrays.asList("Alle", "Erlernte", "Keine"));
 			group.addListener((o, oldV, newV) -> {
 				if (!lock[0]) {
 					showGroups.setValue("");
@@ -279,7 +279,7 @@ public class SpecialSkillsSheet extends Sheet {
 		additionalChoiceRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", 1));
 		final JSONObject groups = settings.getObjOrDefault("Gruppen", new JSONObject(null));
 		for (final String name : skillGroups.keySet()) {
-			skillGroups.get(name).set(groups.getStringOrDefault(name, name.equals("Schwarze Gaben") ? "Eigene" : "Alle"));
+			skillGroups.get(name).set(groups.getStringOrDefault(name, name.equals("Schwarze Gaben") ? "Erlernte" : "Alle"));
 		}
 	}
 
