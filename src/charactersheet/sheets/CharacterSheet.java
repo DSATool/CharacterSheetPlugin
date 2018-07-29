@@ -102,12 +102,14 @@ public class CharacterSheet extends Sheet {
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER).setBorder(1, 1, 1, 0));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
 
 		final Cell emptyDesc = new TextCell(" ", FontManager.serif, 6, 6);
 		final Bordered curDesc = new TextCell("Akt.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		final Bordered modDesc = new TextCell("Mod.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
+		final Bordered startDesc = new TextCell("Start", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		final Bordered maxDesc = new TextCell("Max.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
-		table.addRow(emptyDesc, curDesc, modDesc, maxDesc);
+		table.addRow(emptyDesc, curDesc, modDesc, startDesc, maxDesc);
 
 		JSONObject actualAttributes = null;
 		if (hero != null) {
@@ -121,8 +123,9 @@ public class CharacterSheet extends Sheet {
 				actualAttribute = actualAttributes.getObj(attribute);
 				final String cur = Integer.toString(actualAttribute.getIntOrDefault("Wert", 0));
 				final String mod = Util.getSignedIntegerString(actualAttribute.getIntOrDefault("Modifikator", 0));
-				final String max = Integer.toString((int) Math.round(actualAttribute.getIntOrDefault("Start", 0) * 1.5));
-				table.addRow(attributes.getObj(attribute).getString("Name"), cur, mod, max);
+				final int start = actualAttribute.getIntOrDefault("Start", 0);
+				final String max = Integer.toString((int) Math.round(start * 1.5));
+				table.addRow(attributes.getObj(attribute).getString("Name"), cur, mod, start, max);
 			} else {
 				table.addRow(attributes.getObj(attribute).getString("Name"));
 			}
@@ -131,10 +134,11 @@ public class CharacterSheet extends Sheet {
 		final Bordered so = new TextCell(
 				hero != null && fill ? Integer.toString(HeroUtil.getCurrentValue(hero.getObj("Basiswerte").getObj("Sozialstatus"), false)) : " ").setBorder(1,
 						1, 1, 1);
-		table.addRow("Sozialstatus", so);
+		final Bordered empty = new TextCell("").setBorder(0, 0, 0, 0);
+		table.addRow("Sozialstatus", so, empty, empty, empty);
 
 		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
-		table.render(document, 122, 12, page.getMediaBox().getHeight() - 105, 72, 10);
+		table.render(document, 142, 12, page.getMediaBox().getHeight() - 105, 72, 10);
 	}
 
 	private void addBiographyTable(final PDDocument document) throws IOException {
