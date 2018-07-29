@@ -36,4 +36,6 @@ public class FontManager {
 		serifItalic = PDType0Font.load(document, new File(Util.getAppDir() + "/resources/fonts/LinLibertine_RIah.ttf"));
 	}
 
+	private FontManager() {}
+
 }

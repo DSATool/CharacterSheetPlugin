@@ -42,6 +42,7 @@ import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
 public class SheetUtil {
+
 	public static class BottomObserver {
 		public float bottom;
 		public final float top;
@@ -660,4 +661,6 @@ public class SheetUtil {
 	public static RowStripe stripe() {
 		return new CellFiller.RowStripe(new Color(0.9f, 0.9f, 0.9f));
 	}
+
+	private SheetUtil() {}
 }
