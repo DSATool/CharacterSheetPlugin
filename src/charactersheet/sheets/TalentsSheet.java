@@ -326,7 +326,7 @@ public class TalentsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		header = SheetUtil.createHeader("Talentbrief", true, true, false, hero, fill, fillAll);
+		header = SheetUtil.createHeader("Talentbrief", true, true, false, hero, fill, fillAll, showName, showDate);
 
 		startCreate(document);
 

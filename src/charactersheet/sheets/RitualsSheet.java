@@ -76,7 +76,7 @@ public class RitualsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll);
+		header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll, showName, showDate);
 
 		final JSONObject rituals = ResourceManager.getResource("data/Rituale");
 		final JSONObject ritualGroupData = ResourceManager.getResource("data/Ritualgruppen");
@@ -183,7 +183,7 @@ public class RitualsSheet extends Sheet {
 				}
 			});
 
-			if (pageSize == SheetUtil.landscape) {
+			if (pageSize == SheetUtil.landscape && !landscapeTables.isEmpty()) {
 				if (!SheetUtil.matchesPageSize(document, SheetUtil.landscape)) {
 					final PDPage page = new PDPage(SheetUtil.landscape);
 					document.addPage(page);
@@ -200,7 +200,7 @@ public class RitualsSheet extends Sheet {
 					table.addEventHandler(EventType.BEGIN_PAGE, header);
 					bottom.bottom = table.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable.getHeight(818), 10) - 5;
 				}
-			} else {
+			} else if (!portraitTables.isEmpty()) {
 				if (!SheetUtil.matchesPageSize(document, PDRectangle.A4)) {
 					final PDPage page = new PDPage(PDRectangle.A4);
 					document.addPage(page);

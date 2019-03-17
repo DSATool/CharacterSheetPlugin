@@ -525,7 +525,7 @@ public class CharacterSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		header = SheetUtil.createHeader("Heldenbrief", false, false, false, hero, fill, fillAll);
+		header = SheetUtil.createHeader("Heldenbrief", false, false, false, hero, fill, fillAll, showName, showDate);
 
 		startCreate(document);
 

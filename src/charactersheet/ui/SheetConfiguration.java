@@ -45,6 +45,7 @@ import dsatool.util.Util;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.cell.CheckBoxListCell;
@@ -58,8 +59,9 @@ import javafx.stage.FileChooser;
 import jsonant.value.JSONObject;
 
 public class SheetConfiguration extends HeroSelector {
-	public static List<Class<? extends Sheet>> sheetControllers = Arrays.asList(CompactSheet.class, CharacterSheet.class, FightSheet.class,
-			SpecialSkillsSheet.class, TalentsSheet.class, InventorySheet.class, SpellsSheet.class, RitualsSheet.class, ClericSheet.class, AnimalSheet.class);
+	public static List<Class<? extends Sheet>> sheetControllers = Arrays.asList(CompactSheet.class, CharacterSheet.class,
+			FightSheet.class, SpecialSkillsSheet.class, TalentsSheet.class, InventorySheet.class, SpellsSheet.class, RitualsSheet.class, ClericSheet.class,
+			AnimalSheet.class);
 
 	@FXML
 	private RadioButton fillAll;
@@ -67,6 +69,10 @@ public class SheetConfiguration extends HeroSelector {
 	private RadioButton fill;
 	@FXML
 	private RadioButton noFill;
+	@FXML
+	private CheckBox showName;
+	@FXML
+	private CheckBox showDate;
 	@FXML
 	private CheckListView<Sheet> sheets;
 	@FXML
@@ -137,6 +143,7 @@ public class SheetConfiguration extends HeroSelector {
 			document.getDocumentCatalog().setDocumentOutline(new PDDocumentOutline());
 			for (final Sheet sheet : sheets.getCheckModel().getCheckedItems()) {
 				sheet.setFill(!noFill.isSelected(), fillAll.isSelected());
+				sheet.setShowNameAndDate(showName.isSelected(), showDate.isSelected());
 				try {
 					sheet.create(document);
 				} catch (final Exception e) {
@@ -230,6 +237,8 @@ public class SheetConfiguration extends HeroSelector {
 			if (hero != null) {
 				final JSONObject settings = new JSONObject(hero);
 				settings.put("Ausfüllen", noFill.isSelected() ? "Nicht" : fillAll.isSelected() ? "Alles" : "Unveränderliches");
+				settings.put("Name", showName.isSelected());
+				settings.put("Datum", showDate.isSelected());
 				settings.put("Datei", file.getAbsolutePath());
 				for (final Sheet sheet : sheets.getItems()) {
 					if (sheets.getCheckModel().isChecked(sheet)) {
@@ -246,7 +255,8 @@ public class SheetConfiguration extends HeroSelector {
 		super.setHero(index);
 		hero = heroes.get(index);
 		if (hero != null && hero.containsKey("Heldenbogen")) {
-			final String filled = hero.getObj("Heldenbogen").getStringOrDefault("Ausfüllen", "Unveränderliches");
+			final JSONObject settings = hero.getObj("Heldenbogen");
+			final String filled = settings.getStringOrDefault("Ausfüllen", "Unveränderliches");
 			switch (filled) {
 			case "Nicht":
 				noFill.setSelected(true);
@@ -258,6 +268,8 @@ public class SheetConfiguration extends HeroSelector {
 				fill.setSelected(true);
 				break;
 			}
+			showName.setSelected(settings.getBoolOrDefault("Name", false));
+			showDate.setSelected(settings.getBoolOrDefault("Datum", false));
 		}
 		checkSheets();
 	}

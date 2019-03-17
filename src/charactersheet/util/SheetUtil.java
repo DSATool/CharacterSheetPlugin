@@ -19,6 +19,8 @@ import java.awt.Color;
 import java.io.IOException;
 import java.text.Collator;
 import java.text.DecimalFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.function.Consumer;
 
@@ -135,24 +137,56 @@ public class SheetUtil {
 	}
 
 	public static Consumer<TableEvent> createHeader(final String header, final boolean includeNameLine, final boolean includeAttributesLine,
-			final boolean includeBasicValuesLine, final JSONObject hero, final boolean fill, final boolean fillAll) {
+			final boolean includeBasicValuesLine, final JSONObject hero, final boolean fill, final boolean fillAll, final boolean showName,
+			final boolean showDate) {
 		return event -> {
 			final PDPageContentStream stream = event.getStream();
 			final boolean landscape = event.getWidth() == PDRectangle.A4.getHeight();
 
-			try {
-				final PDFont font = FontManager.serif;
-				final float fontSize = 40;
-				stream.setNonStrokingColor(Color.BLACK);
-				stream.setFont(font, fontSize);
-				final float xStart = (event.getWidth() - font.getStringWidth(header) / 1000 * fontSize) * 0.5f;
-				final float yStart = event.getHeight() - 10 - (font.getFontDescriptor().getAscent() + font.getFontDescriptor().getDescent()) / 1000 * fontSize;
-				stream.beginText();
-				stream.newLineAtOffset(xStart, yStart);
-				stream.showText(header);
-				stream.endText();
-			} catch (final IOException e) {
-				ErrorLogger.logError(e);
+			if (header != null) {
+				try {
+					final PDFont font = FontManager.serif;
+					final float fontSize = 40;
+					stream.setNonStrokingColor(Color.BLACK);
+					stream.setFont(font, fontSize);
+					final float xStart = (event.getWidth() - font.getStringWidth(header) / 1000 * fontSize) * 0.5f;
+					final float yStart = event.getHeight() - 10
+							- (font.getFontDescriptor().getAscent() + font.getFontDescriptor().getDescent()) / 1000 * fontSize;
+					stream.beginText();
+					stream.newLineAtOffset(xStart, yStart);
+					stream.showText(header);
+					stream.endText();
+				} catch (final IOException e) {
+					ErrorLogger.logError(e);
+				}
+			}
+
+			if (showName || showDate) {
+				try {
+					final PDFont font = FontManager.serif;
+					final float fontSize = 6;
+					stream.setFont(font, fontSize);
+					final float xStart = 13;
+					final float yStart = 3;
+					stream.beginText();
+					stream.newLineAtOffset(xStart, yStart);
+					if (showName) {
+						String name = "Leerer Bogen";
+						if (hero != null) {
+							name = hero.getObj("Biografie").getStringOrDefault("Vorname", "");
+						}
+						stream.showText(name);
+						if (showDate) {
+							stream.showText(" - ");
+						}
+					}
+					if (showDate) {
+						stream.showText(LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.uuuu")));
+					}
+					stream.endText();
+				} catch (final IOException e) {
+					ErrorLogger.logError(e);
+				}
 			}
 
 			if (includeNameLine) {

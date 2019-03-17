@@ -50,6 +50,8 @@ public abstract class Sheet implements HeroController {
 
 	protected boolean fill;
 	protected boolean fillAll;
+	protected boolean showName;
+	protected boolean showDate;
 	protected JSONObject hero;
 	protected final SettingsPage settingsPage = new SettingsPage();
 	protected final BooleanProperty separatePage = new SimpleBooleanProperty(true);
@@ -109,6 +111,11 @@ public abstract class Sheet implements HeroController {
 		this.hero = hero;
 		loadSettings(hero != null && hero.containsKey("Heldenbogen") ? hero.getObj("Heldenbogen").getObjOrDefault(toString(), new JSONObject(null))
 				: new JSONObject(null));
+	}
+
+	public void setShowNameAndDate(final boolean showName, final boolean showDate) {
+		this.showName = showName;
+		this.showDate = showDate;
 	}
 
 	protected void startCreate(final PDDocument document) throws IOException {

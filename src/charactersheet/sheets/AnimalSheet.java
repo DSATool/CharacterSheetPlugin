@@ -234,7 +234,7 @@ public class AnimalSheet extends Sheet {
 	@Override
 	public void create(final PDDocument document) throws IOException {
 		if (types.size() > 0) {
-			header = SheetUtil.createHeader("Tierbrief", true, false, false, hero, fill, fillAll);
+			header = SheetUtil.createHeader("Tierbrief", true, false, false, hero, fill, fillAll, showName, showDate);
 
 			startCreate(document);
 

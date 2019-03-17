@@ -387,7 +387,7 @@ public class InventorySheet extends Sheet {
 			height = 771;
 		}
 
-		header = SheetUtil.createHeader("Ausrüstungsbrief", true, showAttributes.get(), false, hero, fill, fillAll);
+		header = SheetUtil.createHeader("Ausrüstungsbrief", true, showAttributes.get(), false, hero, fill, fillAll, showName, showDate);
 
 		startCreate(document);
 

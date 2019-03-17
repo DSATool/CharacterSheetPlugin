@@ -276,7 +276,7 @@ public class ClericSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		header = SheetUtil.createHeader("Geweihtenbrief", true, false, false, hero, fill, fillAll).andThen(event -> {
+		header = SheetUtil.createHeader("Geweihtenbrief", true, false, false, hero, fill, fillAll, showName, showDate).andThen(event -> {
 			final Table table = new Table().setBorder(0, 0, 0, 0);
 			table.addColumn(new Column(29, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
 			table.addColumn(new Column(29, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0.5f, 0.5f, 0.5f, 0.5f));

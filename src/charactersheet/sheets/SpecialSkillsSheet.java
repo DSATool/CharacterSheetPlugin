@@ -60,7 +60,7 @@ public class SpecialSkillsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		header = SheetUtil.createHeader("Sonderfertigkeiten", true, false, false, hero, fill, fillAll);
+		header = SheetUtil.createHeader("Sonderfertigkeiten", true, false, false, hero, fill, fillAll, showName, showDate);
 
 		startCreate(document);
 

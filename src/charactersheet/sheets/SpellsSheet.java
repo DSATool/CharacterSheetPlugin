@@ -87,7 +87,7 @@ public class SpellsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		header = SheetUtil.createHeader("Zauberbrief", true, true, false, hero, fill, fillAll);
+		header = SheetUtil.createHeader("Zauberbrief", true, true, false, hero, fill, fillAll, showName, showDate);
 
 		startCreate(document);
 
