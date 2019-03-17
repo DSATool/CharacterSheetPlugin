@@ -222,14 +222,54 @@ public class FightSheet extends Sheet {
 							bf = "—";
 						}
 
-						String defaultNotes = " ";
+						String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", ""));
+						boolean first = notes.isEmpty();
 						if (baseWeapon.containsKey("Bannschwert") && baseWeapon.getObj("Bannschwert").getObj("Rituale").containsKey("Bannschwert")) {
-							defaultNotes = "Bannschwert";
+							if (first) {
+								first = false;
+							} else {
+								notes += ", ";
+							}
+							notes += "Bannschwert";
 							if (baseWeapon.getObj("Bannschwert").getObj("Rituale").containsKey("Apport")) {
-								defaultNotes += ", Apport";
+								notes += ", Apport";
 							}
 						}
-						final String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", defaultNotes));
+						if (weaponMastery != null) {
+							final JSONObject easierManeuvers = weaponMastery.getObjOrDefault("Manöver:Erleichterung", null);
+							final JSONArray additionalManeuvers = weaponMastery.getArrOrDefault("Manöver:Zusätzlich", null);
+							final JSONObject pros = weaponMastery.getObjOrDefault("Vorteile", null);
+							if (easierManeuvers != null) {
+								for (final String maneuver : easierManeuvers.keySet()) {
+									if (first) {
+										first = false;
+									} else {
+										notes += ", ";
+									}
+									notes += maneuver + "-" + easierManeuvers.getInt(maneuver);
+								}
+							}
+							if (additionalManeuvers != null) {
+								for (final String maneuver : additionalManeuvers.getStrings()) {
+									if (first) {
+										first = false;
+									} else {
+										notes += ", ";
+									}
+									notes += maneuver;
+								}
+							}
+							if (pros != null) {
+								for (final String pro : pros.keySet()) {
+									if (first) {
+										first = false;
+									} else {
+										notes += ", ";
+									}
+									notes += pro;
+								}
+							}
+						}
 
 						table.addRow(name, type, ebe, tp, at, pa, tpkk, wm, ini, distance, bf, notes);
 					} else {
@@ -715,7 +755,46 @@ public class FightSheet extends Sheet {
 							}
 						}
 
-						final String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
+						String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
+
+						final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArr("Waffenmeister"), type,
+								item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
+						if (weaponMastery != null) {
+							boolean first = notes.isEmpty();
+							final JSONObject easierManeuvers = weaponMastery.getObjOrDefault("Manöver:Erleichterung", null);
+							final JSONArray additionalManeuvers = weaponMastery.getArrOrDefault("Manöver:Zusätzlich", null);
+							final JSONObject pros = weaponMastery.getObjOrDefault("Vorteile", null);
+							if (easierManeuvers != null) {
+								for (final String maneuver : easierManeuvers.keySet()) {
+									if (first) {
+										first = false;
+									} else {
+										notes += ", ";
+									}
+									notes += maneuver + "-" + easierManeuvers.getInt(maneuver);
+								}
+							}
+							if (additionalManeuvers != null) {
+								for (final String maneuver : additionalManeuvers.getStrings()) {
+									if (first) {
+										first = false;
+									} else {
+										notes += ", ";
+									}
+									notes += maneuver;
+								}
+							}
+							if (pros != null) {
+								for (final String pro : pros.keySet()) {
+									if (first) {
+										first = false;
+									} else {
+										notes += ", ";
+									}
+									notes += pro;
+								}
+							}
+						}
 
 						table.addRow(name, type, ebe, tp, at, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0],
 								tpdistance[1], tpdistance[2], tpdistance[3], tpdistance[4], num, notes);
@@ -931,7 +1010,7 @@ public class FightSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		header = SheetUtil.createHeader("Kampfbrief", true, false, true, hero, fill, fillAll);
+		header = SheetUtil.createHeader("Kampfbrief", true, false, true, hero, fill, fillAll, showName, showDate);
 
 		startCreate(document);
 
