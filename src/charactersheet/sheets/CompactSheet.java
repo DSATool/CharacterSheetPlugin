@@ -16,9 +16,12 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -77,6 +80,7 @@ public class CompactSheet extends Sheet {
 		final int numAttributes = attributes.size() + 3;
 
 		final Table table = new Table().setBorder(0, 0, 0, 0);
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
 		for (int i = 0; i < numAttributes; ++i) {
 			table.addColumn(new Column(291.5f / numAttributes, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
@@ -101,6 +105,7 @@ public class CompactSheet extends Sheet {
 
 	private void addBiographyTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
 		table.addColumn(new Column(453, 453, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
 		table.addColumn(new Column(65, 65, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
@@ -121,6 +126,7 @@ public class CompactSheet extends Sheet {
 
 	private void addCloseCombatTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(92, 92, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
@@ -212,6 +218,7 @@ public class CompactSheet extends Sheet {
 
 	private void addDerivedValuesTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
 		for (int i = 0; i < 4; ++i) {
 			table.addColumn(new Column(583f / 11, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
@@ -252,6 +259,7 @@ public class CompactSheet extends Sheet {
 
 	private void addInfightTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(34, FontManager.serif, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(43, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
@@ -277,8 +285,91 @@ public class CompactSheet extends Sheet {
 		bottom.bottom = table.render(document, 117, 332, bottom.bottom - 5, 10, 10);
 	}
 
+	private void addMulticolTable(final PDDocument document, final String title, final Object[] tableHeader, final Table table,
+			final int numColumns, final List<Object[]> rows, final Set<Integer> dividers, final int additionalRows) throws IOException {
+
+		for (int i = 0; i < additionalRows || rows.size() % numColumns != 0; ++i) {
+			rows.add(new Object[] { " " });
+		}
+
+		int start = 0;
+
+		Table mainTable = new Table().setFiller(SheetUtil.stripe());
+		mainTable.addEventHandler(EventType.BEGIN_PAGE, header);
+		final float width = (583 - 5 * (numColumns - 1)) / (float) numColumns;
+
+		mainTable.addColumn(new Column(width, FontManager.serif, fontSize, HAlign.LEFT));
+		for (int i = 1; i < numColumns; ++i) {
+			mainTable.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
+			mainTable.addColumn(new Column(width, FontManager.serif, fontSize, HAlign.CENTER));
+		}
+
+		Table columnTable = table;
+		if (tableHeader != null) {
+			columnTable.addRow(tableHeader);
+		}
+
+		while (true) {
+			SheetUtil.addTitle(mainTable, title);
+
+			final float headerHeight = mainTable.getHeight(583) + 0.25f;
+			final float rowHeight = columnTable.duplicate().addRow(" ").getHeight(583);
+
+			final int maxRows = (rows.size() - start) / numColumns;
+			if (maxRows == 0) {
+				break;
+			}
+			int numRows = Math.min((int) ((bottom.bottom - 5 - headerHeight - 10) / rowHeight) - (tableHeader != null ? 1 : 0), maxRows);
+			if (numRows < 15) {
+				numRows = maxRows;
+			}
+			int rowIndex = 0;
+			for (int column = 0; column < numColumns; ++column) {
+
+				while (rowIndex < numRows) {
+					final int index = rowIndex + column * numRows + start;
+					final Object[] row = rows.get(index);
+					columnTable.addRow(row);
+
+					if (dividers != null && rowIndex != 0 && dividers.contains(index)) {
+						columnTable.getRows().get(columnTable.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
+							try {
+								final PDPageContentStream stream = event.getStream();
+								stream.setLineWidth(1);
+								stream.moveTo(event.getLeft(), event.getTop());
+								stream.lineTo(event.getLeft() + event.getWidth(), event.getTop());
+								stream.stroke();
+							} catch (final IOException e) {
+								ErrorLogger.logError(e);
+							}
+						});
+					}
+
+					++rowIndex;
+				}
+
+				mainTable.addCells(new TableCell(columnTable));
+				if (column != numColumns - 1) {
+					mainTable.addCells(" ");
+				}
+				columnTable = table.duplicate();
+				if (tableHeader != null) {
+					columnTable.addRow(tableHeader);
+				}
+
+				rowIndex = 0;
+			}
+
+			bottom.bottom = mainTable.render(document, 583, 6, bottom.bottom - 5, 10, 10);
+			mainTable = mainTable.duplicate();
+
+			start += numRows * numColumns;
+		}
+	}
+
 	private void addProsAndConsTable(final PDDocument document) throws IOException {
 		final Table table = new Table();
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(583, FontManager.serif, fontSize, HAlign.LEFT));
 
 		SheetUtil.addTitle(table, "Vor- und Nachteile");
@@ -318,6 +409,7 @@ public class CompactSheet extends Sheet {
 
 	private void addRangedCombatTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(92, 92, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
@@ -418,6 +510,7 @@ public class CompactSheet extends Sheet {
 
 	private void addSpecialSkillsTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(583, FontManager.serif, fontSize, HAlign.LEFT));
 
 		SheetUtil.addTitle(table, "Sonderfertigkeiten");
@@ -479,48 +572,10 @@ public class CompactSheet extends Sheet {
 	}
 
 	private void addSpellTable(final PDDocument document) throws IOException {
-		final Table spellTable = new Table().setFiller(SheetUtil.stripe());
-		spellTable.addColumn(new Column(289, FontManager.serif, fontSize, HAlign.LEFT));
-		spellTable.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
-		spellTable.addColumn(new Column(289, FontManager.serif, fontSize, HAlign.CENTER));
-
-		SheetUtil.addTitle(spellTable, "Zauber");
-
-		Table table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-		table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
-		table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
-		table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
-		table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
-		table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
-
 		final JSONObject spells = ResourceManager.getResource("data/Zauber");
 		final JSONObject actualSpells = hero.getObj("Zauber");
 
-		int rows = additionalSpellRows.get() + 1;
-
-		for (final String spellName : actualSpells.keySet()) {
-			final JSONObject spell = HeroUtil.findTalent(spellName)._1;
-			final JSONObject actualSpell = actualSpells.getObj(spellName);
-			for (final String repName : actualSpell.keySet()) {
-				if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
-					rows += actualSpell.getArr(repName).size();
-				} else {
-					++rows;
-				}
-			}
-		}
-
-		if (rows == 1) return;
-
-		int index = 0;
-
-		final Cell nameTitle = new TextCell("Zauber", FontManager.serifBold, 0, 8);
-		final Cell repTitle = new TextCell("Rep.", FontManager.serifBold, 0, 8);
-		final Cell challengeTitle = new TextCell("Probe", FontManager.serifBold, 0, 8);
-		final Cell traitTitle = new TextCell("Merk.", FontManager.serifBold, 0, 8).setHAlign(HAlign.CENTER);
-		final Cell valueTitle = new TextCell("ZfW", FontManager.serifBold, 0, 8);
-
-		table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
+		final List<Object[]> rows = new ArrayList<>();
 
 		final Map<Tuple<String, String>, JSONValue> actual = new TreeMap<>((s1, s2) -> {
 			final int name = SheetUtil.comparator.compare(s1._1, s2._1);
@@ -557,13 +612,6 @@ public class CompactSheet extends Sheet {
 			}
 
 			for (final JSONObject actualTalent : actualTalents) {
-				if (index >= rows / 2) {
-					spellTable.addCells(new TableCell(table), " ");
-					table = table.duplicate();
-					table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
-					index = 0;
-				}
-
 				String name = spellNameRep._1;
 				if (spell.containsKey("Auswahl")) {
 					name = name + ": " + actualTalent.getStringOrDefault("Auswahl", "");
@@ -592,63 +640,33 @@ public class CompactSheet extends Sheet {
 					zfw = actualTalent.getIntOrDefault("ZfW", 0).toString();
 				}
 
-				table.addCells(name, spellNameRep._2, challenge, traitString, zfw);
-
-				++index;
+				rows.add(new Object[] { name, spellNameRep._2, challenge, traitString, zfw });
 			}
 		}
 
-		for (int i = 0; i < additionalSpellRows.get() || index < rows / 2; ++i) {
-			if (index >= rows / 2) {
-				spellTable.addCells(new TableCell(table), " ");
-				table = table.duplicate();
-				table.addRow(nameTitle, repTitle, challengeTitle, traitTitle, valueTitle);
-				index = 0;
-			}
-			table.addRow("", "", "", "", " ");
-			++index;
-		}
+		final Table table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+		table.addColumn(new Column(162, 162, FontManager.serif, 4, 8, HAlign.LEFT));
+		table.addColumn(new Column(19, 19, FontManager.serif, 4, 8, HAlign.CENTER));
+		table.addColumn(new Column(57, 57, FontManager.serif, 4, 8, HAlign.CENTER));
+		table.addColumn(new Column(28, 28, FontManager.serif, 4, 8, HAlign.LEFT));
+		table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
 
-		spellTable.addCells(new TableCell(table));
+		final Cell nameTitle = new TextCell("Zauber", FontManager.serifBold, 0, 8);
+		final Cell repTitle = new TextCell("Rep.", FontManager.serifBold, 0, 8);
+		final Cell challengeTitle = new TextCell("Probe", FontManager.serifBold, 0, 8);
+		final Cell traitTitle = new TextCell("Merk.", FontManager.serifBold, 0, 8).setHAlign(HAlign.CENTER);
+		final Cell valueTitle = new TextCell("ZfW", FontManager.serifBold, 0, 8);
+		final Object[] tableHeader = new Object[] { nameTitle, repTitle, challengeTitle, traitTitle, valueTitle };
 
-		bottom.bottom = spellTable.render(document, 583, 6, bottom.bottom - 5, 10, 10);
+		addMulticolTable(document, "Zauber", tableHeader, table, 2, rows, null, additionalSpellRows.get());
 	}
 
 	private void addTalentsTable(final PDDocument document) throws IOException {
-		final Table talentsTable = new Table().setFiller(SheetUtil.stripe());
-		talentsTable.addColumn(new Column(191, FontManager.serif, fontSize, HAlign.LEFT));
-		talentsTable.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
-		talentsTable.addColumn(new Column(191, FontManager.serif, fontSize, HAlign.CENTER));
-		talentsTable.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
-		talentsTable.addColumn(new Column(191, FontManager.serif, fontSize, HAlign.CENTER));
-
-		SheetUtil.addTitle(talentsTable, "Talente");
-
-		Table table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
-		table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
-		table.addColumn(new Column(43, FontManager.serif, 8, HAlign.CENTER));
-		table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
-		table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
-
 		final JSONObject talents = ResourceManager.getResource("data/Talente");
 		final JSONObject actualTalentGroups = hero.getObj("Talente");
 
-		int rows = additionalTalentRows.get() + 2;
-
-		for (final String talentGroupName : actualTalentGroups.keySet()) {
-			++rows;
-			final JSONObject actualTalentGroup = actualTalentGroups.getObj(talentGroupName);
-			for (final String talentName : actualTalentGroup.keySet()) {
-				final JSONObject talent = HeroUtil.findTalent(talentName)._1;
-				if (talent != null && (talent.containsKey("Auswahl") || talent.containsKey("Freitext"))) {
-					rows += actualTalentGroup.getArr(talentName).size();
-				} else {
-					++rows;
-				}
-			}
-		}
-
-		int index = 0;
+		final List<Object[]> rows = new ArrayList<>();
+		final Set<Integer> dividers = new HashSet<>();
 
 		final int ATBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"), hero,
 				hero.getObj("Basiswerte").getObj("Attacke-Basis"), true);
@@ -656,6 +674,8 @@ public class CompactSheet extends Sheet {
 				hero.getObj("Basiswerte").getObj("Parade-Basis"), true);
 		final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"), hero,
 				hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
+
+		int index = 0;
 
 		for (final String talentGroupName : talents.keySet()) {
 			final JSONObject talentGroup = talents.getObj(talentGroupName);
@@ -665,48 +685,31 @@ public class CompactSheet extends Sheet {
 				continue;
 			}
 
-			if (index >= rows / 3) {
-				talentsTable.addCells(new TableCell(table), " ");
-				table = table.duplicate();
-				index = 0;
-			}
+			dividers.add(index);
 
 			final Cell nameTitle = new TextCell(talentGroupName, FontManager.serifBold, 0, 8);
 			final Cell tawTitle = new TextCell("TaW", FontManager.serifBold, 0, 8);
 
 			switch (talentGroupName) {
 			case "Nahkampftalente":
-				table.addRow(nameTitle, new TextCell("AT", FontManager.serifBold, 0, 8).addText("/").addText("PA").setEquallySpaced(true),
-						new TextCell("BE", FontManager.serifBold, 0, 8), tawTitle);
+				rows.add(new Object[] { nameTitle, new TextCell("AT", FontManager.serifBold, 0, 8).addText("/").addText("PA").setEquallySpaced(true),
+						new TextCell("BE", FontManager.serifBold, 0, 8), tawTitle });
 				break;
 			case "Fernkampftalente":
-				table.addRow(nameTitle, new TextCell("FK", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8),
-						tawTitle);
+				rows.add(new Object[] { nameTitle, new TextCell("FK", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8),
+						tawTitle });
 				break;
 			case "Körperliche Talente":
-				table.addRow(nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8),
-						tawTitle);
+				rows.add(new Object[] { nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8),
+						tawTitle });
 				break;
 			case "Sprachen und Schriften":
-				table.addRow(nameTitle, new TextCell("Kpl.", FontManager.serifBold, 0, 8), new TextCell("S", FontManager.serifBold, 0, 8), tawTitle);
+				rows.add(new Object[] { nameTitle, new TextCell("Kpl.", FontManager.serifBold, 0, 8), new TextCell("S", FontManager.serifBold, 0, 8),
+						tawTitle });
 				break;
 			default:
-				table.addRow(nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), " ", tawTitle);
+				rows.add(new Object[] { nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), " ", tawTitle });
 				break;
-			}
-
-			if (index != 0) {
-				table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
-					try {
-						final PDPageContentStream stream = event.getStream();
-						stream.setLineWidth(1);
-						stream.moveTo(event.getLeft(), event.getTop());
-						stream.lineTo(event.getLeft() + event.getWidth(), event.getTop());
-						stream.stroke();
-					} catch (final IOException e) {
-						ErrorLogger.logError(e);
-					}
-				});
 			}
 
 			++index;
@@ -745,12 +748,6 @@ public class CompactSheet extends Sheet {
 				}
 
 				for (final JSONObject actualTalent : actualTalents) {
-					if (index >= rows / 3) {
-						talentsTable.addCells(new TableCell(table), " ");
-						table = table.duplicate();
-						index = 0;
-					}
-
 					Cell special;
 					Cell language = null;
 					switch (talentGroupName) {
@@ -819,26 +816,11 @@ public class CompactSheet extends Sheet {
 
 					final TextCell nameCell = new TextCell(name,
 							markBasis.get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic : FontManager.serif, 8, 8);
-					table.addCells(nameCell, special);
-					if ("Sprachen und Schriften".equals(talentGroupName)) {
-						table.addCells(language);
-					} else {
-						table.addCells(be);
-					}
-					table.addCells(taw);
+					final Object beOrLanguage = "Sprachen und Schriften".equals(talentGroupName) ? language : be;
+					rows.add(new Object[] { nameCell, special, beOrLanguage, taw });
 
-					if (index != 0 && groupBasis.get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
-						table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
-							try {
-								final PDPageContentStream stream = event.getStream();
-								stream.setLineWidth(1);
-								stream.moveTo(event.getLeft(), event.getTop());
-								stream.lineTo(event.getLeft() + event.getWidth(), event.getTop());
-								stream.stroke();
-							} catch (final IOException e) {
-								ErrorLogger.logError(e);
-							}
-						});
+					if (groupBasis.get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
+						dividers.add(index);
 					}
 					basicTalent = talent.getBoolOrDefault("Basis", false);
 
@@ -847,23 +829,18 @@ public class CompactSheet extends Sheet {
 			}
 		}
 
-		for (int i = 0; i < additionalTalentRows.get() || index < rows / 3; ++i) {
-			if (index >= rows / 3) {
-				talentsTable.addCells(new TableCell(table), " ");
-				table = table.duplicate();
-				index = 0;
-			}
-			table.addRow(" ");
-			++index;
-		}
+		final Table table = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+		table.addColumn(new Column(100, 100, FontManager.serif, 4, 8, HAlign.LEFT));
+		table.addColumn(new Column(43, FontManager.serif, 8, HAlign.CENTER));
+		table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
+		table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
 
-		talentsTable.addCells(new TableCell(table));
-
-		bottom.bottom = talentsTable.render(document, 583, 6, bottom.bottom - 5, 10, 10);
+		addMulticolTable(document, "Talente", null, table, 3, rows, groupBasis.get() ? dividers : null, additionalTalentRows.get());
 	}
 
 	private void addTotalArmorTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(91, 91, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(22, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(22, FontManager.serif, fontSize, HAlign.CENTER));
@@ -935,6 +912,7 @@ public class CompactSheet extends Sheet {
 
 	private void addZoneArmorTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(91, 91, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(22, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(18, FontManager.serif, fontSize, HAlign.CENTER));
@@ -1032,6 +1010,7 @@ public class CompactSheet extends Sheet {
 	@Override
 	public void create(final PDDocument document) throws IOException {
 		if (hero != null) {
+			header = SheetUtil.createHeader(null, false, false, false, hero, fill, fillAll, showName, showDate);
 			startCreate(document);
 
 			try {
