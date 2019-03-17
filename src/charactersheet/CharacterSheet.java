@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2017 DSATool team
  *
@@ -14,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package charactersheet;
+
 import charactersheet.ui.SheetConfiguration;
 import dsatool.credits.Credits;
 import dsatool.gui.Main;
