@@ -387,12 +387,8 @@ public class CompactSheet extends Sheet {
 			for (final String proOrConName : actualProsOrCons.keySet()) {
 				final JSONObject proOrCon = actualProsOrCons.get(proOrConName);
 				if (proOrCon.containsKey("Auswahl") || proOrCon.containsKey("Freitext")) {
-					final JSONArray proOrConList = actual.getArr(proOrConName);
-					for (int i = 0; i < proOrConList.size(); ++i) {
-						final JSONObject actualProOrCon = proOrConList.getObj(i);
-						prosAndCons.append(DSAUtil.printProOrCon(actualProOrCon, proOrConName, proOrCon, true));
-						prosAndCons.append("; ");
-					}
+					prosAndCons.append(DSAUtil.printProsOrCons(actual.getArr(proOrConName), proOrConName, proOrCon, true));
+					prosAndCons.append("; ");
 				} else {
 					prosAndCons.append(DSAUtil.printProOrCon(actual.getObj(proOrConName), proOrConName, proOrCon, true));
 					prosAndCons.append("; ");
@@ -551,12 +547,8 @@ public class CompactSheet extends Sheet {
 			final JSONObject skill = skills.get(skillName);
 
 			if (skill.containsKey("Auswahl") || skill.containsKey("Freitext")) {
-				final JSONArray skillList = actualSkills.getArr(skillName);
-				for (int j = 0; j < skillList.size(); ++j) {
-					final JSONObject actualSkill = skillList.getObj(j);
-					skillsString.append(DSAUtil.printProOrCon(actualSkill, skillName, skill, false));
-					skillsString.append("; ");
-				}
+				skillsString.append(DSAUtil.printProsOrCons(actualSkills.getArr(skillName), skillName, skill, false));
+				skillsString.append("; ");
 			} else {
 				skillsString.append(skillName);
 				skillsString.append("; ");
@@ -597,7 +589,7 @@ public class CompactSheet extends Sheet {
 
 		for (final Tuple<String, String> spellNameRep : actual.keySet()) {
 			final JSONObject spell = spells.getObj(spellNameRep._1);
-			final JSONObject rep = spell.getObj(spellNameRep._2);
+			final JSONObject rep = spell.getObj("Repräsentationen").getObj(spellNameRep._2);
 
 			final List<JSONObject> actualTalents = new LinkedList<>();
 			if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
@@ -691,25 +683,16 @@ public class CompactSheet extends Sheet {
 			final Cell tawTitle = new TextCell("TaW", FontManager.serifBold, 0, 8);
 
 			switch (talentGroupName) {
-			case "Nahkampftalente":
-				rows.add(new Object[] { nameTitle, new TextCell("AT", FontManager.serifBold, 0, 8).addText("/").addText("PA").setEquallySpaced(true),
+				case "Nahkampftalente" -> rows
+						.add(new Object[] { nameTitle, new TextCell("AT", FontManager.serifBold, 0, 8).addText("/").addText("PA").setEquallySpaced(true),
+								new TextCell("BE", FontManager.serifBold, 0, 8), tawTitle });
+				case "Fernkampftalente" -> rows.add(
+						new Object[] { nameTitle, new TextCell("FK", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8), tawTitle });
+				case "Körperliche Talente" -> rows.add(new Object[] { nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8),
 						new TextCell("BE", FontManager.serifBold, 0, 8), tawTitle });
-				break;
-			case "Fernkampftalente":
-				rows.add(new Object[] { nameTitle, new TextCell("FK", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8),
-						tawTitle });
-				break;
-			case "Körperliche Talente":
-				rows.add(new Object[] { nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), new TextCell("BE", FontManager.serifBold, 0, 8),
-						tawTitle });
-				break;
-			case "Sprachen und Schriften":
-				rows.add(new Object[] { nameTitle, new TextCell("Kpl.", FontManager.serifBold, 0, 8), new TextCell("S", FontManager.serifBold, 0, 8),
-						tawTitle });
-				break;
-			default:
-				rows.add(new Object[] { nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), " ", tawTitle });
-				break;
+				case "Sprachen und Schriften" -> rows.add(new Object[] { nameTitle, new TextCell("Kpl.", FontManager.serifBold, 0, 8),
+						new TextCell("S", FontManager.serifBold, 0, 8), tawTitle });
+				default -> rows.add(new Object[] { nameTitle, new TextCell("Probe", FontManager.serifBold, 0, 8), " ", tawTitle });
 			}
 
 			++index;
@@ -748,59 +731,52 @@ public class CompactSheet extends Sheet {
 				}
 
 				for (final JSONObject actualTalent : actualTalents) {
-					Cell special;
 					Cell language = null;
-					switch (talentGroupName) {
-					case "Nahkampftalente":
-						final boolean ATOnly = talent.getBoolOrDefault("NurAT", false);
+					final Cell special = switch (talentGroupName) {
+						case "Nahkampftalente" -> {
+							final boolean ATOnly = talent.getBoolOrDefault("NurAT", false);
 
-						final int at = ATBase + actualTalent.getIntOrDefault("AT", 0);
-						final String atString = (at < 10 ? "  " : "") + Integer.toString(at);
+							final int at = ATBase + actualTalent.getIntOrDefault("AT", 0);
+							final String atString = (at < 10 ? "  " : "") + Integer.toString(at);
 
-						String paString;
-						if (ATOnly) {
-							paString = "—";
-						} else {
-							final int pa = PABase + actualTalent.getIntOrDefault("PA", 0);
-							paString = (pa < 10 ? "  " : "") + Integer.toString(pa);
+							String paString;
+							if (ATOnly) {
+								paString = "—";
+							} else {
+								final int pa = PABase + actualTalent.getIntOrDefault("PA", 0);
+								paString = (pa < 10 ? "  " : "") + Integer.toString(pa);
+							}
+							break new TextCell(atString).addText("/").addText(paString).setEquallySpaced(true);
 						}
-						special = new TextCell(atString).addText("/").addText(paString).setEquallySpaced(true);
-						break;
-					case "Fernkampftalente":
-						special = new TextCell(Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0)));
-						break;
-					case "Sprachen und Schriften":
-						special = new TextCell(talent.getInt("Komplexität").toString());
-						if (actualTalent.getBoolOrDefault("Muttersprache", false)) {
-							language = new TextCell("MS");
-						} else if (actualTalent.getBoolOrDefault("Zweitsprache", false)) {
-							language = new TextCell("ZS");
-						} else if (actualTalent.getBoolOrDefault("Lehrsprache", false)) {
-							language = new TextCell("LS");
-						} else {
-							language = new TextCell(" ");
+						case "Fernkampftalente" -> new TextCell(Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0)));
+						case "Sprachen und Schriften" -> {
+							if (actualTalent.getBoolOrDefault("Muttersprache", false)) {
+								language = new TextCell("MS");
+							} else if (actualTalent.getBoolOrDefault("Zweitsprache", false)) {
+								language = new TextCell("ZS");
+							} else if (actualTalent.getBoolOrDefault("Lehrsprache", false)) {
+								language = new TextCell("LS");
+							} else {
+								language = new TextCell(" ");
+							}
+							break new TextCell(talent.getInt("Komplexität").toString());
 						}
-						break;
-					default:
-						if (talent.containsKey("Probe")) {
-							final JSONArray challenge = talent.getArr("Probe");
-							special = new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
-									.addText(challenge.getString(2))
-									.setEquallySpaced(true).setPadding(0, 1, 1, 0);
-						} else {
-							special = new TextCell("—");
+						default -> {
+							if (talent.containsKey("Probe")) {
+								final JSONArray challenge = talent.getArr("Probe");
+								break new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
+										.addText(challenge.getString(2))
+										.setEquallySpaced(true).setPadding(0, 1, 1, 0);
+							} else {
+								break new TextCell("—");
+							}
 						}
-						break;
-					}
+					};
 
-					String be = " ";
-					switch (talentGroupName) {
-					case "Nahkampftalente":
-					case "Fernkampftalente":
-					case "Körperliche Talente":
-						be = DSAUtil.getBEString(talent);
-						break;
-					}
+					final String be = switch (talentGroupName) {
+						case "Nahkampftalente", "Fernkampftalente", "Körperliche Talente" -> DSAUtil.getBEString(talent);
+						default -> " ";
+					};
 
 					String taw = "—";
 					if (actualTalent.getBoolOrDefault("aktiviert", true) || talent.getBoolOrDefault("Basis", false)) {
