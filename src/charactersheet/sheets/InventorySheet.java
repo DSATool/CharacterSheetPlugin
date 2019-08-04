@@ -123,19 +123,13 @@ public class InventorySheet extends Sheet {
 				final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
 				final String actualType = item.getStringOrDefault("Typ", baseItem.getStringOrDefault("Typ", ""));
 				final String type = types.getOrDefault(actualType, "");
-				String loads = "—";
-				switch (actualType) {
-				case "Applicatus":
-				case "Arcanovi (einmalig)":
-				case "Arcanovi (aufladbar)":
-				case "Arcanovi (semipermanent)":
-					loads = DSAUtil.getModificationString(item.getObjOrDefault("Ladungen", baseItem.getObj("Ladungen")), Units.TIME, false);
-					break;
-				case "Matrixgeber":
-				case "Zaubertalisman":
-					loads = stabilities.getOrDefault(item.getStringOrDefault("Stabilität", baseItem.getString("Stabilität")), "");
-					break;
-				}
+				final String loads = switch (actualType) {
+					case "Applicatus", "Arcanovi (einmalig)", "Arcanovi (aufladbar)", "Arcanovi (semipermanent)" -> DSAUtil
+							.getModificationString(item.getObjOrDefault("Ladungen", baseItem.getObj("Ladungen")), Units.TIME, false);
+					case "Matrixgeber", "Zaubertalisman" -> stabilities.getOrDefault(item.getStringOrDefault("Stabilität", baseItem.getString("Stabilität")),
+							"");
+					default -> "—";
+				};
 				final JSONObject energy = item.getObjOrDefault("Astralenergie", baseItem.getObj("Astralenergie"));
 				final String asp = energy.getIntOrDefault("Additiv", 0) == 0 ? "—" : DSAUtil.getModificationString(energy, Units.NONE, false);
 
