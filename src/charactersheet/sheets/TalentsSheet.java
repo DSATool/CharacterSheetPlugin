@@ -79,6 +79,7 @@ public class TalentsSheet extends Sheet {
 	private final BooleanProperty markBasis = new SimpleBooleanProperty(false);
 	private final BooleanProperty primaryTalents = new SimpleBooleanProperty(false);
 	private final StringProperty showMetaTalents = new SimpleStringProperty("Alle");
+	private final BooleanProperty showRitualOrLiturgyKnowledge = new SimpleBooleanProperty(false);
 	private final BooleanProperty basicValuesInWeaponTalent = new SimpleBooleanProperty(true);
 
 	public TalentsSheet() {
@@ -89,7 +90,7 @@ public class TalentsSheet extends Sheet {
 		final Table table = new Table().setFiller(SheetUtil.stripe()).setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		table.addColumn(new Column(71, 71, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(65, 65, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(45, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -215,7 +216,7 @@ public class TalentsSheet extends Sheet {
 			}
 		}
 
-		bottom.bottom = table.render(document, 419, 12, bottom.bottom, 72, 10) - 5;
+		bottom.bottom = table.render(document, 370, 12, bottom.bottom, 72, 10) - 5;
 	}
 
 	private void addSpecialTable(final PDDocument document) throws IOException {
@@ -401,37 +402,37 @@ public class TalentsSheet extends Sheet {
 		final Map<String, Integer> languageFamilies = new HashMap<>();
 
 		switch (groupName) {
-		case "Nahkampftalente":
-			isCloseCombat = true;
-		case "Fernkampftalente":
-			isFightGroup = true;
-		case "Körperliche Talente":
-			needsBE = true;
-			table.addColumn(new Column(45, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			break;
-		case "Sprachen":
-			isLanguage = true;
-			table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			break;
-		case "Schriften":
-			isWriting = true;
-			table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			break;
-		default:
-			table.addColumn(new Column(45, FontManager.serif, fontSize, HAlign.CENTER));
-			table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			break;
+			case "Nahkampftalente":
+				isCloseCombat = true;
+			case "Fernkampftalente":
+				isFightGroup = true;
+			case "Körperliche Talente":
+				needsBE = true;
+				table.addColumn(new Column(45, FontManager.serif, fontSize, HAlign.CENTER));
+				table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+				table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				break;
+			case "Sprachen":
+				isLanguage = true;
+				table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+				table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+				table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				break;
+			case "Schriften":
+				isWriting = true;
+				table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+				table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+				table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				break;
+			default:
+				table.addColumn(new Column(45, FontManager.serif, fontSize, HAlign.CENTER));
+				table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				table.addColumn(new Column(111, 111, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				break;
 		}
 
 		table.addRow(SheetUtil.createTitleCell(getGroupTableHeader(groupName, talentGroupInfo), table.getNumColumns()));
@@ -922,6 +923,7 @@ public class TalentsSheet extends Sheet {
 		markBasis.set(settings.getBoolOrDefault("Basistalente markieren", false));
 		primaryTalents.set(settings.getBoolOrDefault("Leittalente anzeigen", hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht")));
 		showMetaTalents.set(settings.getStringOrDefault("Metatalente anzeigen", "Alle"));
+		showRitualOrLiturgyKnowledge.set(settings.getBoolOrDefault("Ritual-/Liturgiekenntnis anzeigen", false));
 		basicValuesInWeaponTalent.set(settings.getBoolOrDefault("Basiswerte bei AT/PA-Verteilung berücksichtigen", true));
 	}
 
