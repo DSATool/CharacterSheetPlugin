@@ -50,9 +50,11 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TitledPane;
@@ -100,6 +102,15 @@ public class AnimalSheet extends Sheet {
 		} catch (final Exception e) {
 			ErrorLogger.logError(e);
 		}
+	}
+
+	public void addAnimal(final ActionEvent event) {
+		final String type = switch (((Button) event.getSource()).getText().charAt(0)) {
+			case 'V' -> "Vertrautentier";
+			case 'R' -> "Reittier";
+			default -> "Tier";
+		};
+		addAnimal(type, new JSONObject(null));
 	}
 
 	public TitledPane addAnimal(final String type, final JSONObject settings) {
@@ -159,7 +170,7 @@ public class AnimalSheet extends Sheet {
 			additionalInventoryRows.remove(index);
 		});
 		menu.getItems().add(removeItem);
-		control.setContextMenu(menu);
+		settingsPage.getControl().setContextMenu(menu);
 
 		return control;
 	}
