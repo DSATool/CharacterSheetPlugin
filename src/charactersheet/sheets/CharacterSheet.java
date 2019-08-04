@@ -127,14 +127,14 @@ public class CharacterSheet extends Sheet {
 				final String max = Integer.toString((int) Math.round(start * 1.5));
 				table.addRow(attributes.getObj(attribute).getString("Name"), cur, mod, start, max);
 			} else {
-				table.addRow(attributes.getObj(attribute).getString("Name"));
+				table.addRow(attributes.getObj(attribute).getString("Name"), " ");
 			}
 		}
 
 		final Bordered so = new TextCell(
 				hero != null && fill ? Integer.toString(HeroUtil.getCurrentValue(hero.getObj("Basiswerte").getObj("Sozialstatus"), false)) : " ").setBorder(1,
 						1, 1, 1);
-		final Bordered empty = new TextCell("").setBorder(0, 0, 0, 0);
+		final Bordered empty = new TextCell(" ").setBorder(0, 0, 0, 0);
 		table.addRow("Sozialstatus", so, empty, empty, empty);
 
 		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
@@ -275,7 +275,7 @@ public class CharacterSheet extends Sheet {
 				final String result = SheetUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, hero));
 				table.addRow(derivedName, new TextCell(derivation.toString()).setPadding(0, 0, 2, 0), cur, mod, result);
 			} else {
-				table.addRow(derivedName, new TextCell(derivation.toString()).setPadding(0, 0, 2, 0));
+				table.addRow(derivedName, new TextCell(derivation.toString()).setPadding(0, 0, 2, 0), " ");
 			}
 		}
 
@@ -413,12 +413,14 @@ public class CharacterSheet extends Sheet {
 	private void addMoneyTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
 
-		table.addColumn(new Column(62, FontManager.serif, descSize, HAlign.LEFT).setBorder(0, 0, 0, 0));
+		final boolean needsSmallTable = showBankMoney.get() && showImage.get() && !showAsP.get() && !showKaP.get();
+
+		table.addColumn(new Column(needsSmallTable ? 21 : 62, FontManager.serif, descSize, HAlign.LEFT).setBorder(0, 0, 0, 0));
 		table.addColumn(new Column(40, FontManager.serif, fontSize, HAlign.RIGHT).setBorder(1, 1, 0, 1));
 		table.addColumn(new Column(40, FontManager.serif, fontSize, HAlign.RIGHT).setBorder(1, 1, 0, 1));
 		table.addColumn(new Column(40, FontManager.serif, fontSize, HAlign.RIGHT).setBorder(1, 1, 0, 1));
 		table.addColumn(new Column(40, FontManager.serif, fontSize, HAlign.RIGHT).setBorder(1, 1, 0, 1));
-		table.addColumn(new Column(91, FontManager.serif, descSize, HAlign.RIGHT).setBorder(0, 1, 0, 0));
+		table.addColumn(new Column(needsSmallTable ? 26 : 91, FontManager.serif, descSize, HAlign.RIGHT).setBorder(0, 1, 0, 0));
 		table.addColumn(new Column(70, FontManager.serif, fontSize, HAlign.RIGHT).setBorder(0, 0, 0, 0));
 
 		table.addCells("Geld");
@@ -439,7 +441,7 @@ public class CharacterSheet extends Sheet {
 		}
 
 		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
-		table.render(document, 383, 12, page.getMediaBox().getHeight() - 237, 72, 10);
+		table.render(document, needsSmallTable ? 277 : 383, 12, page.getMediaBox().getHeight() - 237, 72, 10);
 	}
 
 	private void addProOrConTable(final PDDocument document, final String title) throws IOException {
