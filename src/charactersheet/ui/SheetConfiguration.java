@@ -25,6 +25,7 @@ import java.util.Map;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline;
 import org.controlsfx.control.CheckListView;
+import org.controlsfx.control.CheckModel;
 
 import charactersheet.sheets.AnimalSheet;
 import charactersheet.sheets.CharacterSheet;
@@ -42,6 +43,7 @@ import dsa41basis.ui.hero.HeroController;
 import dsa41basis.ui.hero.HeroSelector;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Util;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -171,7 +173,9 @@ public class SheetConfiguration extends HeroSelector {
 			});
 
 			cell.setOnDragDropped(e -> {
-				final Sheet[] checked = sheets.getCheckModel().getCheckedItems().toArray(new Sheet[0]);
+				final CheckModel<Sheet> checkModel = sheets.getCheckModel();
+				final ObservableList<Sheet> checkedSheets = checkModel.getCheckedItems();
+				final Sheet[] checkedPreviously = checkedSheets.toArray(new Sheet[checkedSheets.size()]);
 				final Sheet item = sheets.getItems().get((Integer) e.getDragboard().getContent(DataFormat.PLAIN_TEXT));
 				sheets.getItems().remove(item);
 				final int index = sheets.getItems().indexOf(cell.getItem());
@@ -180,9 +184,9 @@ public class SheetConfiguration extends HeroSelector {
 				} else {
 					sheets.getItems().add(index, item);
 				}
-				sheets.getCheckModel().clearChecks();
-				for (final Sheet sheet : checked) {
-					sheets.getCheckModel().check(sheet);
+				checkModel.clearChecks();
+				for (final Sheet sheet : checkedPreviously) {
+					checkModel.check(sheet);
 				}
 				e.setDropCompleted(true);
 			});
@@ -258,15 +262,9 @@ public class SheetConfiguration extends HeroSelector {
 			final JSONObject settings = hero.getObj("Heldenbogen");
 			final String filled = settings.getStringOrDefault("Ausfüllen", "Unveränderliches");
 			switch (filled) {
-			case "Nicht":
-				noFill.setSelected(true);
-				break;
-			case "Alles":
-				fillAll.setSelected(true);
-				break;
-			default:
-				fill.setSelected(true);
-				break;
+				case "Nicht" -> noFill.setSelected(true);
+				case "Alles" -> fillAll.setSelected(true);
+				default -> fill.setSelected(true);
 			}
 			showName.setSelected(settings.getBoolOrDefault("Name", false));
 			showDate.setSelected(settings.getBoolOrDefault("Datum", false));
