@@ -4,8 +4,8 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/DSA41BasisPlugin"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/DSATool"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="dependencies/fontbox-2.0.14.jar"/>
-	<classpathentry kind="lib" path="dependencies/pdfbox-2.0.14.jar"/>
 	<classpathentry kind="lib" path="dependencies/BoxTable-0.1.0.jar"/>
+	<classpathentry kind="lib" path="dependencies/fontbox-2.0.15.jar"/>
+	<classpathentry kind="lib" path="dependencies/pdfbox-2.0.15.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
