@@ -63,11 +63,11 @@ public class SpellsSheet extends Sheet {
 	private void addSpoMo(final Table table, final String name, final JSONObject variant, final JSONObject base) {
 		table.addCells(name, base.getStringOrDefault("Abkürzung", ""));
 
-		final JSONObject zfp = variant.getObjOrDefault("Erschwernis", base.getObj("Erschwernis"));
+		final JSONObject zfp = variant.getObjOrDefault("Erschwernis", base.getObjOrDefault("Erschwernis", null));
 		final String zfpString = DSAUtil.getModificationString(zfp, Units.NONE, true);
 		table.addCells(zfpString);
 
-		final JSONObject duration = variant.getObjOrDefault("Zauberdauer", base.getObj("Zauberdauer"));
+		final JSONObject duration = variant.getObjOrDefault("Zauberdauer", base.getObjOrDefault("Zauberdauer", null));
 		String durationString = "";
 		if (duration.containsKey("Multiplikativ")) {
 			durationString = SheetUtil.threeDecimalPlacesSigned.format((duration.getDouble("Multiplikativ") - 1) * 100) + "%";
@@ -248,7 +248,8 @@ public class SpellsSheet extends Sheet {
 						if (actualSpell.containsKey(representation)) {
 							orderedRepresentations.put(representation, actualSpell.getObj(representation));
 						} else {
-							for (final String knownRepresentation : spellRepresentations.getObj(representation).getObj("Verbreitung").keySet()) {
+							for (final String knownRepresentation : spellRepresentations.getObj(representation)
+									.getObjOrDefault("Verbreitung", new JSONObject(null)).keySet()) {
 								if (representations.get(knownRepresentation).get()) {
 									orderedRepresentations.put(representation, null);
 									break;
@@ -258,7 +259,8 @@ public class SpellsSheet extends Sheet {
 					}
 				} else {
 					for (final String representation : spellRepresentations.keySet()) {
-						for (final String knownRepresentation : spellRepresentations.getObj(representation).getObj("Verbreitung").keySet()) {
+						for (final String knownRepresentation : spellRepresentations.getObj(representation).getObjOrDefault("Verbreitung", new JSONObject(null))
+								.keySet()) {
 							if (representations.get(knownRepresentation).get()) {
 								orderedRepresentations.put(representation, null);
 								break;

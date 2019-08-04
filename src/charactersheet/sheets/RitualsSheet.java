@@ -449,22 +449,23 @@ public class RitualsSheet extends Sheet {
 			headerString.append("Volumen: ");
 			int used = 0;
 			if (item != null) {
-				final JSONObject rituals = item.getObjOrDefault("Rituale", baseItem.getObj("Rituale"));
+				final JSONObject rituals = item.getObjOrDefault("Rituale", baseItem.getObjOrDefault("Rituale", new JSONObject(null)));
 				for (final String ritualName : rituals.keySet()) {
-					final String multipleTimes = actualGroup.getObj(ritualName).getStringOrDefault("Mehrfach", null);
+					final JSONObject actualRitual = "Apport".equals(ritualName) ? apport : actualGroup.getObj(ritualName);
+					final String multipleTimes = actualRitual.getStringOrDefault("Mehrfach", null);
 					if ("Anzahl".equals(multipleTimes)) {
 						final JSONObject ritual = rituals.getObj(ritualName);
-						used += ritual.getIntOrDefault("Volumen", ritual.getIntOrDefault("Anzahl", 1)
-								* ("Stabzauber".equals(groupName) ? actualGroup.getObj(ritualName).getIntOrDefault("Volumen", 1) : 1));
+						used += ritual.getIntOrDefault("Volumen",
+								ritual.getIntOrDefault("Anzahl", 1) * ("Stabzauber".equals(groupName) ? actualRitual.getIntOrDefault("Volumen", 1) : 1));
 					} else if (multipleTimes != null) {
 						final JSONArray choices = rituals.getArr(ritualName);
 						for (int i = 0; i < choices.size(); ++i) {
 							used += choices.getObj(i).getIntOrDefault("Volumen",
-									"Stabzauber".equals(groupName) ? actualGroup.getObj(ritualName).getIntOrDefault("Volumen", 1) : 1);
+									"Stabzauber".equals(groupName) ? actualRitual.getIntOrDefault("Volumen", 1) : 1);
 						}
 					} else {
 						used += rituals.getObj(ritualName).getIntOrDefault("Volumen",
-								"Stabzauber".equals(groupName) ? actualGroup.getObj(ritualName).getIntOrDefault("Volumen", 1) : 1);
+								"Stabzauber".equals(groupName) ? actualRitual.getIntOrDefault("Volumen", 1) : 1);
 					}
 				}
 			}
@@ -484,7 +485,7 @@ public class RitualsSheet extends Sheet {
 			headerString.append("pAsP: ");
 			int pAsP = 0;
 			if (item != null) {
-				final JSONObject rituals = item.getObjOrDefault("Rituale", baseItem.getObj("Rituale"));
+				final JSONObject rituals = item.getObjOrDefault("Rituale", baseItem.getObjOrDefault("Rituale", null));
 				for (final String ritualName : rituals.keySet()) {
 					final String multipleTimes = actualGroup.getObj(ritualName).getStringOrDefault("Mehrfach", null);
 					if ("Anzahl".equals(multipleTimes)) {
@@ -580,7 +581,7 @@ public class RitualsSheet extends Sheet {
 
 		String active = " ";
 		if (item != null && baseItem != null) {
-			final JSONObject rituals = item.getObjOrDefault("Rituale", baseItem.getObj("Rituale"));
+			final JSONObject rituals = item.getObjOrDefault("Rituale", baseItem.getObjOrDefault("Rituale", new JSONObject(null)));
 			if (item != null && rituals.containsKey(ritualName)) {
 				int count = 1;
 				if (multipleCount) {
@@ -716,7 +717,7 @@ public class RitualsSheet extends Sheet {
 
 		if (multipleTimes && !multipleCount) {
 			if (item != null && baseItem != null) {
-				final JSONObject rituals = item.getObjOrDefault("Rituale", baseItem.getObj("Rituale"));
+				final JSONObject rituals = item.getObjOrDefault("Rituale", baseItem.getObjOrDefault("Rituale", new JSONObject(null)));
 				if (rituals.containsKey(ritualName)) {
 					final JSONArray choice = rituals.getArr(ritualName);
 					if (choice.size() > 0) {
@@ -749,8 +750,9 @@ public class RitualsSheet extends Sheet {
 		final JSONObject group = ritualGroups.getObjOrDefault(groupName, new JSONObject(null));
 		for (final String ritual : group.keySet()) {
 			final JSONObject preconditions = group.getObj(ritual).getObjOrDefault("Voraussetzungen", null);
-			final JSONObject knowledges = preconditions != null
-					? preconditions.getObj("Vorteile/Nachteile/Sonderfertigkeiten").getObj("Muss").getObjOrDefault("Ritualkenntnis", null) : null;
+			final JSONObject prosCons = preconditions != null ? preconditions.getObjOrDefault("Vorteile/Nachteile/Sonderfertigkeiten", null) : null;
+			final JSONObject requiredProsCons = prosCons != null ? prosCons.getObjOrDefault("Muss", null) : null;
+			final JSONObject knowledges = requiredProsCons != null ? requiredProsCons.getObjOrDefault("Ritualkenntnis", null) : null;
 			final JSONObject required = knowledges != null ? knowledges.getObj("Auswahl") : null;
 			if (required != null && required.containsKey("Muss")) {
 				requiredKnowledges.add(required.getString("Muss"));
@@ -954,31 +956,29 @@ public class RitualsSheet extends Sheet {
 				if (groups.containsKey(name) && groups.getBool(name) != null) {
 					value = groups.getBool(name);
 				} else if (hero != null) {
-					switch (name) {
-					case "Zauberzeichen":
-						value = hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen");
-						break;
-					case "Bann- und Schutzkreise":
-						value = hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen") || hero.getObj("Zauber").containsKey("Invocatio minor")
-								|| hero.getObj("Zauber").containsKey("Invocatio maior");
-						break;
-					case "Elfenlieder":
-						value = hero.getObj("Vorteile").containsKey("Zweistimmiger Gesang");
-						break;
-					default:
-						final List<String> requiredKnowledges = getRequiredKnowledges(name);
-						if (requiredKnowledges.isEmpty()) {
-							value = true;
-						} else {
-							final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", new JSONArray(null));
-							for (int i = 0; i < ritualKnowledges.size(); ++i) {
-								if (requiredKnowledges.contains(ritualKnowledges.getObj(i).getString("Auswahl"))) {
-									value = true;
-									break;
+					value = switch (name) {
+						case "Zauberzeichen" -> hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen");
+						case "Bann- und Schutzkreise" -> {
+							break hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen") || hero.getObj("Zauber").containsKey("Invocatio minor")
+									|| hero.getObj("Zauber").containsKey("Invocatio maior");
+						}
+						case "Elfenlieder" -> hero.getObj("Vorteile").containsKey("Zweistimmiger Gesang");
+						default -> {
+							final List<String> requiredKnowledges = getRequiredKnowledges(name);
+							if (requiredKnowledges.isEmpty()) {
+								break true;
+							} else {
+								final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", new JSONArray(null));
+								boolean found = false;
+								for (int i = 0; !found && i < ritualKnowledges.size(); ++i) {
+									if (requiredKnowledges.contains(ritualKnowledges.getObj(i).getString("Auswahl"))) {
+										found = true;
+									}
 								}
+								break found;
 							}
 						}
-					}
+					};
 				}
 				((BooleanProperty) ritualGroupCount).set(value);
 			}
