@@ -57,6 +57,7 @@ import jsonant.value.JSONObject;
 public class ClericSheet extends Sheet {
 
 	final StringProperty deity = new SimpleStringProperty();
+	private final BooleanProperty ownLiturgiesOnly = new SimpleBooleanProperty(false);
 	private final BooleanProperty modTable = new SimpleBooleanProperty(true);
 	private final BooleanProperty categoriesTable = new SimpleBooleanProperty(true);
 
@@ -475,6 +476,8 @@ public class ClericSheet extends Sheet {
 
 	private void fillLiturgy(final Table table, final String baseName, final String name, final JSONObject baseLiturgy, final JSONObject actualLiturgy,
 			final JSONObject cheaperLiturgy, final int origCost) {
+		if (ownLiturgiesOnly.get() && actualLiturgy == null && cheaperLiturgy == null) return;
+
 		final JSONObject liturgy = baseLiturgy.getObj("Gottheiten").getObj(deity.get());
 
 		String actual = " ";
@@ -519,6 +522,7 @@ public class ClericSheet extends Sheet {
 		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
 		settings.put("Leerseite einfügen", emptyPage.get());
 		settings.put("Gottheit", deity.get());
+		settings.put("Nur erlernte/verbilligte Liturgien", ownLiturgiesOnly.get());
 		settings.put("Modifikationen", modTable.get());
 		settings.put("Kategorien", categoriesTable.get());
 		return settings;
@@ -530,6 +534,7 @@ public class ClericSheet extends Sheet {
 		final Set<String> deities = ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").keySet();
 		deity.set(deities.iterator().next());
 		settingsPage.addStringChoice("Gottheit", deity, deities);
+		settingsPage.addBooleanChoice("Nur erlernte/verbilligte Liturgien", ownLiturgiesOnly);
 		settingsPage.addBooleanChoice("Modifikationen", modTable);
 		settingsPage.addBooleanChoice("Kategorien", categoriesTable);
 	}
@@ -547,6 +552,7 @@ public class ClericSheet extends Sheet {
 		} else {
 			deity.set(null);
 		}
+		ownLiturgiesOnly.set(settings.getBoolOrDefault("Nur erlernte/verbilligte Liturgien", false));
 		modTable.set(settings.getBoolOrDefault("Modifikationen", true));
 		categoriesTable.set(settings.getBoolOrDefault("Kategorien", true));
 	}
