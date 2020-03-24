@@ -959,14 +959,14 @@ public class RitualsSheet extends Sheet {
 					value = switch (name) {
 						case "Zauberzeichen" -> hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen");
 						case "Bann- und Schutzkreise" -> {
-							break hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen") || hero.getObj("Zauber").containsKey("Invocatio minor")
+							yield hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen") || hero.getObj("Zauber").containsKey("Invocatio minor")
 									|| hero.getObj("Zauber").containsKey("Invocatio maior");
 						}
 						case "Elfenlieder" -> hero.getObj("Vorteile").containsKey("Zweistimmiger Gesang");
 						default -> {
 							final List<String> requiredKnowledges = getRequiredKnowledges(name);
 							if (requiredKnowledges.isEmpty()) {
-								break true;
+								yield true;
 							} else {
 								final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", new JSONArray(null));
 								boolean found = false;
@@ -975,7 +975,7 @@ public class RitualsSheet extends Sheet {
 										found = true;
 									}
 								}
-								break found;
+								yield found;
 							}
 						}
 					};

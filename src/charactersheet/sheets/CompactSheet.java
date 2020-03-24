@@ -746,7 +746,7 @@ public class CompactSheet extends Sheet {
 								final int pa = PABase + actualTalent.getIntOrDefault("PA", 0);
 								paString = (pa < 10 ? "  " : "") + Integer.toString(pa);
 							}
-							break new TextCell(atString).addText("/").addText(paString).setEquallySpaced(true);
+							yield new TextCell(atString).addText("/").addText(paString).setEquallySpaced(true);
 						}
 						case "Fernkampftalente" -> new TextCell(Integer.toString(FKBase + actualTalent.getIntOrDefault("AT", 0)));
 						case "Sprachen und Schriften" -> {
@@ -759,16 +759,16 @@ public class CompactSheet extends Sheet {
 							} else {
 								language = new TextCell(" ");
 							}
-							break new TextCell(talent.getInt("Komplexität").toString());
+							yield new TextCell(talent.getInt("Komplexität").toString());
 						}
 						default -> {
 							if (talent.containsKey("Probe")) {
 								final JSONArray challenge = talent.getArr("Probe");
-								break new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
+								yield new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
 										.addText(challenge.getString(2))
 										.setEquallySpaced(true).setPadding(0, 1, 1, 0);
 							} else {
-								break new TextCell("—");
+								yield new TextCell("—");
 							}
 						}
 					};
