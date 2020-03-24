@@ -118,8 +118,8 @@ public class CompactSheet extends Sheet {
 		table.addRow("Rasse: " + SheetUtil.getRaceString(bio), new TextCell("AP: " + bio.getIntOrDefault("Abenteuerpunkte", 0)).setColSpan(2));
 		table.addRow("Kultur: " + SheetUtil.getCultureString(bio),
 				new TextCell("Geschlecht: " + ("weiblich".equals(bio.getString("Geschlecht")) ? "♀" : "♂")).setColSpan(2));
-		table.addRow("Profession: " + SheetUtil.getProfessionString(hero, bio), "Größe: " + bio.getIntOrDefault("Größe", 0),
-				"Gewicht: " + bio.getIntOrDefault("Gewicht", 0));
+		table.addRow("Profession: " + HeroUtil.getProfessionString(hero, bio, ResourceManager.getResource("data/Professionen"), true),
+				"Größe: " + bio.getIntOrDefault("Größe", 0), "Gewicht: " + bio.getIntOrDefault("Gewicht", 0));
 
 		bottom.bottom = table.render(document, 583, 6, bottom.bottom - 5, 10, 10);
 	}

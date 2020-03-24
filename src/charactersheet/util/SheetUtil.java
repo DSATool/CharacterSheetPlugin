@@ -295,38 +295,6 @@ public class SheetUtil {
 		return cultureString.toString();
 	}
 
-	public static String getProfessionString(final JSONObject hero, final JSONObject bio) {
-		final StringBuilder professionString = new StringBuilder(bio.getStringOrDefault("Profession", ""));
-		if (bio.containsKey("Profession:Modifikation")) {
-			final JSONArray professionModifiers = bio.getArr("Profession:Modifikation");
-			professionString.append(" (");
-			professionString.append(String.join(", ", professionModifiers.getStrings()));
-			professionString.append(")");
-		}
-		final JSONObject pros = hero.getObj("Vorteile");
-		if (pros != null) {
-			if (pros.containsKey("Veteran")) {
-				final JSONObject veteran = pros.getObj("Veteran");
-				professionString.append(" Veteran");
-				if (veteran != null && veteran.containsKey("Profession:Modifikation")) {
-					professionString.append(' ');
-					professionString.append(String.join(", ", veteran.getArr("Profession:Modifikation").getStrings()));
-				}
-			}
-			if (pros.containsKey("Breitgefächerte Bildung")) {
-				final JSONObject bgb = pros.getObj("Breitgefächerte Bildung");
-				professionString.append(" BGB ");
-				professionString.append(bgb.getString("Profession"));
-				if (bgb.containsKey("Profession:Modifikation")) {
-					professionString.append(" (");
-					professionString.append(String.join(", ", bgb.getArr("Profession:Modifikation").getStrings()));
-					professionString.append(")");
-				}
-			}
-		}
-		return professionString.toString();
-	}
-
 	public static String getRaceString(final JSONObject bio) {
 		final StringBuilder raceString = new StringBuilder(bio.getStringOrDefault("Rasse", ""));
 
