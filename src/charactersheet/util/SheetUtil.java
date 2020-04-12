@@ -204,10 +204,6 @@ public class SheetUtil {
 					ErrorLogger.logError(e);
 				}
 			}
-			JSONObject actualAttributes = null;
-			if (hero != null) {
-				actualAttributes = hero.getObj("Eigenschaften");
-			}
 			if (includeAttributesLine) {
 				final JSONObject attributes = ResourceManager.getResource("data/Eigenschaften");
 				final int numAttributes = attributes.size() + 1;
@@ -216,8 +212,9 @@ public class SheetUtil {
 					table.addColumn(new Column(285.5f / numAttributes, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
 					table.addColumn(new Column(285.5f / numAttributes, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0.5f, 0.5f, 0.5f, 0.5f));
 				}
+				final JSONObject actualAttributes = hero != null && fill ? hero.getObj("Eigenschaften") : null;
 				for (final String attribute : attributes.keySet()) {
-					table.addCells(attribute, hero != null && fill ? HeroUtil.getCurrentValue(actualAttributes.getObj(attribute), false) : " ");
+					table.addCells(attribute, actualAttributes != null ? HeroUtil.getCurrentValue(actualAttributes.getObj(attribute), false) : " ");
 				}
 				table.addCells("BE", hero != null && fill ? HeroUtil.getBE(hero) : " ");
 				try {
@@ -237,15 +234,10 @@ public class SheetUtil {
 					table.addColumn(new Column(30, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0.5f, 0.5f, 0.5f, 0.5f));
 				}
 				table.addColumn(new Column(421f / 5, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
-				JSONObject baseValues = null;
-				if (hero != null) {
-					baseValues = hero.getObj("Basiswerte");
-				}
+				final JSONObject baseValues = hero != null && fill ? hero.getObj("Basiswerte") : null;
 				final JSONObject derivedValues = ResourceManager.getResource("data/Basiswerte");
 				for (final String value : new String[] { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Initiative-Basis" }) {
-					table.addCells(value, hero != null
-							&& fill ? HeroUtil.deriveValue(derivedValues.getObj(value), hero, hero.getObj("Basiswerte").getObj(value), false)
-									+ baseValues.getObj(value).getIntOrDefault("Modifikator", 0) : " ");
+					table.addCells(value, baseValues != null ? HeroUtil.deriveValue(derivedValues.getObj(value), hero, baseValues.getObj(value), false) : " ");
 				}
 				table.addCells("\u00A0\u00A0\u00A0+4\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0+2");
 				final int left = landscape ? 274 : 27;
