@@ -181,8 +181,8 @@ public class FightSheet extends Sheet {
 						final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
 						final String ebe = Integer.toString(closeCombatTalents.getObjOrDefault(type, new JSONObject(null)).getIntOrDefault("BEAdditiv", 0));
 
-						final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArr("Waffenmeister"), type,
-								item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
+						final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null),
+								type, item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 
 						final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
@@ -757,8 +757,8 @@ public class FightSheet extends Sheet {
 
 						String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
 
-						final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArr("Waffenmeister"), type,
-								item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
+						final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null),
+								type, item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 						if (weaponMastery != null) {
 							boolean first = notes.isEmpty();
 							final JSONObject easierManeuvers = weaponMastery.getObjOrDefault("Manöver:Erleichterung", null);

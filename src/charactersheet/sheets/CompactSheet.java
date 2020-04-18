@@ -163,7 +163,7 @@ public class CompactSheet extends Sheet {
 				final JSONArray types = item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
 				final String type = item.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : "");
 				final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
-				final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArr("Waffenmeister"), type,
+				final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null), type,
 						item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 
 				final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
