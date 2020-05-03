@@ -181,7 +181,7 @@ public class CharacterSheet extends Sheet {
 			table.addRow(culture, size);
 
 			final Cell profession = new TextCell(
-					"Profession: " + HeroUtil.getProfessionString(hero, bio, ResourceManager.getResource("data/Professionen"), true, true)).setColSpan(3);
+					"Profession: " + HeroUtil.getProfessionString(hero, bio, ResourceManager.getResource("data/Professionen"), true)).setColSpan(3);
 			final String weight = "Gewicht: " + bio.getIntOrDefault("Gewicht", 0);
 			table.addRow(profession, weight);
 		} else {
