@@ -37,6 +37,7 @@ import boxtable.table.Column;
 import boxtable.table.Table;
 import charactersheet.util.FontManager;
 import charactersheet.util.SheetUtil;
+import dsa41basis.util.DSAUtil;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.resources.Settings;
@@ -116,7 +117,7 @@ public class FightSheet extends Sheet {
 		final JSONObject ammunitionTypes = ResourceManager.getResource("data/Geschosstypen");
 		for (final String name : ammunitionTypes.keySet()) {
 			final JSONObject type = ammunitionTypes.getObj(name);
-			table.addCells(name, "x" + SheetUtil.threeDecimalPlaces.format(type.getDoubleOrDefault("Preis:Faktor", 1.0)));
+			table.addCells(name, "x" + DSAUtil.threeDecimalPlaces.format(type.getDoubleOrDefault("Preis:Faktor", 1.0)));
 			for (int i = 0; i < numCols; ++i) {
 				if (fillAll && i < ammunition.size()) {
 					table.addCells(ammunition.get(i).getObj(name).getIntOrDefault("Aktuell", 0));
@@ -862,7 +863,7 @@ public class FightSheet extends Sheet {
 						if ("Gesamtrüstung".equals(armorSetting)) {
 							be = item.getIntOrDefault("Gesamtbehinderung", baseArmor.getIntOrDefault("Gesamtbehinderung", 0)).toString();
 						} else {
-							be = SheetUtil.threeDecimalPlaces.format(item.getDoubleOrDefault("Behinderung", baseArmor.getDoubleOrDefault("Behinderung",
+							be = DSAUtil.threeDecimalPlaces.format(item.getDoubleOrDefault("Behinderung", baseArmor.getDoubleOrDefault("Behinderung",
 									item.getIntOrDefault("Gesamtbehinderung", baseArmor.getIntOrDefault("Gesamtbehinderung", 0)).doubleValue())));
 						}
 
@@ -884,7 +885,7 @@ public class FightSheet extends Sheet {
 							}
 							if ("Zonengesamtrüstung".equals(armorSetting)) {
 								for (int k = 0; k < 8; ++k) {
-									rs[k] = SheetUtil.threeDecimalPlaces.format((zoneValues[0] * 2 + zoneValues[1] * 4 + zoneValues[2] * 4 + zoneValues[3] * 4
+									rs[k] = DSAUtil.threeDecimalPlaces.format((zoneValues[0] * 2 + zoneValues[1] * 4 + zoneValues[2] * 4 + zoneValues[3] * 4
 											+ zoneValues[4] + zoneValues[5] + zoneValues[6] * 2 + zoneValues[7] * 2) / 20.0);
 								}
 							}
@@ -905,7 +906,7 @@ public class FightSheet extends Sheet {
 
 		final Cell sum = new TextCell("Summe:").setHAlign(HAlign.RIGHT);
 
-		final String beSum = hero != null && fill ? SheetUtil.threeDecimalPlaces.format(HeroUtil.getBERaw(hero)) : " ";
+		final String beSum = hero != null && fill ? DSAUtil.threeDecimalPlaces.format(HeroUtil.getBERaw(hero)) : " ";
 
 		final Cell rg = new TextCell("Rüstungsgewöhnung:      I      II      III").setHAlign(HAlign.LEFT).setColSpan(9);
 

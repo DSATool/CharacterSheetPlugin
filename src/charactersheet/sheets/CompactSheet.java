@@ -846,7 +846,7 @@ public class CompactSheet extends Sheet {
 				if ("Gesamtrüstung".equals(armorSetting)) {
 					beString = item.getIntOrDefault("Gesamtbehinderung", baseArmor.getIntOrDefault("Gesamtbehinderung", 0)).toString();
 				} else {
-					beString = SheetUtil.threeDecimalPlaces.format(item.getDoubleOrDefault("Behinderung", baseArmor.getDoubleOrDefault("Behinderung",
+					beString = DSAUtil.threeDecimalPlaces.format(item.getDoubleOrDefault("Behinderung", baseArmor.getDoubleOrDefault("Behinderung",
 							item.getIntOrDefault("Gesamtbehinderung", baseArmor.getIntOrDefault("Gesamtbehinderung", 0)).doubleValue())));
 				}
 
@@ -866,7 +866,7 @@ public class CompactSheet extends Sheet {
 					final double pieceRS = (zoneValues[0] * 2 + zoneValues[1] * 4 + zoneValues[2] * 4 + zoneValues[3] * 4 + zoneValues[4] + zoneValues[5]
 							+ zoneValues[6] * 2 + zoneValues[7] * 2) / 20.0;
 					RS += pieceRS;
-					rsString = SheetUtil.threeDecimalPlaces.format(pieceRS);
+					rsString = DSAUtil.threeDecimalPlaces.format(pieceRS);
 				}
 				table.addRow(name, beString, rsString);
 			}
@@ -881,7 +881,7 @@ public class CompactSheet extends Sheet {
 			table.addRow("");
 		}
 
-		table.addRow("Gesamt:", SheetUtil.threeDecimalPlaces.format(HeroUtil.getBERaw(hero)), SheetUtil.threeDecimalPlaces.format(RS));
+		table.addRow("Gesamt:", DSAUtil.threeDecimalPlaces.format(HeroUtil.getBERaw(hero)), DSAUtil.threeDecimalPlaces.format(RS));
 
 		bottom.bottom = table.render(document, 135, 454, bottom.bottom - 5, 10, 10);
 	}
@@ -929,9 +929,8 @@ public class CompactSheet extends Sheet {
 				if ("Gesamtrüstung".equals(armorSetting)) {
 					be = item.getIntOrDefault("Gesamtbehinderung", baseArmor.getIntOrDefault("Gesamtbehinderung", 0)).toString();
 				} else {
-					be = SheetUtil.threeDecimalPlaces.format(item.getDoubleOrDefault("Behinderung", baseArmor.getDoubleOrDefault("Behinderung",
+					be = DSAUtil.threeDecimalPlaces.format(item.getDoubleOrDefault("Behinderung", baseArmor.getDoubleOrDefault("Behinderung",
 							item.getIntOrDefault("Gesamtbehinderung", baseArmor.getIntOrDefault("Gesamtbehinderung", 0)).doubleValue())));
-
 				}
 
 				final String[] rs = new String[8];
@@ -952,7 +951,7 @@ public class CompactSheet extends Sheet {
 						++j;
 					}
 					if ("Zonengesamtrüstung".equals(armorSetting)) {
-						final String zoneRS = SheetUtil.threeDecimalPlaces.format((zoneValues[0] * 2 + zoneValues[1] * 4 + zoneValues[2] * 4 + zoneValues[3] * 4
+						final String zoneRS = DSAUtil.threeDecimalPlaces.format((zoneValues[0] * 2 + zoneValues[1] * 4 + zoneValues[2] * 4 + zoneValues[3] * 4
 								+ zoneValues[4] + zoneValues[5] + zoneValues[6] * 2 + zoneValues[7] * 2) / 20.0);
 						for (int k = 0; k < 8; ++k) {
 							rs[k] = zoneRS;
@@ -973,7 +972,7 @@ public class CompactSheet extends Sheet {
 			rs[i] = HeroUtil.getZoneRS(hero, zone);
 			++i;
 		}
-		table.addRow("Gesamt:", SheetUtil.threeDecimalPlaces.format(HeroUtil.getBERaw(hero)), rs[0], rs[1], rs[2], rs[3], rs[4], rs[5], rs[6], rs[7]);
+		table.addRow("Gesamt:", DSAUtil.threeDecimalPlaces.format(HeroUtil.getBERaw(hero)), rs[0], rs[1], rs[2], rs[3], rs[4], rs[5], rs[6], rs[7]);
 
 		bottom.bottom = table.render(document, 257, 332, bottom.bottom - 5, 10, 10);
 	}

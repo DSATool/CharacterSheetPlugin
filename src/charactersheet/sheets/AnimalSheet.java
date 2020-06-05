@@ -170,7 +170,7 @@ public class AnimalSheet extends Sheet {
 			additionalInventoryRows.remove(index);
 		});
 		menu.getItems().add(removeItem);
-		settingsPage.getControl().setContextMenu(menu);
+		control.setContextMenu(menu);
 
 		return control;
 	}
@@ -422,15 +422,15 @@ public class AnimalSheet extends Sheet {
 
 			actualValue = actualValues.getObj("Geschwindigkeit");
 			actual = actualValue.containsKey("Boden")
-					? new TextCell(SheetUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Boden", 0.0))).addText("/")
-							.addText(SheetUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Luft", 0.0))).setEquallySpaced(true)
-					: new TextCell(SheetUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Wert", 0.0)));
+					? new TextCell(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Boden", 0.0))).addText("/")
+							.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Luft", 0.0))).setEquallySpaced(true)
+					: new TextCell(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Wert", 0.0)));
 			mod = actualValue.containsKey("Boden")
-					? new TextCell(isMagical ? SheetUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Boden:Kauf", 0))
+					? new TextCell(isMagical ? DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Boden:Kauf", 0))
 							: SheetUtil.threeDecimalPlacesSigned.format(actualValue.getIntOrDefault("Boden:Modifikator", 0))).addText("/")
-									.addText(SheetUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault(isMagical ? "Luft:Kauf" : "Luft:Modifikator", 0)))
+									.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault(isMagical ? "Luft:Kauf" : "Luft:Modifikator", 0)))
 									.setEquallySpaced(true)
-					: new TextCell(isMagical ? SheetUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Kauf", 0))
+					: new TextCell(isMagical ? DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Kauf", 0))
 							: SheetUtil.threeDecimalPlacesSigned.format(actualValue.getIntOrDefault("Modifikator", 0)));
 			table.addRow("", "Geschwindigkeit", actual, mod);
 
@@ -682,12 +682,12 @@ public class AnimalSheet extends Sheet {
 			mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
 
 			actualValue = actualValues.getObj("Geschwindigkeit");
-			actualRight = new TextCell(SheetUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Schritt", 0.0))).addText("/")
-					.addText(SheetUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Trab", 0.0))).addText("/")
-					.addText(SheetUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Galopp", 0.0))).setEquallySpaced(true);
-			modRight = new TextCell(SheetUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Schritt:Modifikator", 0))).addText("/")
-					.addText(SheetUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Trab:Modifikator", 0))).addText("/")
-					.addText(SheetUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Galopp:Modifikator", 0))).setEquallySpaced(true);
+			actualRight = new TextCell(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Schritt", 0.0))).addText("/")
+					.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Trab", 0.0))).addText("/")
+					.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Galopp", 0.0))).setEquallySpaced(true);
+			modRight = new TextCell(DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Schritt:Modifikator", 0))).addText("/")
+					.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Trab:Modifikator", 0))).addText("/")
+					.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Galopp:Modifikator", 0))).setEquallySpaced(true);
 
 			table.addRow("Zugkraft", "x" + actual, mod, "", "Geschwindigkeit", actualRight, modRight);
 

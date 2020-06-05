@@ -273,7 +273,7 @@ public class CharacterSheet extends Sheet {
 				final JSONObject actualValue = hero.getObj("Basiswerte").getObj(derivedName);
 				final String cur = Integer.toString(HeroUtil.deriveValue(derivedValue, hero, actualValue, false));
 				final String mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
-				final String result = SheetUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, hero));
+				final String result = DSAUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, hero));
 				table.addRow(derivedName, new TextCell(derivation.toString()).setPadding(0, 0, 2, 0), cur, mod, result);
 			} else {
 				table.addRow(derivedName, new TextCell(derivation.toString()).setPadding(0, 0, 2, 0), " ");
@@ -293,7 +293,7 @@ public class CharacterSheet extends Sheet {
 			if (hero != null && fill) {
 				final String cur = Integer.toString((int) Math.round(i * woundThreshold + woundModifier));
 				final String mod = Util.getSignedIntegerString(woundModifier);
-				final String result = SheetUtil.threeDecimalPlaces.format(i * woundThreshold);
+				final String result = DSAUtil.threeDecimalPlaces.format(i * woundThreshold);
 				table.addRow(name, new TextCell(derivation).setPadding(0, 0, 2, 0), cur, mod, result);
 			} else {
 				table.addRow(name, new TextCell(derivation).setPadding(0, 0, 2, 0));
@@ -374,7 +374,7 @@ public class CharacterSheet extends Sheet {
 					}
 					final String perm = actualValue.getIntOrDefault("Permanent", 0).toString();
 					final String mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
-					final String result = SheetUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, hero));
+					final String result = DSAUtil.threeDecimalPlaces.format(HeroUtil.deriveValueRaw(derivedValue, hero));
 					final TextCell cur = new TextCell(Integer.toString(HeroUtil.deriveValue(derivedValue, hero, actualValue, false)));
 					if ("Lebensenergie".equals(derivedName)) {
 						cur.setBorder(1, 1, 1, 1);
