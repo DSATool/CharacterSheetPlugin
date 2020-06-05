@@ -308,6 +308,16 @@ public class InventorySheet extends Sheet {
 		SheetUtil.addTitle(table, "Tränke");
 
 		int cols = additionalPotionRows.get() + 1;
+		final Queue<JSONObject> potions = new LinkedList<>();
+
+		JSONArray items = null;
+		if (hero != null) {
+			items = hero.getObj("Besitz").getArr("Ausrüstung");
+			DSAUtil.foreach(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Trank")), item -> {
+				potions.add(item);
+			}, items);
+			cols += potions.size();
+		}
 		cols = Math.max(cols, 2);
 
 		final Table[] tables = new Table[2];
@@ -320,15 +330,29 @@ public class InventorySheet extends Sheet {
 			tables[i].addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
 			tables[i].addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
 
-			final TextCell nameTitle = new TextCell("Gegenstand", FontManager.serifBold, 8.5f, 8.5f);
+			final TextCell nameTitle = new TextCell("Trank", FontManager.serifBold, 8.5f, 8.5f);
 			final TextCell notesTitle = new TextCell("Wirkung", FontManager.serifBold, 8.5f, 8.5f);
+			final TextCell qualityTitle = new TextCell("Qual.", FontManager.serifBold, 8.5f, 8.5f);
 			final TextCell countTitle = new TextCell("Anz.", FontManager.serifBold, 8.5f, 8.5f);
-			final TextCell valueTitle = new TextCell("Wert", FontManager.serifBold, 8.5f, 8.5f);
 
-			tables[i].addRow(nameTitle, notesTitle, countTitle, valueTitle);
+			tables[i].addRow(nameTitle, notesTitle, qualityTitle, countTitle);
 
 			for (int j = 0; j < cols / 2; ++j) {
-				tables[i].addRow("");
+				if (hero != null && fill && !potions.isEmpty()) {
+					JSONObject item = potions.poll();
+					final JSONObject baseItem = item;
+					if (item.containsKey("Trank")) {
+						item = item.getObj("Trank");
+					}
+					final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
+					final String notes = item.getStringOrDefault("Wirkung",
+							baseItem.getStringOrDefault("Wirkung", item.getStringOrDefault("Anmerkungen", baseItem.getStringOrDefault("Anmerkungen", ""))));
+					final String quality = item.getStringOrDefault("Qualität", baseItem.getStringOrDefault("Qualität", ""));
+					final String count = Integer.toString(item.getIntOrDefault("Anzahl", baseItem.getIntOrDefault("Anzahl", 1)));
+					tables[i].addRow(name, notes, quality, count);
+				} else {
+					tables[i].addRow("");
+				}
 			}
 		}
 
@@ -348,6 +372,17 @@ public class InventorySheet extends Sheet {
 		SheetUtil.addTitle(table, "Wertgegenstände");
 
 		int cols = additionalValuablesRows.get() + 1;
+
+		final Queue<JSONObject> valuables = new LinkedList<>();
+
+		JSONArray items = null;
+		if (hero != null) {
+			items = hero.getObj("Besitz").getArr("Ausrüstung");
+			DSAUtil.foreach(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Wertgegenstand")), item -> {
+				valuables.add(item);
+			}, items);
+			cols += valuables.size();
+		}
 		cols = Math.max(cols, 2);
 
 		final Table[] tables = new Table[2];
@@ -356,8 +391,8 @@ public class InventorySheet extends Sheet {
 			tables[i] = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
 
 			tables[i].addColumn(new Column(100, 100, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			tables[i].addColumn(new Column(158, 158, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			tables[i].addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
+			tables[i].addColumn(new Column(133, 133, FontManager.serif, 4, fontSize, HAlign.LEFT));
+			tables[i].addColumn(new Column(50, FontManager.serif, fontSize, HAlign.CENTER));
 
 			final TextCell nameTitle = new TextCell("Gegenstand", FontManager.serifBold, 8.5f, 8.5f);
 			final TextCell notesTitle = new TextCell("Anmerkungen", FontManager.serifBold, 8.5f, 8.5f);
@@ -366,7 +401,19 @@ public class InventorySheet extends Sheet {
 			tables[i].addRow(nameTitle, notesTitle, valueTitle);
 
 			for (int j = 0; j < cols / 2; ++j) {
-				tables[i].addRow("");
+				if (hero != null && fill && !valuables.isEmpty()) {
+					JSONObject item = valuables.poll();
+					final JSONObject baseItem = item;
+					if (item.containsKey("Wertgegenstand")) {
+						item = item.getObj("Wertgegenstand");
+					}
+					final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
+					final String notes = item.getStringOrDefault("Anmerkungen", baseItem.getStringOrDefault("Anmerkungen", ""));
+					final String value = DSAUtil.getMoneyString(item.getDoubleOrDefault("Wert", baseItem.getDoubleOrDefault("Wert", 0.0)));
+					tables[i].addRow(name, notes, value);
+				} else {
+					tables[i].addRow("");
+				}
 			}
 		}
 
@@ -469,11 +516,27 @@ public class InventorySheet extends Sheet {
 		showAttributes.set(settings.getBoolOrDefault("Eigenschaften anzeigen", false));
 		showClothing.set(settings.getBoolOrDefault("Kleidung", true));
 		additionalClothingRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Kleidung", 20));
-		showValuables.set(settings.getBoolOrDefault("Wertgegenstände", false));
-		additionalValuablesRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Wertgegenstände", 0));
-		showPotions.set(settings.getBoolOrDefault("Tränke", false));
+		if (settings.containsKey("Wertgegenstände") || hero == null) {
+			showValuables.set(settings.getBoolOrDefault("Wertgegenstände", false));
+		} else {
+			showValuables.set(hero.getObj("Besitz").getArr("Ausrüstung").getObjs().stream()
+					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Wertgegenstand"))));
+		}
 		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Tränke", 0));
-		showArtifacts.set(settings.getBoolOrDefault("Artefakte", true));
+		additionalValuablesRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Wertgegenstände", 0));
+		if (settings.containsKey("Tränke") || hero == null) {
+			showPotions.set(settings.getBoolOrDefault("Tränke", false));
+		} else {
+			showPotions.set(hero.getObj("Besitz").getArr("Ausrüstung").getObjs().stream()
+					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Trank"))));
+		}
+		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Tränke", 0));
+		if (settings.containsKey("Artefakte") || hero == null) {
+			showArtifacts.set(settings.getBoolOrDefault("Artefakte", false));
+		} else {
+			showArtifacts.set(hero.getObj("Besitz").getArr("Ausrüstung").getObjs().stream()
+					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Artefakt"))));
+		}
 		additionalArtifactRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Artefakte", 5));
 		showInventory.set(settings.getBoolOrDefault("Inventar", true));
 		additionalInventoryRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Inventar", 60));
