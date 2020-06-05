@@ -85,7 +85,7 @@ public class SheetConfiguration extends HeroSelector {
 	private JSONObject hero;
 
 	public SheetConfiguration() {
-		super(false);
+		super(false, true);
 
 		final FXMLLoader fxmlLoader = new FXMLLoader();
 		fxmlLoader.setController(this);
