@@ -305,7 +305,7 @@ public class InventorySheet extends Sheet {
 		table.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(283, FontManager.serif, fontSize, HAlign.LEFT));
 
-		SheetUtil.addTitle(table, "Tränke");
+		SheetUtil.addTitle(table, "Alchemika");
 
 		int cols = additionalPotionRows.get() + 1;
 		final Queue<JSONObject> potions = new LinkedList<>();
@@ -313,7 +313,7 @@ public class InventorySheet extends Sheet {
 		JSONArray items = null;
 		if (hero != null) {
 			items = hero.getObj("Besitz").getArr("Ausrüstung");
-			DSAUtil.foreach(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Trank")), item -> {
+			DSAUtil.foreach(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Alchemikum")), item -> {
 				potions.add(item);
 			}, items);
 			cols += potions.size();
@@ -330,7 +330,7 @@ public class InventorySheet extends Sheet {
 			tables[i].addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
 			tables[i].addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
 
-			final TextCell nameTitle = new TextCell("Trank", FontManager.serifBold, 8.5f, 8.5f);
+			final TextCell nameTitle = new TextCell("Alchemikum", FontManager.serifBold, 8.5f, 8.5f);
 			final TextCell notesTitle = new TextCell("Wirkung", FontManager.serifBold, 8.5f, 8.5f);
 			final TextCell qualityTitle = new TextCell("Qual.", FontManager.serifBold, 8.5f, 8.5f);
 			final TextCell countTitle = new TextCell("Anz.", FontManager.serifBold, 8.5f, 8.5f);
@@ -341,8 +341,8 @@ public class InventorySheet extends Sheet {
 				if (hero != null && fill && !potions.isEmpty()) {
 					JSONObject item = potions.poll();
 					final JSONObject baseItem = item;
-					if (item.containsKey("Trank")) {
-						item = item.getObj("Trank");
+					if (item.containsKey("Alchemikum")) {
+						item = item.getObj("Alchemikum");
 					}
 					final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
 					final String notes = item.getStringOrDefault("Wirkung",
@@ -485,8 +485,8 @@ public class InventorySheet extends Sheet {
 		settings.put("Zusätzliche Zeilen für Kleidung", additionalClothingRows.get());
 		settings.put("Wertgegenstände", showValuables.get());
 		settings.put("Zusätzliche Zeilen für Wertgegenstände", additionalValuablesRows.get());
-		settings.put("Tränke", showPotions.get());
-		settings.put("Zusätzliche Zeilen für Tränke", additionalPotionRows.get());
+		settings.put("Alchemika", showPotions.get());
+		settings.put("Zusätzliche Zeilen für Alchemika", additionalPotionRows.get());
 		settings.put("Artefakte", showArtifacts.get());
 		settings.put("Zusätzliche Zeilen für Artefakte", additionalArtifactRows.get());
 		settings.put("Inventar", showInventory.get());
@@ -502,8 +502,8 @@ public class InventorySheet extends Sheet {
 		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Kleidung", additionalClothingRows, 0, 200);
 		settingsPage.addBooleanChoice("Wertgegenstände", showValuables);
 		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Wertgegenstände", additionalValuablesRows, 0, 200);
-		settingsPage.addBooleanChoice("Tränke", showPotions);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Tränke", additionalPotionRows, 0, 200);
+		settingsPage.addBooleanChoice("Alchemika", showPotions);
+		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Alchemika", additionalPotionRows, 0, 200);
 		settingsPage.addBooleanChoice("Artefakte", showArtifacts);
 		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Artefakte", additionalArtifactRows, 0, 200);
 		settingsPage.addBooleanChoice("Inventar", showInventory);
@@ -522,15 +522,15 @@ public class InventorySheet extends Sheet {
 			showValuables.set(hero.getObj("Besitz").getArr("Ausrüstung").getObjs().stream()
 					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Wertgegenstand"))));
 		}
-		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Tränke", 0));
+		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Alchemika", 0));
 		additionalValuablesRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Wertgegenstände", 0));
-		if (settings.containsKey("Tränke") || hero == null) {
-			showPotions.set(settings.getBoolOrDefault("Tränke", false));
+		if (settings.containsKey("Alchemika") || hero == null) {
+			showPotions.set(settings.getBoolOrDefault("Alchemika", false));
 		} else {
 			showPotions.set(hero.getObj("Besitz").getArr("Ausrüstung").getObjs().stream()
-					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Trank"))));
+					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Alchemikum"))));
 		}
-		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Tränke", 0));
+		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Alchemika", 0));
 		if (settings.containsKey("Artefakte") || hero == null) {
 			showArtifacts.set(settings.getBoolOrDefault("Artefakte", false));
 		} else {
