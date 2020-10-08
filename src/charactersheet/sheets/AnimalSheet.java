@@ -697,7 +697,7 @@ public class AnimalSheet extends Sheet {
 			mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
 
 			final JSONObject riding = (JSONObject) HeroUtil.findActualTalent(hero, "Reiten")._1;
-			if (riding.getIntOrDefault("TaW", -1) < 0) {
+			if (riding == null || riding.getIntOrDefault("TaW", -1) < 0) {
 				actualRight = new TextCell("—").addText("/").addText("—").setEquallySpaced(true);
 			} else {
 				final JSONObject attacks = animal.getObj("Angriffe");
