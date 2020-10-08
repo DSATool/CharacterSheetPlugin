@@ -301,9 +301,11 @@ public class InventorySheet extends Sheet {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		table.addColumn(new Column(283, FontManager.serif, fontSize, HAlign.LEFT));
-		table.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
-		table.addColumn(new Column(283, FontManager.serif, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(100, 100, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(183, 183, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(238, 238, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
+		table.addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
 
 		SheetUtil.addTitle(table, "Alchemika");
 
@@ -318,45 +320,33 @@ public class InventorySheet extends Sheet {
 			}, items);
 			cols += potions.size();
 		}
-		cols = Math.max(cols, 2);
+		cols = Math.max(cols, 1);
 
-		final Table[] tables = new Table[2];
+		final TextCell nameTitle = new TextCell("Alchemikum", FontManager.serifBold, 8.5f, 8.5f);
+		final TextCell notesTitle = new TextCell("Anmerkungen", FontManager.serifBold, 8.5f, 8.5f);
+		final TextCell effectTitle = new TextCell("Wirkung", FontManager.serifBold, 8.5f, 8.5f);
+		final TextCell qualityTitle = new TextCell("Qual.", FontManager.serifBold, 8.5f, 8.5f);
+		final TextCell countTitle = new TextCell("Anz.", FontManager.serifBold, 8.5f, 8.5f);
 
-		for (int i = 0; i < 2; ++i) {
-			tables[i] = new Table().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
+		table.addRow(nameTitle, notesTitle, effectTitle, qualityTitle, countTitle);
 
-			tables[i].addColumn(new Column(100, 100, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			tables[i].addColumn(new Column(133, 133, FontManager.serif, 4, fontSize, HAlign.LEFT));
-			tables[i].addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
-			tables[i].addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
-
-			final TextCell nameTitle = new TextCell("Alchemikum", FontManager.serifBold, 8.5f, 8.5f);
-			final TextCell notesTitle = new TextCell("Wirkung", FontManager.serifBold, 8.5f, 8.5f);
-			final TextCell qualityTitle = new TextCell("Qual.", FontManager.serifBold, 8.5f, 8.5f);
-			final TextCell countTitle = new TextCell("Anz.", FontManager.serifBold, 8.5f, 8.5f);
-
-			tables[i].addRow(nameTitle, notesTitle, qualityTitle, countTitle);
-
-			for (int j = 0; j < cols / 2; ++j) {
-				if (hero != null && fill && !potions.isEmpty()) {
-					JSONObject item = potions.poll();
-					final JSONObject baseItem = item;
-					if (item.containsKey("Alchemikum")) {
-						item = item.getObj("Alchemikum");
-					}
-					final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
-					final String notes = item.getStringOrDefault("Wirkung",
-							baseItem.getStringOrDefault("Wirkung", item.getStringOrDefault("Anmerkungen", baseItem.getStringOrDefault("Anmerkungen", ""))));
-					final String quality = item.getStringOrDefault("Qualität", baseItem.getStringOrDefault("Qualität", ""));
-					final String count = Integer.toString(item.getIntOrDefault("Anzahl", baseItem.getIntOrDefault("Anzahl", 1)));
-					tables[i].addRow(name, notes, quality, count);
-				} else {
-					tables[i].addRow("");
+		for (int i = 0; i < cols; ++i) {
+			if (hero != null && fill && !potions.isEmpty()) {
+				JSONObject item = potions.poll();
+				final JSONObject baseItem = item;
+				if (item.containsKey("Alchemikum")) {
+					item = item.getObj("Alchemikum");
 				}
+				final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
+				final String notes = item.getStringOrDefault("Anmerkungen", baseItem.getStringOrDefault("Anmerkungen", ""));
+				final String effect = item.getStringOrDefault("Wirkung", baseItem.getStringOrDefault("Wirkung", ""));
+				final String quality = item.getStringOrDefault("Qualität", baseItem.getStringOrDefault("Qualität", ""));
+				final String count = Integer.toString(item.getIntOrDefault("Anzahl", baseItem.getIntOrDefault("Anzahl", 1)));
+				table.addRow(name, notes, effect, quality, count);
+			} else {
+				table.addRow("");
 			}
 		}
-
-		table.addRow(new TableCell(tables[0]), "", new TableCell(tables[1]));
 
 		bottom.bottom = table.render(document, 571, 12, bottom.bottom, showAttributes.get() ? 72 : 54, 10) - 5;
 	}
