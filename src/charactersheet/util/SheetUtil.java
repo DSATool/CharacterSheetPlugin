@@ -126,11 +126,15 @@ public class SheetUtil {
 	}
 
 	public static void checkChoiceBox(final PDPageContentStream stream, final int left, final float top) throws IOException {
+		checkChoiceBox(stream, left, top, 8);
+	}
+
+	public static void checkChoiceBox(final PDPageContentStream stream, final int left, final float top, final float size) throws IOException {
 		stream.setLineWidth(1);
 		stream.moveTo(left + 1, top - 1);
-		stream.lineTo(left + 7, top - 7);
-		stream.moveTo(left + 7, top - 1);
-		stream.lineTo(left + 1, top - 7);
+		stream.lineTo(left + size - 1, top - size + 1);
+		stream.moveTo(left + size - 1, top - 1);
+		stream.lineTo(left + 1, top - size + 1);
 		stream.stroke();
 	}
 
@@ -227,30 +231,32 @@ public class SheetUtil {
 			}
 			if (includeBasicValuesLine) {
 				final Table table = new Table().setBorder(0, 0, 0, 0);
-				for (int i = 0; i < 4; ++i) {
-					table.addColumn(new Column(421f / 5, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
+				for (int i = 0; i < 5; ++i) {
+					table.addColumn(new Column(80, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
 					table.addColumn(new Column(30, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0.5f, 0.5f, 0.5f, 0.5f));
 				}
-				table.addColumn(new Column(421f / 5, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
+				table.addColumn(new Column(21, FontManager.serif, 7, HAlign.RIGHT).setBorder(0, 0, 0, 0));
+
 				final JSONObject baseValues = hero != null && fill ? hero.getObj("Basiswerte") : null;
 				final JSONObject derivedValues = ResourceManager.getResource("data/Basiswerte");
-				for (final String value : new String[] { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Initiative-Basis" }) {
+				for (final String value : new String[] { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Wundschwelle", "Initiative-Basis" }) {
 					table.addCells(value, baseValues != null ? HeroUtil.deriveValue(derivedValues.getObj(value), hero, baseValues.getObj(value), false) : " ");
 				}
-				table.addCells("\u00A0\u00A0\u00A0+4\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0+2");
-				final int left = landscape ? 274 : 27;
+				table.addCells(new TextCell("+4\n+2").setPadding(0, 0, 4, -3));
+
+				final int left = landscape ? 259 : 12;
 				final int top = landscape || !includeNameLine ? 41 : 54;
 				try {
-					table.renderRows(event.getDocument(), stream, 0, -1, 541, left, event.getHeight() - top);
-					drawChoiceBox(stream, left + 470, event.getHeight() - top - 2);
-					drawChoiceBox(stream, left + 500, event.getHeight() - top - 2);
+					table.renderRows(event.getDocument(), stream, 0, -1, 571, left, event.getHeight() - top);
+					drawChoiceBox(stream, left + 553, event.getHeight() - top, 5.75f);
+					drawChoiceBox(stream, left + 553, event.getHeight() - top - 6.75f, 5.75f);
 					if (hero != null && fill) {
 						final JSONObject skills = hero.getObj("Sonderfertigkeiten");
 						if (skills.containsKey("Kampfreflexe")) {
-							checkChoiceBox(stream, left + 470, event.getHeight() - top - 2);
+							checkChoiceBox(stream, left + 553, event.getHeight() - top, 5.75f);
 						}
 						if (skills.containsKey("Kampfgespür")) {
-							checkChoiceBox(stream, left + 500, event.getHeight() - top - 2);
+							checkChoiceBox(stream, left + 553, event.getHeight() - top - 6.75f, 5.75f);
 						}
 					}
 				} catch (final IOException e) {
@@ -265,12 +271,17 @@ public class SheetUtil {
 	}
 
 	public static void drawChoiceBox(final PDPageContentStream stream, final float left, final float top) throws IOException {
+		drawChoiceBox(stream, left, top, 8);
+	}
+
+	public static void drawChoiceBox(final PDPageContentStream stream, final float left, final float top, final float size) throws IOException {
 		stream.setLineWidth(0.25f);
-		stream.moveTo(left, top);
-		stream.lineTo(left + 8, top);
-		stream.lineTo(left + 8, top - 8);
-		stream.lineTo(left, top - 8);
+		stream.moveTo(left + size / 2, top);
+		stream.lineTo(left + size, top);
+		stream.lineTo(left + size, top - size);
+		stream.lineTo(left, top - size);
 		stream.lineTo(left, top);
+		stream.lineTo(left + size / 2, top);
 		stream.stroke();
 	}
 
