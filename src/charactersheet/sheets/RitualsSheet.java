@@ -200,7 +200,7 @@ public class RitualsSheet extends Sheet {
 					table.addEventHandler(EventType.BEGIN_PAGE, header);
 					bottom.bottom = table.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable.getHeight(818), 10) - 5;
 				}
-			} else if (!portraitTables.isEmpty()) {
+			} else if (pageSize == PDRectangle.A4 && !portraitTables.isEmpty()) {
 				if (!SheetUtil.matchesPageSize(document, PDRectangle.A4)) {
 					final PDPage page = new PDPage(PDRectangle.A4);
 					document.addPage(page);
