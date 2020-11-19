@@ -851,12 +851,16 @@ public class CompactSheet extends Sheet {
 				}
 
 				String rsString;
-				if ("Gesamtrüstung".equals(armorSetting) || !(item.containsKey("Rüstungsschutz") || baseArmor.containsKey("Rüstungsschutz"))) {
+				final JSONObject zones = item.getObjOrDefault("Rüstungsschutz", baseArmor.getObjOrDefault("Rüstungsschutz", null));
+				if ("Gesamtrüstung".equals(armorSetting) || zones == null && !(item.containsKey("Rüstungsschutz") || baseArmor.containsKey("Rüstungsschutz"))) {
 					final int pieceRS = item.getIntOrDefault("Gesamtrüstungsschutz", baseArmor.getIntOrDefault("Gesamtrüstungsschutz", 0));
 					RS += pieceRS;
 					rsString = Integer.toString(pieceRS);
+				} else if (zones == null) {
+					final double pieceRS = item.getDoubleOrDefault("Rüstungsschutz", baseArmor.getDoubleOrDefault("Rüstungsschutz", 0.0));
+					RS += pieceRS;
+					rsString = DSAUtil.threeDecimalPlaces.format(pieceRS);
 				} else {
-					final JSONObject zones = item.getObjOrDefault("Rüstungsschutz", baseArmor.getObj("Rüstungsschutz"));
 					final int[] zoneValues = new int[8];
 					int j = 0;
 					for (final String zone : new String[] { "Kopf", "Brust", "Rücken", "Bauch", "Linker Arm", "Rechter Arm", "Linkes Bein", "Rechtes Bein" }) {
@@ -934,13 +938,19 @@ public class CompactSheet extends Sheet {
 				}
 
 				final String[] rs = new String[8];
-				if ("Gesamtrüstung".equals(armorSetting) || !(item.containsKey("Rüstungsschutz") || baseArmor.containsKey("Rüstungsschutz"))) {
+				final JSONObject zones = item.getObjOrDefault("Rüstungsschutz", baseArmor.getObjOrDefault("Rüstungsschutz", null));
+				if ("Gesamtrüstung".equals(armorSetting) || zones == null && !(item.containsKey("Rüstungsschutz") || baseArmor.containsKey("Rüstungsschutz"))) {
 					final int RS = item.getIntOrDefault("Gesamtrüstungsschutz", baseArmor.getIntOrDefault("Gesamtrüstungsschutz", 0));
 					for (int j = 0; j < 8; ++j) {
 						rs[i] = Integer.toString(RS);
 					}
+				} else if (zones == null) {
+					final String pieceRS = DSAUtil.threeDecimalPlaces
+							.format(item.getDoubleOrDefault("Rüstungsschutz", baseArmor.getDoubleOrDefault("Rüstungsschutz", 0.0)));
+					for (int k = 0; k < 8; ++k) {
+						rs[k] = pieceRS;
+					}
 				} else {
-					final JSONObject zones = item.getObjOrDefault("Rüstungsschutz", baseArmor.getObj("Rüstungsschutz"));
 					final int[] zoneValues = new int[8];
 					int j = 0;
 					for (final String zone : new String[] { "Kopf", "Brust", "Rücken", "Bauch", "Linker Arm", "Rechter Arm", "Linkes Bein", "Rechtes Bein" }) {
