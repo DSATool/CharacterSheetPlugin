@@ -246,7 +246,7 @@ public class SpecialSkillsSheet extends Sheet {
 		super.load();
 		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", additionalChoiceRows, 0, 30);
 
-		final boolean[] lock = new boolean[] { false };
+		final boolean[] lock = { false };
 
 		final StringProperty showGroups = new SimpleStringProperty("");
 		settingsPage.addStringChoice("Sonderfertigkeiten anzeigen", showGroups, Arrays.asList("Alle", "Erlernte", "Keine", ""));

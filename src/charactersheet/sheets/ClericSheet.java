@@ -410,7 +410,7 @@ public class ClericSheet extends Sheet {
 		final Map<String, String>[] liturgiesByLevel = new Map[numLevels];
 
 		for (int i = 0; i < numLevels; ++i) {
-			liturgiesByLevel[i] = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+			liturgiesByLevel[i] = new TreeMap<>(SheetUtil.comparator);
 		}
 
 		DSAUtil.foreach(liturgy -> liturgy.getObj("Gottheiten").containsKey(deity.get()), (liturgyName, liturgy) -> {

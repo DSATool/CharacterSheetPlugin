@@ -1131,9 +1131,12 @@ public class FightSheet extends Sheet {
 
 	private List<String> getZoneImages() {
 		final List<String> zoneImages = new ArrayList<>();
-		for (final File file : new File(Util.getAppDir() + "/resources/images/zones/").listFiles()) {
-			if (file.isFile()) {
-				zoneImages.add(file.getName());
+		final File[] files = new File(Util.getAppDir() + "/resources/images/zones/").listFiles();
+		if (files != null) {
+			for (final File file : files) {
+				if (file.isFile()) {
+					zoneImages.add(file.getName());
+				}
 			}
 		}
 		zoneImages.add(0, "Keines");

@@ -216,7 +216,7 @@ public class SpellsSheet extends Sheet {
 		final JSONObject talents = ResourceManager.getResource("data/Zauber");
 		final JSONObject actualSpells = hero == null ? null : hero.getObjOrDefault("Zauber", null);
 
-		final Map<String, JSONObject> spells = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+		final Map<String, JSONObject> spells = new TreeMap<>(SheetUtil.comparator);
 		for (final String spellName : talents.keySet()) {
 			spells.put(spellName, talents.getObj(spellName));
 		}
@@ -227,7 +227,7 @@ public class SpellsSheet extends Sheet {
 			if (spell.containsKey("Auswahl") || spell.containsKey("Freitext")) {
 				if (actualSpells != null && actualSpells.containsKey(spellName)) {
 					final JSONObject actualSpell = actualSpells.getObj(spellName);
-					final Map<String, JSONArray> orderedRepresentations = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+					final Map<String, JSONArray> orderedRepresentations = new TreeMap<>(SheetUtil.comparator);
 					for (final String representation : spellRepresentations.keySet()) {
 						if (actualSpell.containsKey(representation)) {
 							orderedRepresentations.put(representation, actualSpell.getArr(representation));
@@ -241,7 +241,7 @@ public class SpellsSheet extends Sheet {
 					}
 				}
 			} else {
-				final Map<String, JSONObject> orderedRepresentations = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+				final Map<String, JSONObject> orderedRepresentations = new TreeMap<>(SheetUtil.comparator);
 				if (actualSpells != null && actualSpells.containsKey(spellName)) {
 					final JSONObject actualSpell = actualSpells.getObj(spellName);
 					for (final String representation : spellRepresentations.keySet()) {

@@ -290,7 +290,7 @@ public class RitualsSheet extends Sheet {
 		table.addColumn(seColumn);
 		table.addCells(seTitle);
 
-		final float[] width = new float[] { nameColumn.getMaxWidth() + actualColumn.getMaxWidth() + seColumn.getMaxWidth() + apColumn.getMaxWidth() };
+		final float[] width = { nameColumn.getMaxWidth() + actualColumn.getMaxWidth() + seColumn.getMaxWidth() + apColumn.getMaxWidth() };
 
 		ifHas("Verbreitung", actualGroup, ritual -> {
 			final Object spread = ritual.getUnsafe("Verbreitung");

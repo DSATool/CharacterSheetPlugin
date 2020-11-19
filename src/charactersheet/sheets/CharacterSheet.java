@@ -289,7 +289,7 @@ public class CharacterSheet extends Sheet {
 		}
 		for (int i = 1; i < 4; ++i) {
 			final String name = Integer.toString(i) + ". Wundschwelle";
-			final String derivation = (i % 2 == 1 ? i + "/2 " : "") + "KO";
+			final String derivation = (i % 2 == 0 ? "" : i + "/2 ") + "KO";
 			if (hero != null && fill) {
 				final String cur = Integer.toString((int) Math.round(i * woundThreshold + woundModifier));
 				final String mod = Util.getSignedIntegerString(woundModifier);
@@ -466,7 +466,7 @@ public class CharacterSheet extends Sheet {
 			final JSONObject prosOrCons = ResourceManager.getResource("data/" + title + 'e');
 			final JSONObject actual = hero.getObj(title + 'e');
 
-			final Map<String, JSONObject> actualProsOrCons = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+			final Map<String, JSONObject> actualProsOrCons = new TreeMap<>(SheetUtil.comparator);
 			for (final String proOrConName : actual.keySet()) {
 				actualProsOrCons.put(proOrConName, prosOrCons.getObj(proOrConName));
 			}

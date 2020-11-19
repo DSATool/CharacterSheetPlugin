@@ -96,8 +96,8 @@ public class CompactSheet extends Sheet {
 		table.addCells("GS", HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Geschwindigkeit"), hero,
 				hero.getObj("Basiswerte").getObj("Geschwindigkeit"), false));
 
-		final int woundThreshold = Math.round(HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Wundschwelle"), hero,
-				hero.getObj("Basiswerte").getObj("Wundschwelle"), false));
+		final int woundThreshold = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Wundschwelle"), hero,
+				hero.getObj("Basiswerte").getObj("Wundschwelle"), false);
 		table.addCells("WS", woundThreshold);
 
 		bottom.bottom = table.render(document, 583, 6, bottom.bottom - 5, 10, 10);
@@ -231,8 +231,8 @@ public class CompactSheet extends Sheet {
 		}
 
 		final JSONObject derivedValues = ResourceManager.getResource("data/Basiswerte");
-		String[] derivedNames = new String[] { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Initiative-Basis" };
-		String[] derivedLabels = new String[] { "AT-Basis", "PA-Basis", "FK-Basis", "INI-Basis" };
+		String[] derivedNames = { "Attacke-Basis", "Parade-Basis", "Fernkampf-Basis", "Initiative-Basis" };
+		String[] derivedLabels = { "AT-Basis", "PA-Basis", "FK-Basis", "INI-Basis" };
 		for (int i = 0; i < 4; ++i) {
 			final String derivedName = derivedNames[i];
 			final JSONObject derivedValue = derivedValues.getObj(derivedName);
@@ -379,7 +379,7 @@ public class CompactSheet extends Sheet {
 			final JSONObject prosOrCons = ResourceManager.getResource("data/" + pOrC);
 			final JSONObject actual = hero.getObj(pOrC);
 
-			final Map<String, JSONObject> actualProsOrCons = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+			final Map<String, JSONObject> actualProsOrCons = new TreeMap<>(SheetUtil.comparator);
 			for (final String proOrConName : actual.keySet()) {
 				actualProsOrCons.put(proOrConName, prosOrCons.getObj(proOrConName));
 			}
@@ -533,7 +533,7 @@ public class CompactSheet extends Sheet {
 		++i;
 		skillGroups[i] = liturgies;
 
-		final Map<String, JSONObject> skills = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+		final Map<String, JSONObject> skills = new TreeMap<>(SheetUtil.comparator);
 		for (final String skillName : actualSkills.keySet()) {
 			for (final JSONObject skillGroup : skillGroups) {
 				if (skillGroup.containsKey(skillName)) {
@@ -648,7 +648,7 @@ public class CompactSheet extends Sheet {
 		final Cell challengeTitle = new TextCell("Probe", FontManager.serifBold, 0, 8);
 		final Cell traitTitle = new TextCell("Merk.", FontManager.serifBold, 0, 8).setHAlign(HAlign.CENTER);
 		final Cell valueTitle = new TextCell("ZfW", FontManager.serifBold, 0, 8);
-		final Object[] tableHeader = new Object[] { nameTitle, repTitle, challengeTitle, traitTitle, valueTitle };
+		final Object[] tableHeader = { nameTitle, repTitle, challengeTitle, traitTitle, valueTitle };
 
 		addMulticolTable(document, "Zauber", tableHeader, table, 2, rows, null, additionalSpellRows.get());
 	}

@@ -105,7 +105,7 @@ public class TalentsSheet extends Sheet {
 		table.addRow(nameTitle, tawTitle, challengeTitle, calculationTitle);
 
 		final JSONObject talents = ResourceManager.getResource("data/Talente").getObj("Meta-Talente");
-		final Map<String, JSONObject> metaTalents = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+		final Map<String, JSONObject> metaTalents = new TreeMap<>(SheetUtil.comparator);
 		for (final String talentName : talents.keySet()) {
 			metaTalents.put(talentName, talents.getObj(talentName));
 		}
@@ -245,7 +245,7 @@ public class TalentsSheet extends Sheet {
 
 		final JSONObject talents = ResourceManager.getResource("data/Talente").getObj("Gaben");
 
-		final Map<String, JSONObject> specialTalents = new TreeMap<>((s1, s2) -> SheetUtil.comparator.compare(s1, s2));
+		final Map<String, JSONObject> specialTalents = new TreeMap<>(SheetUtil.comparator);
 		for (final String talentName : talents.keySet()) {
 			specialTalents.put(talentName, talents.getObj(talentName));
 		}

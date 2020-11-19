@@ -162,7 +162,7 @@ public class SheetConfiguration extends HeroSelector {
 		sheets.setCellFactory(list -> {
 			final CheckBoxListCell<Sheet> cell = new CheckBoxListCell<>();
 
-			cell.setSelectedStateCallback(item -> sheets.getItemBooleanProperty(item));
+			cell.setSelectedStateCallback(sheets::getItemBooleanProperty);
 
 			cell.setOnDragDetected(e -> {
 				if (cell.isEmpty()) return;
@@ -170,6 +170,7 @@ public class SheetConfiguration extends HeroSelector {
 				final ClipboardContent content = new ClipboardContent();
 				content.put(DataFormat.PLAIN_TEXT, cell.getIndex());
 				dragBoard.setContent(content);
+				e.consume();
 			});
 
 			cell.setOnDragDropped(e -> {
