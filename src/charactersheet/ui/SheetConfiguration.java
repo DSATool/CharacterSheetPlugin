@@ -81,6 +81,7 @@ public class SheetConfiguration extends HeroSelector {
 	private StackPane tabArea;
 
 	private final Map<Sheet, Node> sheetControls = new HashMap<>();
+	private final Map<String, Sheet> sheetNames = new HashMap<>();
 
 	private JSONObject hero;
 
@@ -116,6 +117,7 @@ public class SheetConfiguration extends HeroSelector {
 				final Node control = sheet.getControl();
 				tabArea.getChildren().add(control);
 				sheetControls.put(sheet, control);
+				sheetNames.put(sheet.toString(), sheet);
 				sheets.getItems().add(sheet);
 			} catch (final Exception e) {
 				ErrorLogger.logError(e);
@@ -125,8 +127,26 @@ public class SheetConfiguration extends HeroSelector {
 		load();
 	}
 
-	private void checkSheets() {
+	private void checkAndOrderSheets() {
 		final JSONObject settings = hero != null ? hero.getObjOrDefault("Heldenbogen", null) : null;
+
+		final ObservableList<Sheet> items = sheets.getItems();
+		items.clear();
+		if (settings != null) {
+			for (final String key : settings.keySet()) {
+				if (sheetNames.containsKey(key)) {
+					items.add(sheetNames.get(key));
+				}
+			}
+		}
+
+		for (final HeroController controller : controllers) {
+			final Sheet sheet = (Sheet) controller;
+			if (settings == null || !settings.containsKey(sheet.toString())) {
+				items.add(sheet);
+			}
+		}
+
 		for (final HeroController controller : controllers) {
 			final Sheet sheet = (Sheet) controller;
 			final boolean checked = settings != null ? settings.containsKey(sheet.toString()) : sheet.check();
@@ -215,7 +235,7 @@ public class SheetConfiguration extends HeroSelector {
 		heroes.add(0, null);
 		list.getItems().add(0, "Leerer Bogen");
 
-		checkSheets();
+		checkAndOrderSheets();
 
 		heroModel.clearAndSelect(Math.max(0, selectedHero));
 		sheetControlModel.clearAndSelect(Math.max(0, selectedSheet));
@@ -273,7 +293,7 @@ public class SheetConfiguration extends HeroSelector {
 			showName.setSelected(settings.getBoolOrDefault("Name", false));
 			showDate.setSelected(settings.getBoolOrDefault("Datum", false));
 		}
-		checkSheets();
+		checkAndOrderSheets();
 	}
 
 	@FXML
