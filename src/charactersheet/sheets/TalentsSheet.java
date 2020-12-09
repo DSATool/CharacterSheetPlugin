@@ -58,9 +58,8 @@ public class TalentsSheet extends Sheet {
 		final StringBuilder title = new StringBuilder(name);
 
 		if (talentGroup.containsKey("Steigerung")) {
-			final int enhancement = talentGroup.getInt("Steigerung");
 			title.append(" (");
-			title.append(DSAUtil.getEnhancementGroupString(enhancement));
+			title.append(DSAUtil.getEnhancementGroupString(talentGroup.getInt("Steigerung")));
 			title.append(')');
 		}
 
