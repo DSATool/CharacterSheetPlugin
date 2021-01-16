@@ -33,6 +33,8 @@ import charactersheet.util.FontManager;
 import charactersheet.util.SheetUtil;
 import dsa41basis.util.DSAUtil;
 import dsa41basis.util.DSAUtil.Units;
+import dsa41basis.util.HeroUtil;
+import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -88,7 +90,16 @@ public class InventorySheet extends Sheet {
 		table.addColumn(new Column(126, 126, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(124, 124, FontManager.serif, 4, fontSize, HAlign.LEFT));
 
-		SheetUtil.addTitle(table, "Artefakte");
+		String controlValue;
+		if (hero != null && fill) {
+			final JSONObject derivation = ResourceManager.getResource("data/Basiswerte").getObj("Artefaktkontrolle");
+			controlValue = Integer.toString(HeroUtil.deriveValue(derivation, hero, hero.getObj("Basiswerte").getObj("Artefaktkontrolle"), false));
+		} else {
+			controlValue = "___";
+		}
+
+		table.addRowAtIndex(0, SheetUtil.createTitleCell("Artefakte", 1).setBorder(0, 0, 0, 0.25f),
+				new TextCell("Artefaktkontrolle: ___ / " + controlValue).setHAlign(HAlign.RIGHT).setColSpan(6).setBorder(0, 0, 0, 0.25f));
 
 		int cols = additionalArtifactRows.get();
 		final Queue<JSONObject> artifacts = new LinkedList<>();

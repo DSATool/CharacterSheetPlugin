@@ -433,7 +433,6 @@ public class RitualsSheet extends Sheet {
 		table.addColumn(descColumn);
 		table.addCells(descTitle);
 
-		String additionalHeader = "";
 		final StringBuilder headerString = new StringBuilder();
 
 		if (group.containsKey("Material")) {
@@ -508,7 +507,7 @@ public class RitualsSheet extends Sheet {
 			headerString.append(hero != null && fillAll && item != null ? pAsP : "___");
 		}
 
-		additionalHeader = headerString.toString();
+		final String additionalHeader = headerString.toString();
 
 		table.addRowAtIndex(0, SheetUtil.createTitleCell(groupName, table.getNumColumns() - 1).setBorder(0, 0, 0, 0.25f),
 				new TextCell(additionalHeader).setHAlign(HAlign.RIGHT).setColSpan(1).setBorder(0, 0, 0, 0.25f));
