@@ -641,11 +641,11 @@ public class FightSheet extends Sheet {
 		if (hero != null && fill) {
 			TPKKModifier = (HeroUtil.getCurrentValue(hero.getObj("Eigenschaften").getObj("KK"), false) - 10) / 3;
 			final String tp = "1W" + (TPKKModifier == 0 ? "" : Util.getSignedIntegerString(TPKKModifier)) + "(A)";
-			final String at1 = fillAll ? Integer.toString(HeroUtil.getAT(hero, null, "Raufen", true, false, false)) : " ";
-			final String pa1 = fillAll ? Integer.toString(HeroUtil.getPA(hero, null, "Raufen", false, false)) : " ";
+			final String at1 = fillAll ? Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Raufen", true, false, false)) : " ";
+			final String pa1 = fillAll ? Integer.toString(HeroUtil.getPA(hero, HeroUtil.infight, "Raufen", false, false)) : " ";
 			table.addRow("Raufen", tp, at1, pa1, tpkk, "±0");
-			final String at2 = fillAll ? Integer.toString(HeroUtil.getAT(hero, null, "Ringen", true, false, false)) : " ";
-			final String pa2 = fillAll ? Integer.toString(HeroUtil.getPA(hero, null, "Ringen", false, false)) : " ";
+			final String at2 = fillAll ? Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Ringen", true, false, false)) : " ";
+			final String pa2 = fillAll ? Integer.toString(HeroUtil.getPA(hero, HeroUtil.infight, "Ringen", false, false)) : " ";
 			table.addRow("Ringen", tp, at2, pa2, tpkk, "±0");
 		} else {
 			table.addRow("Raufen", " ", " ", " ", tpkk, "±0");
