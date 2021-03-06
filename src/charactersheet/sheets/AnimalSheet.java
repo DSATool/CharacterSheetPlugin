@@ -404,8 +404,8 @@ public class AnimalSheet extends Sheet {
 
 		if (animal != null && fill) {
 			JSONObject actualValue = actualValues.getObj("Initiative");
-			Bordered actual = new TextCell(actualValue.getIntOrDefault("Basis", 0) + "+" + actualValue.getIntOrDefault("Würfel:Anzahl", 1) + "W"
-					+ actualValue.getIntOrDefault("Würfel:Typ", 6));
+			Bordered actual = new TextCell(actualValues.getObj("Initiative-Basis").getIntOrDefault("Wert", 0) + "+"
+					+ actualValue.getIntOrDefault("Würfel:Anzahl", 1) + "W" + actualValue.getIntOrDefault("Würfel:Typ", 6));
 			TextCell mod = new TextCell(Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0)));
 			table.addRow("", "Initiative", actual, isMagical ? "—" : mod);
 
@@ -538,7 +538,7 @@ public class AnimalSheet extends Sheet {
 		table.addRow(nameTitle, beTitle, koTitle, hTitle, brTitle, krTitle, lTitle, notesTitle);
 
 		if (animal != null) {
-			final int natural = animal.getObj("Basiswerte").getObj("Rüstungsschutz").getIntOrDefault("Wert", 0);
+			final int natural = animal.getObj("Vorteile").getObj("Natürlicher Rüstungsschutz").getIntOrDefault("Stufe", 0);
 			if (natural != 0) {
 				table.addCells("Natürlicher Rüstungsschutz", "0");
 				for (int i = 0; i < 5; ++i) {
@@ -649,8 +649,8 @@ public class AnimalSheet extends Sheet {
 			String mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
 
 			actualValue = actualValues.getObj("Initiative");
-			Bordered actualRight = new TextCell(actualValue.getIntOrDefault("Basis", 0) + "+" + actualValue.getIntOrDefault("Würfel:Anzahl", 1) + "W"
-					+ actualValue.getIntOrDefault("Würfel:Typ", 6));
+			Bordered actualRight = new TextCell(actualValues.getObj("Initiative-Basis").getIntOrDefault("Wert", 0) + "+"
+					+ actualValue.getIntOrDefault("Würfel:Anzahl", 1) + "W" + actualValue.getIntOrDefault("Würfel:Typ", 6));
 			TextCell modRight = new TextCell(Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0)));
 
 			table.addRow("Konstitution", actual, mod, "", "Initiative", actualRight, modRight);
