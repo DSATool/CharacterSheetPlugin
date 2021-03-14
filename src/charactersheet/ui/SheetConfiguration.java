@@ -41,6 +41,7 @@ import charactersheet.sheets.TalentsSheet;
 import charactersheet.util.FontManager;
 import dsa41basis.ui.hero.HeroController;
 import dsa41basis.ui.hero.HeroSelector;
+import dsatool.gui.GUIUtil;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Util;
 import javafx.collections.ObservableList;
@@ -50,11 +51,8 @@ import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.cell.CheckBoxListCell;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.DataFormat;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
@@ -85,6 +83,8 @@ public class SheetConfiguration extends HeroSelector {
 
 	private JSONObject hero;
 
+	private Sheet[] checkedPreviously;
+
 	public SheetConfiguration() {
 		super(false, true);
 
@@ -101,13 +101,24 @@ public class SheetConfiguration extends HeroSelector {
 
 		setContent(pane);
 
+		sheets.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
 		sheets.getSelectionModel().selectedItemProperty().addListener((o, oldV, newV) -> {
 			if (newV != null) {
 				sheetControls.get(newV).toFront();
 			}
 		});
 
-		initializeDragDrop();
+		sheets.setCellFactory(list -> {
+			final CheckBoxListCell<Sheet> cell = new CheckBoxListCell<>();
+
+			cell.setSelectedStateCallback(sheets::getItemBooleanProperty);
+
+			GUIUtil.dragDropReorder(cell, () -> checkedPreviously = sheets.getCheckModel().getCheckedItems().toArray(new Sheet[0]),
+					() -> restoreCheckedSheets(), moved -> restoreCheckedSheets(), sheets);
+
+			return cell;
+		});
 
 		for (final Class<? extends Sheet> sheetClass : sheetControllers) {
 			try {
@@ -178,46 +189,6 @@ public class SheetConfiguration extends HeroSelector {
 		}
 	}
 
-	private void initializeDragDrop() {
-		sheets.setCellFactory(list -> {
-			final CheckBoxListCell<Sheet> cell = new CheckBoxListCell<>();
-
-			cell.setSelectedStateCallback(sheets::getItemBooleanProperty);
-
-			cell.setOnDragDetected(e -> {
-				if (cell.isEmpty()) return;
-				final Dragboard dragBoard = sheets.startDragAndDrop(TransferMode.MOVE);
-				final ClipboardContent content = new ClipboardContent();
-				content.put(DataFormat.PLAIN_TEXT, cell.getIndex());
-				dragBoard.setContent(content);
-				e.consume();
-			});
-
-			cell.setOnDragDropped(e -> {
-				final CheckModel<Sheet> checkModel = sheets.getCheckModel();
-				final ObservableList<Sheet> checkedSheets = checkModel.getCheckedItems();
-				final Sheet[] checkedPreviously = checkedSheets.toArray(new Sheet[checkedSheets.size()]);
-				final Sheet item = sheets.getItems().get((Integer) e.getDragboard().getContent(DataFormat.PLAIN_TEXT));
-				sheets.getItems().remove(item);
-				final int index = sheets.getItems().indexOf(cell.getItem());
-				if (index == -1) {
-					sheets.getItems().add(item);
-				} else {
-					sheets.getItems().add(index, item);
-				}
-				checkModel.clearChecks();
-				for (final Sheet sheet : checkedPreviously) {
-					checkModel.check(sheet);
-				}
-				e.setDropCompleted(true);
-			});
-
-			cell.setOnDragOver(e -> e.acceptTransferModes(TransferMode.MOVE));
-
-			return cell;
-		});
-	}
-
 	/**
 	 * Reloads the data if it has changed
 	 */
@@ -239,6 +210,14 @@ public class SheetConfiguration extends HeroSelector {
 
 		heroModel.clearAndSelect(Math.max(0, selectedHero));
 		sheetControlModel.clearAndSelect(Math.max(0, selectedSheet));
+	}
+
+	private void restoreCheckedSheets() {
+		final CheckModel<Sheet> checkModel = sheets.getCheckModel();
+		checkModel.clearChecks();
+		for (final Sheet sheet : checkedPreviously) {
+			checkModel.check(sheet);
+		}
 	}
 
 	@FXML
