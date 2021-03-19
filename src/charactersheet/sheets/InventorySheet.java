@@ -320,7 +320,7 @@ public class InventorySheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Alchemika");
 
-		int cols = additionalPotionRows.get() + 1;
+		int cols = additionalPotionRows.get();
 		final Queue<JSONObject> potions = new LinkedList<>();
 
 		JSONArray items = null;
