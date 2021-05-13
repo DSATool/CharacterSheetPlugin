@@ -917,7 +917,7 @@ public class TalentsSheet extends Sheet {
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
 		ownTalentsOnly.set(settings.getBoolOrDefault("Nur erlernte Talente anzeigen", false));
-		additionalTalentRows.set(settings.getIntOrDefault("Nur erlernte Talente anzeigen", 3));
+		additionalTalentRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Talente", 3));
 		groupBasis.set(settings.getBoolOrDefault("Basistalente gruppieren", true));
 		markBasis.set(settings.getBoolOrDefault("Basistalente markieren", false));
 		primaryTalents.set(settings.getBoolOrDefault("Leittalente anzeigen", hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht")));
