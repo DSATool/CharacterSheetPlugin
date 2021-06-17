@@ -115,7 +115,7 @@ public class SheetConfiguration extends HeroSelector {
 			cell.setSelectedStateCallback(sheets::getItemBooleanProperty);
 
 			GUIUtil.dragDropReorder(cell, () -> checkedPreviously = sheets.getCheckModel().getCheckedItems().toArray(new Sheet[0]),
-					() -> restoreCheckedSheets(), moved -> restoreCheckedSheets(), sheets);
+					this::restoreCheckedSheets, moved -> restoreCheckedSheets(), sheets);
 
 			return cell;
 		});

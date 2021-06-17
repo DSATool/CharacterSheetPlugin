@@ -279,7 +279,7 @@ public class SpecialSkillsSheet extends Sheet {
 		additionalChoiceRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", 1));
 		final JSONObject groups = settings.getObjOrDefault("Gruppen", new JSONObject(null));
 		for (final String name : skillGroups.keySet()) {
-			skillGroups.get(name).set(groups.getStringOrDefault(name, name.equals("Schwarze Gaben") ? "Erlernte" : "Alle"));
+			skillGroups.get(name).set(groups.getStringOrDefault(name, "Schwarze Gaben".equals(name) ? "Erlernte" : "Alle"));
 		}
 	}
 

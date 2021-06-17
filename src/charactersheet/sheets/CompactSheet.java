@@ -388,11 +388,10 @@ public class CompactSheet extends Sheet {
 				final JSONObject proOrCon = actualProsOrCons.get(proOrConName);
 				if (proOrCon.containsKey("Auswahl") || proOrCon.containsKey("Freitext")) {
 					prosAndCons.append(DSAUtil.printProsOrCons(actual.getArr(proOrConName), proOrConName, proOrCon, true));
-					prosAndCons.append("; ");
 				} else {
 					prosAndCons.append(DSAUtil.printProOrCon(actual.getObj(proOrConName), proOrConName, proOrCon, true));
-					prosAndCons.append("; ");
 				}
+				prosAndCons.append("; ");
 			}
 			if (prosAndCons.length() > 2) {
 				prosAndCons.delete(prosAndCons.length() - 2, prosAndCons.length());
@@ -548,11 +547,10 @@ public class CompactSheet extends Sheet {
 
 			if (skill.containsKey("Auswahl") || skill.containsKey("Freitext")) {
 				skillsString.append(DSAUtil.printProsOrCons(actualSkills.getArr(skillName), skillName, skill, false));
-				skillsString.append("; ");
 			} else {
 				skillsString.append(skillName);
-				skillsString.append("; ");
 			}
+			skillsString.append("; ");
 		}
 
 		if (skillsString.length() > 2) {

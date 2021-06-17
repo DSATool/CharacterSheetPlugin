@@ -164,7 +164,7 @@ public class TalentsSheet extends Sheet {
 				}
 			}
 
-			if (taw == Double.NEGATIVE_INFINITY && showMetaTalents.get().equals("Aktivierte")) {
+			if (taw == Double.NEGATIVE_INFINITY && "Aktivierte".equals(showMetaTalents.get())) {
 				++leftOut;
 				continue;
 			}
@@ -209,7 +209,7 @@ public class TalentsSheet extends Sheet {
 			table.addRow(talentName, tawString, challengeCell, calculationString.toString());
 		}
 
-		if (showMetaTalents.get().equals("Aktivierte")) {
+		if ("Aktivierte".equals(showMetaTalents.get())) {
 			for (int i = 0; i < Math.min(leftOut, additionalTalentRows.get()); ++i) {
 				table.addRow("");
 			}
@@ -320,7 +320,7 @@ public class TalentsSheet extends Sheet {
 		}
 
 		if (table.getNumRows() > 2) {
-			bottom.bottom = table.render(document, 152, !showMetaTalents.get().equals("Keine") ? 431 : 12, bottom.bottom, 72, 10) - 5;
+			bottom.bottom = table.render(document, 152, !"Keine".equals(showMetaTalents.get()) ? 431 : 12, bottom.bottom, 72, 10) - 5;
 		}
 	}
 
@@ -359,7 +359,7 @@ public class TalentsSheet extends Sheet {
 
 		float metaBottom = bottom.bottom;
 
-		if (!showMetaTalents.get().equals("Keine")) {
+		if (!"Keine".equals(showMetaTalents.get())) {
 			final float currentBottom = bottom.bottom;
 			try {
 				addMetaTable(document);
@@ -494,10 +494,7 @@ public class TalentsSheet extends Sheet {
 		for (final String talentName : talents.keySet()) {
 			final JSONObject talent = talents.get(talentName);
 
-			if (isLanguage && talent.getBoolOrDefault("Schrift", false)) {
-				continue;
-			}
-			if (isWriting && !talent.getBoolOrDefault("Schrift", false)) {
+			if ((isLanguage && talent.getBoolOrDefault("Schrift", false)) || (isWriting && !talent.getBoolOrDefault("Schrift", false))) {
 				continue;
 			}
 
@@ -907,7 +904,7 @@ public class TalentsSheet extends Sheet {
 		settingsPage.addBooleanChoice("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent);
 
 		ownTalentsOnly.addListener((o, oldV, newV) -> {
-			if (!showMetaTalents.get().equals("Keine")) {
+			if (!"Keine".equals(showMetaTalents.get())) {
 				showMetaTalents.set(newV ? "Aktivierte" : "Alle");
 			}
 		});
