@@ -402,7 +402,12 @@ public class CharacterSheet extends Sheet {
 		final File file = image.get();
 
 		if (file != null) {
-			table.addRow(new ImageCell(file).setMinHeight(height).setBorder(0, 0, 0, 0));
+			if (file.exists()) {
+				table.addRow(new ImageCell(file).setMinHeight(height).setBorder(0, 0, 0, 0));
+			} else {
+				ErrorLogger.log("Bilddatei nicht gefunden:\n" + file.getAbsolutePath());
+				table.addRow(new Cell().setMinHeight(height));
+			}
 		} else {
 			table.addRow(new Cell().setMinHeight(height));
 		}
@@ -664,9 +669,6 @@ public class CharacterSheet extends Sheet {
 		showConnections.set(settings.getBoolOrDefault("Verbindungen", false));
 		showImage.set(settings.getBoolOrDefault("Bild anzeigen", false));
 		image.set(new File(settings.getStringOrDefault("Bild", "Keines")));
-		if (!image.get().exists()) {
-			image.set(null);
-		}
 	}
 
 	@Override
