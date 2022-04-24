@@ -76,10 +76,9 @@ public class AnimalSheet extends Sheet {
 	private final List<IntegerProperty> additionalProConRows = new ArrayList<>();
 	private final List<IntegerProperty> additionalArmorRows = new ArrayList<>();
 	private final List<IntegerProperty> additionalInventoryRows = new ArrayList<>();
-	private final List<BooleanProperty> ownSkillsOnly = new ArrayList<>();
 	private final List<BooleanProperty> showProsCons = new ArrayList<>();
 	private final List<BooleanProperty> showArmor = new ArrayList<>();
-	private final List<BooleanProperty> showSkills = new ArrayList<>();
+	private final List<StringProperty> showSkills = new ArrayList<>();
 	private final List<BooleanProperty> showInventory = new ArrayList<>();
 
 	private JSONArray animals = null;
@@ -139,12 +138,9 @@ public class AnimalSheet extends Sheet {
 		final IntegerProperty numArmor = new SimpleIntegerProperty(settings.getIntOrDefault("Zusätzliche Zeilen für Rüstung", 3));
 		additionalArmorRows.add(numArmor);
 		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Rüstung", numArmor, 0, 20);
-		final BooleanProperty skills = new SimpleBooleanProperty(settings.getBoolOrDefault("Fertigkeiten", true));
+		final StringProperty skills = new SimpleStringProperty(settings.getStringOrDefault("Fertigkeiten", "Erlernbare"));
 		showSkills.add(skills);
-		settingsPage.addBooleanChoice("Fertigkeiten", skills);
-		final BooleanProperty ownSkills = new SimpleBooleanProperty(settings.getBoolOrDefault("Nur erlernbare Fertigkeiten", true));
-		ownSkillsOnly.add(ownSkills);
-		settingsPage.addBooleanChoice("Nur erlernbare Fertigkeiten", ownSkills);
+		settingsPage.addStringChoice("Fertigkeiten", skills, Arrays.asList("Alle", "Erlernbare", "Erlernte", "Keine"));
 		final BooleanProperty inventory = new SimpleBooleanProperty(settings.getBoolOrDefault("Inventar", true));
 		showInventory.add(inventory);
 		settingsPage.addBooleanChoice("Inventar", inventory);
@@ -165,7 +161,6 @@ public class AnimalSheet extends Sheet {
 			showArmor.remove(index);
 			additionalArmorRows.remove(index);
 			showSkills.remove(index);
-			ownSkillsOnly.remove(index);
 			showInventory.remove(index);
 			additionalInventoryRows.remove(index);
 		});
@@ -603,8 +598,9 @@ public class AnimalSheet extends Sheet {
 		final JSONObject actualSkills = animal != null && fill ? animal.getObj("Fertigkeiten") : null;
 		for (final String skillName : skills.keySet()) {
 			final JSONObject skill = skills.getObj(skillName);
-			if (skill.getBoolOrDefault("Speziell", false) && ownSkillsOnly.get(current).get()
-					&& (actualSkills == null || !actualSkills.containsKey(skillName))) {
+			if ((actualSkills == null || !actualSkills.containsKey(skillName)) &&
+					(showSkills.get(index).get() == "Erlernte"
+							|| showSkills.get(index).get() == "Erlernbare" && skill.getBoolOrDefault("Speziell", false))) {
 				continue;
 			}
 			final String actual = actualSkills != null && actualSkills.containsKey(skillName) ? "X" : "";
@@ -884,7 +880,6 @@ public class AnimalSheet extends Sheet {
 				setting.put("Rüstung", showArmor.get(i).get());
 				setting.put("Zusätzliche Zeilen für Rüstung", additionalArmorRows.get(i).get());
 				setting.put("Fertigkeiten", showSkills.get(i).get());
-				setting.put("Nur erlernbare Fertigkeiten", ownSkillsOnly.get(i).get());
 				setting.put("Inventar", showInventory.get(i).get());
 				setting.put("Zusätzliche Zeilen für Inventar", additionalInventoryRows.get(i).get());
 			}
@@ -913,8 +908,8 @@ public class AnimalSheet extends Sheet {
 		final JSONObject actualSkills = animal != null && fill ? animal.getObj("Fertigkeiten") : new JSONObject(null);
 		for (final String skillName : skills.keySet()) {
 			final JSONObject skill = skills.getObj(skillName);
-			if (skill.getBoolOrDefault("Speziell", false) && ownSkillsOnly.get(current).get()
-					&& (actualSkills == null || !actualSkills.containsKey(skillName))) {
+			if ((actualSkills == null || !actualSkills.containsKey(skillName)) && (showSkills.get(index).get() == "Erlernte"
+					|| showSkills.get(index).get() == "Erlernbare" && skill.getBoolOrDefault("Speziell", false))) {
 				continue;
 			}
 			final String actual = actualSkills != null && actualSkills.containsKey(skillName) ? "X" : "";
@@ -960,7 +955,6 @@ public class AnimalSheet extends Sheet {
 		showArmor.clear();
 		additionalArmorRows.clear();
 		showSkills.clear();
-		ownSkillsOnly.clear();
 		showInventory.clear();
 		additionalInventoryRows.clear();
 
