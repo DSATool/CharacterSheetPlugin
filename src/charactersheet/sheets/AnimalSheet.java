@@ -743,7 +743,7 @@ public class AnimalSheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Inventar");
 
-		int cols = additionalInventoryRows.get(current).get() + 1;
+		int rows = additionalRows + 1;
 		final Queue<JSONObject> equipment = new LinkedList<>();
 
 		JSONArray items = null;
@@ -752,9 +752,9 @@ public class AnimalSheet extends Sheet {
 			DSAUtil.foreach(item -> (!item.containsKey("Kategorien") || !item.getArr("Kategorien").contains("Pferderüstung")), item -> {
 				equipment.add(item);
 			}, items);
-			cols += equipment.size();
+			rows += equipment.size();
 		}
-		cols = Math.max(cols, 2);
+		rows = Math.max(rows, 2);
 
 		final Table[] tables = new Table[2];
 
@@ -773,7 +773,7 @@ public class AnimalSheet extends Sheet {
 
 			tables[i].addRow(nameTitle, notesTitle, weightTitle, valueTitle);
 
-			for (int j = 0; j < cols / 2; ++j) {
+			for (int j = 0; j < rows / 2; ++j) {
 				if (animal != null && fill && !equipment.isEmpty()) {
 					final JSONObject item = equipment.poll();
 					final String name = item.getStringOrDefault("Name", "Unbenannt");

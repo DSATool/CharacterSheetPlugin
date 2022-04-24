@@ -101,7 +101,7 @@ public class InventorySheet extends Sheet {
 		table.addRowAtIndex(0, SheetUtil.createTitleCell("Artefakte", 1).setBorder(0, 0, 0, 0.25f),
 				new TextCell("Artefaktkontrolle: ___ / " + controlValue).setHAlign(HAlign.RIGHT).setColSpan(6).setBorder(0, 0, 0, 0.25f));
 
-		int cols = additionalArtifactRows.get();
+		int rows = additionalArtifactRows.get();
 		final Queue<JSONObject> artifacts = new LinkedList<>();
 
 		JSONArray items = null;
@@ -110,9 +110,9 @@ public class InventorySheet extends Sheet {
 			DSAUtil.foreach(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Artefakt")), item -> {
 				artifacts.add(item);
 			}, items);
-			cols += artifacts.size();
+			rows += artifacts.size();
 		}
-		cols = Math.max(cols, 1);
+		rows = Math.max(rows, 1);
 
 		final TextCell nameTitle = new TextCell("Artefakt", FontManager.serifBold, 8.5f, 8.5f);
 		final TextCell typeTitle = new TextCell("Typ", FontManager.serifBold, 8.5f, 8.5f);
@@ -124,7 +124,7 @@ public class InventorySheet extends Sheet {
 
 		table.addRow(nameTitle, typeTitle, loadsTitle, aspTitle, triggerTitle, spellsTitle, notesTitle);
 
-		for (int i = 0; i < cols; ++i) {
+		for (int i = 0; i < rows; ++i) {
 			if (hero != null && fill && !artifacts.isEmpty()) {
 				JSONObject item = artifacts.poll();
 				final JSONObject baseItem = item;
@@ -192,7 +192,7 @@ public class InventorySheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Kleidung");
 
-		int cols = additionalClothingRows.get() + 1;
+		int rows = additionalClothingRows.get() + 1;
 		final Queue<JSONObject> clothing = new LinkedList<>();
 
 		JSONArray items = null;
@@ -201,9 +201,9 @@ public class InventorySheet extends Sheet {
 			DSAUtil.foreach(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Kleidung")), item -> {
 				clothing.add(item);
 			}, items);
-			cols += clothing.size();
+			rows += clothing.size();
 		}
-		cols = Math.max(cols, 2);
+		rows = Math.max(rows, 2);
 
 		final Table[] tables = new Table[2];
 
@@ -220,7 +220,7 @@ public class InventorySheet extends Sheet {
 
 			tables[i].addRow(nameTitle, notesTitle, ksTitle);
 
-			for (int j = 0; j < cols / 2; ++j) {
+			for (int j = 0; j < rows / 2; ++j) {
 				if (hero != null && fill && !clothing.isEmpty()) {
 					JSONObject item = clothing.poll();
 					final JSONObject baseItem = item;
@@ -252,7 +252,7 @@ public class InventorySheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Inventar");
 
-		int cols = additionalInventoryRows.get() + 1;
+		int rows = additionalRows + 1;
 		final Queue<JSONObject> equipment = new LinkedList<>();
 
 		JSONArray items = null;
@@ -261,9 +261,9 @@ public class InventorySheet extends Sheet {
 			DSAUtil.foreach(item -> (!item.containsKey("Kategorien") || item.getArr("Kategorien").size() == 0), item -> {
 				equipment.add(item);
 			}, items);
-			cols += equipment.size();
+			rows += equipment.size();
 		}
-		cols = Math.max(cols, 2);
+		rows = Math.max(rows, 2);
 
 		final Table[] tables = new Table[2];
 
@@ -282,7 +282,7 @@ public class InventorySheet extends Sheet {
 
 			tables[i].addRow(nameTitle, notesTitle, weightTitle, valueTitle);
 
-			for (int j = 0; j < cols / 2; ++j) {
+			for (int j = 0; j < rows / 2; ++j) {
 				if (hero != null && fill && !equipment.isEmpty()) {
 					final JSONObject item = equipment.poll();
 					final String name = item.getStringOrDefault("Name", "Unbenannt");
@@ -312,7 +312,7 @@ public class InventorySheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Alchemika");
 
-		int cols = additionalPotionRows.get();
+		int rows = additionalPotionRows.get();
 		final Queue<JSONObject> potions = new LinkedList<>();
 
 		JSONArray items = null;
@@ -321,9 +321,9 @@ public class InventorySheet extends Sheet {
 			DSAUtil.foreach(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Alchemikum")), item -> {
 				potions.add(item);
 			}, items);
-			cols += potions.size();
+			rows += potions.size();
 		}
-		cols = Math.max(cols, 1);
+		rows = Math.max(rows, 1);
 
 		final TextCell nameTitle = new TextCell("Alchemikum", FontManager.serifBold, 8.5f, 8.5f);
 		final TextCell notesTitle = new TextCell("Anmerkungen", FontManager.serifBold, 8.5f, 8.5f);
@@ -333,7 +333,7 @@ public class InventorySheet extends Sheet {
 
 		table.addRow(nameTitle, notesTitle, effectTitle, qualityTitle, countTitle);
 
-		for (int i = 0; i < cols; ++i) {
+		for (int i = 0; i < rows; ++i) {
 			if (hero != null && fill && !potions.isEmpty()) {
 				JSONObject item = potions.poll();
 				final JSONObject baseItem = item;
@@ -364,7 +364,7 @@ public class InventorySheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Wertgegenstände");
 
-		int cols = additionalValuablesRows.get() + 1;
+		int rows = additionalValuablesRows.get() + 1;
 
 		final Queue<JSONObject> valuables = new LinkedList<>();
 
@@ -374,9 +374,9 @@ public class InventorySheet extends Sheet {
 			DSAUtil.foreach(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Wertgegenstand")), item -> {
 				valuables.add(item);
 			}, items);
-			cols += valuables.size();
+			rows += valuables.size();
 		}
-		cols = Math.max(cols, 2);
+		rows = Math.max(rows, 2);
 
 		final Table[] tables = new Table[2];
 
@@ -393,7 +393,7 @@ public class InventorySheet extends Sheet {
 
 			tables[i].addRow(nameTitle, notesTitle, valueTitle);
 
-			for (int j = 0; j < cols / 2; ++j) {
+			for (int j = 0; j < rows / 2; ++j) {
 				if (hero != null && fill && !valuables.isEmpty()) {
 					JSONObject item = valuables.poll();
 					final JSONObject baseItem = item;
