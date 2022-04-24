@@ -132,7 +132,7 @@ public class InventorySheet extends Sheet {
 					item = item.getObj("Artefakt");
 				}
 				final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
-				final String actualType = item.getStringOrDefault("Typ", baseItem.getStringOrDefault("Typ", ""));
+				final String actualType = item.getStringOrDefault("Artefakttyp", baseItem.getStringOrDefault("Artefakttyp", ""));
 				final String type = types.getOrDefault(actualType, "");
 				final String loads = switch (actualType) {
 					case "Applicatus", "Arcanovi (einmalig)", "Arcanovi (aufladbar)", "Arcanovi (semipermanent)" -> DSAUtil
