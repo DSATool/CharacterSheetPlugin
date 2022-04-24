@@ -172,7 +172,7 @@ public class InventorySheet extends Sheet {
 					}
 				}
 
-				final String notes = item.getStringOrDefault("Anmerkungen", baseItem.getStringOrDefault("Anmerkungen", ""));
+				final String notes = HeroUtil.getItemNotes(item, baseItem);
 				table.addRow(name, type, loads, asp, triggerString, spellsString, notes);
 			} else {
 				table.addRow("");
@@ -228,7 +228,7 @@ public class InventorySheet extends Sheet {
 						item = item.getObj("Kleidung");
 					}
 					final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
-					final String notes = item.getStringOrDefault("Anmerkungen", baseItem.getStringOrDefault("Anmerkungen", ""));
+					final String notes = HeroUtil.getItemNotes(item, baseItem);
 					final String ks = Integer.toString(item.getIntOrDefault("Kälteschutz", baseItem.getIntOrDefault("Kälteschutz", 0)));
 					tables[i].addRow(name, notes, ks);
 				} else {
@@ -287,15 +287,7 @@ public class InventorySheet extends Sheet {
 					final JSONObject item = equipment.poll();
 					final String name = item.getStringOrDefault("Name", "Unbenannt");
 
-					String defaultNotes = " ";
-					if (item.containsKey("Bannschwert") && item.getObj("Bannschwert").getObj("Rituale").containsKey("Bannschwert")) {
-						defaultNotes = "Bannschwert";
-						if (item.getObj("Bannschwert").getObj("Rituale").containsKey("Apport")) {
-							defaultNotes += ", Apport";
-						}
-					}
-
-					final String notes = item.getStringOrDefault("Anmerkungen", defaultNotes);
+					final String notes = HeroUtil.getItemNotes(item, item);
 					tables[i].addRow(name, notes);
 				} else {
 					tables[i].addRow("");
@@ -349,7 +341,7 @@ public class InventorySheet extends Sheet {
 					item = item.getObj("Alchemikum");
 				}
 				final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
-				final String notes = item.getStringOrDefault("Anmerkungen", baseItem.getStringOrDefault("Anmerkungen", ""));
+				final String notes = HeroUtil.getItemNotes(item, baseItem);
 				final String effect = item.getStringOrDefault("Wirkung", baseItem.getStringOrDefault("Wirkung", ""));
 				final String quality = item.getStringOrDefault("Qualität", baseItem.getStringOrDefault("Qualität", ""));
 				final String count = Integer.toString(item.getIntOrDefault("Anzahl", baseItem.getIntOrDefault("Anzahl", 1)));
@@ -409,7 +401,7 @@ public class InventorySheet extends Sheet {
 						item = item.getObj("Wertgegenstand");
 					}
 					final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
-					final String notes = item.getStringOrDefault("Anmerkungen", baseItem.getStringOrDefault("Anmerkungen", ""));
+					final String notes = HeroUtil.getItemNotes(item, baseItem);
 					final String value = DSAUtil.getMoneyString(item.getDoubleOrDefault("Wert", baseItem.getDoubleOrDefault("Wert", 0.0)));
 					tables[i].addRow(name, notes, value);
 				} else {

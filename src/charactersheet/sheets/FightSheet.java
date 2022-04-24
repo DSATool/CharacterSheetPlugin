@@ -223,54 +223,7 @@ public class FightSheet extends Sheet {
 							bf = "—";
 						}
 
-						String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", ""));
-						boolean first = notes.isEmpty();
-						if (baseWeapon.containsKey("Bannschwert") && baseWeapon.getObj("Bannschwert").getObj("Rituale").containsKey("Bannschwert")) {
-							if (first) {
-								first = false;
-							} else {
-								notes += ", ";
-							}
-							notes += "Bannschwert";
-							if (baseWeapon.getObj("Bannschwert").getObj("Rituale").containsKey("Apport")) {
-								notes += ", Apport";
-							}
-						}
-						if (weaponMastery != null) {
-							final JSONObject easierManeuvers = weaponMastery.getObjOrDefault("Manöver:Erleichterung", null);
-							final JSONArray additionalManeuvers = weaponMastery.getArrOrDefault("Manöver:Zusätzlich", null);
-							final JSONObject pros = weaponMastery.getObjOrDefault("Vorteile", null);
-							if (easierManeuvers != null) {
-								for (final String maneuver : easierManeuvers.keySet()) {
-									if (first) {
-										first = false;
-									} else {
-										notes += ", ";
-									}
-									notes += maneuver + "-" + easierManeuvers.getInt(maneuver);
-								}
-							}
-							if (additionalManeuvers != null) {
-								for (final String maneuver : additionalManeuvers.getStrings()) {
-									if (first) {
-										first = false;
-									} else {
-										notes += ", ";
-									}
-									notes += maneuver;
-								}
-							}
-							if (pros != null) {
-								for (final String pro : pros.keySet()) {
-									if (first) {
-										first = false;
-									} else {
-										notes += ", ";
-									}
-									notes += pro;
-								}
-							}
-						}
+						final String notes = HeroUtil.getWeaponNotes(item, baseWeapon, type, hero);
 
 						table.addRow(name, type, ebe, tp, at, pa, tpkk, wm, ini, distance, bf, notes);
 					} else {
@@ -347,7 +300,7 @@ public class FightSheet extends Sheet {
 							bf = "—";
 						}
 
-						final String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
+						final String notes = HeroUtil.getItemNotes(item, baseWeapon);
 
 						table.addRow(name, "S", pa, wm, ini, bf, notes);
 						item = baseWeapon;
@@ -643,10 +596,12 @@ public class FightSheet extends Sheet {
 			final String tp = "1W" + (TPKKModifier == 0 ? "" : Util.getSignedIntegerString(TPKKModifier)) + "(A)";
 			final String at1 = fillAll ? Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Raufen", true, false, false)) : " ";
 			final String pa1 = fillAll ? Integer.toString(HeroUtil.getPA(hero, HeroUtil.infight, "Raufen", false, false)) : " ";
-			table.addRow("Raufen", tp, at1, pa1, tpkk, "±0");
+			final String notes1 = HeroUtil.getWeaponNotes(HeroUtil.infight, HeroUtil.infight, "Raufen", hero);
+			table.addRow("Raufen", tp, at1, pa1, tpkk, "±0", notes1);
 			final String at2 = fillAll ? Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Ringen", true, false, false)) : " ";
 			final String pa2 = fillAll ? Integer.toString(HeroUtil.getPA(hero, HeroUtil.infight, "Ringen", false, false)) : " ";
-			table.addRow("Ringen", tp, at2, pa2, tpkk, "±0");
+			final String notes2 = HeroUtil.getWeaponNotes(HeroUtil.infight, HeroUtil.infight, "Ringen", hero);
+			table.addRow("Ringen", tp, at2, pa2, tpkk, "±0", notes2);
 		} else {
 			table.addRow("Raufen", " ", " ", " ", tpkk, "±0");
 			table.addRow("Ringen", " ", " ", " ", tpkk, "±0");
@@ -756,46 +711,7 @@ public class FightSheet extends Sheet {
 							}
 						}
 
-						String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
-
-						final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null),
-								type, item.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
-						if (weaponMastery != null) {
-							boolean first = notes.isEmpty();
-							final JSONObject easierManeuvers = weaponMastery.getObjOrDefault("Manöver:Erleichterung", null);
-							final JSONArray additionalManeuvers = weaponMastery.getArrOrDefault("Manöver:Zusätzlich", null);
-							final JSONObject pros = weaponMastery.getObjOrDefault("Vorteile", null);
-							if (easierManeuvers != null) {
-								for (final String maneuver : easierManeuvers.keySet()) {
-									if (first) {
-										first = false;
-									} else {
-										notes += ", ";
-									}
-									notes += maneuver + "-" + easierManeuvers.getInt(maneuver);
-								}
-							}
-							if (additionalManeuvers != null) {
-								for (final String maneuver : additionalManeuvers.getStrings()) {
-									if (first) {
-										first = false;
-									} else {
-										notes += ", ";
-									}
-									notes += maneuver;
-								}
-							}
-							if (pros != null) {
-								for (final String pro : pros.keySet()) {
-									if (first) {
-										first = false;
-									} else {
-										notes += ", ";
-									}
-									notes += pro;
-								}
-							}
-						}
+						final String notes = HeroUtil.getWeaponNotes(item, baseWeapon, type, hero);
 
 						table.addRow(name, type, ebe, tp, at, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0],
 								tpdistance[1], tpdistance[2], tpdistance[3], tpdistance[4], num, notes);
@@ -898,7 +814,7 @@ public class FightSheet extends Sheet {
 							}
 						}
 
-						final Cell notes = new TextCell(item.getStringOrDefault("Anmerkungen", baseArmor.getStringOrDefault("Anmerkungen", " "))).setColSpan(3);
+						final Cell notes = new TextCell(HeroUtil.getItemNotes(item, baseArmor)).setColSpan(3);
 
 						table.addRow(name, be, rs[0], rs[1], rs[2], rs[3], rs[4], rs[5], rs[6], rs[7], notes);
 					} else {

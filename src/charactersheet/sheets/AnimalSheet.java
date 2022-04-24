@@ -571,7 +571,7 @@ public class AnimalSheet extends Sheet {
 							++j;
 						}
 
-						final TextCell notes = new TextCell(item.getStringOrDefault("Anmerkungen", baseArmor.getStringOrDefault("Anmerkungen", " ")));
+						final TextCell notes = new TextCell(HeroUtil.getItemNotes(item, baseArmor));
 
 						table.addRow(name, be, rs[0], rs[1], rs[2], rs[3], rs[4], notes);
 					} else {
@@ -777,7 +777,7 @@ public class AnimalSheet extends Sheet {
 				if (animal != null && fill && !equipment.isEmpty()) {
 					final JSONObject item = equipment.poll();
 					final String name = item.getStringOrDefault("Name", "Unbenannt");
-					final String notes = item.getStringOrDefault("Anmerkungen", "");
+					final String notes = HeroUtil.getItemNotes(item, item);
 					tables[i].addRow(name, notes);
 				} else {
 					tables[i].addRow("");
