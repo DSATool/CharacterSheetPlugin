@@ -625,7 +625,7 @@ public class CharacterSheet extends Sheet {
 		settings.put("Nachteile", showCons.get());
 		settings.put("Verbindungen", showConnections.get());
 		settings.put("Bild anzeigen", showImage.get());
-		if (showImage.get()) {
+		if (image.get() != null) {
 			settings.put("Bild", image.get().getAbsolutePath());
 		}
 		return settings;
@@ -668,7 +668,12 @@ public class CharacterSheet extends Sheet {
 		showCons.set(settings.getBoolOrDefault("Nachteile", true));
 		showConnections.set(settings.getBoolOrDefault("Verbindungen", false));
 		showImage.set(settings.getBoolOrDefault("Bild anzeigen", false));
-		image.set(new File(settings.getStringOrDefault("Bild", "Keines")));
+		final String imagePath = settings.getString("Bild");
+		if (imagePath != null) {
+			image.set(new File(imagePath));
+		} else {
+			image.set(null);
+		}
 	}
 
 	@Override
