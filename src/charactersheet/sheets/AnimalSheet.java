@@ -838,12 +838,25 @@ public class AnimalSheet extends Sheet {
 		if (actualProsCons != null) {
 			for (final String proConName : actualProsCons.keySet()) {
 				final JSONObject proCon = prosCons.getObj(proConName);
-				final JSONObject actual = actualProsCons.getObj(proConName);
-				final String value = proCon.getBoolOrDefault("Abgestuft", false) ? Integer.toString(actual.getIntOrDefault("Stufe", 0)) : " ";
-				if (fill) {
-					table.addRow(DSAUtil.printProOrCon(actual, proConName, proCon, false), value, proCon.getStringOrDefault("Beschreibung:Kurz", ""));
+				if (proCon.containsKey("Auswahl") || proCon.containsKey("Freitext")) {
+					final JSONArray actualProCons = actualProsCons.getArr(proConName);
+					for (int i = 0; i < actualProCons.size(); ++i) {
+						final JSONObject actual = actualProCons.getObj(i);
+						final String value = proCon.getBoolOrDefault("Abgestuft", false) ? Integer.toString(actual.getIntOrDefault("Stufe", 0)) : " ";
+						if (fill) {
+							table.addRow(DSAUtil.printProOrCon(actual, proConName, proCon, false), value, proCon.getStringOrDefault("Beschreibung:Kurz", ""));
+						} else {
+							table.addRow(" ");
+						}
+					}
 				} else {
-					table.addRow(" ");
+					final JSONObject actual = actualProsCons.getObj(proConName);
+					final String value = proCon.getBoolOrDefault("Abgestuft", false) ? Integer.toString(actual.getIntOrDefault("Stufe", 0)) : " ";
+					if (fill) {
+						table.addRow(DSAUtil.printProOrCon(actual, proConName, proCon, false), value, proCon.getStringOrDefault("Beschreibung:Kurz", ""));
+					} else {
+						table.addRow(" ");
+					}
 				}
 			}
 		}
