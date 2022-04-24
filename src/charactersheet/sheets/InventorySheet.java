@@ -16,8 +16,10 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
@@ -73,6 +75,8 @@ public class InventorySheet extends Sheet {
 	private final BooleanProperty showPotions = new SimpleBooleanProperty(false);
 	private final BooleanProperty showValuables = new SimpleBooleanProperty(false);
 	private final BooleanProperty showArtifacts = new SimpleBooleanProperty(true);
+	private final List<BooleanProperty> showInventories = new ArrayList<>();
+	private final List<IntegerProperty> additionalInventoriesRows = new ArrayList<>();
 
 	public InventorySheet() {
 		super(788);
@@ -242,7 +246,8 @@ public class InventorySheet extends Sheet {
 		bottom.bottom = table.render(document, 571, 12, bottom.bottom, showAttributes.get() ? 72 : 54, 10) - 5;
 	}
 
-	private void addInventoryTable(final PDDocument document) throws IOException {
+	private void addInventoryTable(final PDDocument document, final String inventoryName, final JSONArray inventory, final int additionalRows)
+			throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -250,17 +255,21 @@ public class InventorySheet extends Sheet {
 		table.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(283, FontManager.serif, fontSize, HAlign.LEFT));
 
-		SheetUtil.addTitle(table, "Inventar");
+		SheetUtil.addTitle(table, inventoryName);
 
 		int rows = additionalRows + 1;
 		final Queue<JSONObject> equipment = new LinkedList<>();
 
-		JSONArray items = null;
-		if (hero != null) {
-			items = hero.getObj("Besitz").getArr("Ausrüstung");
-			DSAUtil.foreach(item -> (!item.containsKey("Kategorien") || item.getArr("Kategorien").size() == 0), item -> {
-				equipment.add(item);
-			}, items);
+		if (inventory != null) {
+			if (((JSONObject) inventory.getParent()).containsKey("Name")) {
+				DSAUtil.foreach(item -> true, item -> {
+					equipment.add(item);
+				}, inventory);
+			} else {
+				DSAUtil.foreach(item -> (!item.containsKey("Kategorien") || item.getArr("Kategorien").size() == 0), item -> {
+					equipment.add(item);
+				}, inventory);
+			}
 			rows += equipment.size();
 		}
 		rows = Math.max(rows, 2);
@@ -459,9 +468,26 @@ public class InventorySheet extends Sheet {
 
 		if (showInventory.get()) {
 			try {
-				addInventoryTable(document);
+				addInventoryTable(document, "Inventar", hero != null ? hero.getObj("Besitz").getArr("Ausrüstung") : null, additionalInventoryRows.get());
 			} catch (final Exception e) {
 				ErrorLogger.logError(e);
+			}
+		}
+
+		if (hero != null) {
+			final JSONArray inventories = hero.getObj("Besitz").getArrOrDefault("Inventare", null);
+			if (inventories != null) {
+				for (int i = 0; i < inventories.size(); ++i) {
+					if (showInventories.get(i).get()) {
+						try {
+							final JSONObject inventory = inventories.getObj(i);
+							addInventoryTable(document, inventory.getStringOrDefault("Name", "Unbekanntes Inventar"), inventory.getArr("Ausrüstung"),
+									additionalInventoriesRows.get(i).get());
+						} catch (final Exception e) {
+							ErrorLogger.logError(e);
+						}
+					}
+				}
 			}
 		}
 
@@ -484,6 +510,20 @@ public class InventorySheet extends Sheet {
 		settings.put("Zusätzliche Zeilen für Artefakte", additionalArtifactRows.get());
 		settings.put("Inventar", showInventory.get());
 		settings.put("Zusätzliche Zeilen für Inventar", additionalInventoryRows.get());
+
+		final JSONArray inventories = hero != null ? hero.getObj("Besitz").getArrOrDefault("Inventare", null) : null;
+		final JSONObject namedInventories = new JSONObject(settings);
+		for (int i = 0; i < showInventories.size(); ++i) {
+			final JSONObject inventory = inventories == null ? null : i < inventories.size() ? inventories.getObj(i) : null;
+			final JSONObject setting = new JSONObject(namedInventories);
+			namedInventories.put(inventory.getStringOrDefault("Name", ""), setting);
+			setting.put("Anzeigen", showInventories.get(i).get());
+			setting.put("Zusätzliche Zeilen", additionalInventoriesRows.get(i).get());
+		}
+		if (namedInventories.size() != 0) {
+			settings.put("Inventare", namedInventories);
+		}
+
 		return settings;
 	}
 
@@ -506,6 +546,12 @@ public class InventorySheet extends Sheet {
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
+
+		settingsPage.clear();
+		showInventories.clear();
+		additionalInventoriesRows.clear();
+		super.load();
+
 		showAttributes.set(settings.getBoolOrDefault("Eigenschaften anzeigen", false));
 		showClothing.set(settings.getBoolOrDefault("Kleidung", true));
 		additionalClothingRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Kleidung", 20));
@@ -533,6 +579,22 @@ public class InventorySheet extends Sheet {
 		additionalArtifactRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Artefakte", 5));
 		showInventory.set(settings.getBoolOrDefault("Inventar", true));
 		additionalInventoryRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Inventar", 60));
+
+		final JSONArray inventories = hero != null ? hero.getObj("Besitz").getArrOrDefault("Inventare", null) : null;
+		if (inventories != null) {
+			final JSONObject namedInventories = settings.getObjOrDefault("Inventare", new JSONObject(null));
+			for (int i = 0; i < inventories.size(); ++i) {
+				final JSONObject inventory = inventories.getObj(i);
+				final String name = inventory.getStringOrDefault("Name", "");
+				final JSONObject setting = namedInventories.getObjOrDefault(name, null);
+				final BooleanProperty showCurrentInventory = new SimpleBooleanProperty(setting != null ? setting.getBoolOrDefault("Anzeigen", true) : true);
+				showInventories.add(showCurrentInventory);
+				final IntegerProperty additionalRows = new SimpleIntegerProperty(setting != null ? setting.getIntOrDefault("Zusätzliche Zeilen", 0) : 0);
+				additionalInventoriesRows.add(additionalRows);
+				settingsPage.addBooleanChoice(name, showCurrentInventory);
+				settingsPage.addIntegerChoice("Zusätzliche Zeilen für " + name, additionalRows, 0, 200);
+			}
+		}
 	}
 
 	@Override

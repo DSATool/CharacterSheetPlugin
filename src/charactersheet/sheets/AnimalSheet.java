@@ -80,6 +80,8 @@ public class AnimalSheet extends Sheet {
 	private final List<BooleanProperty> showArmor = new ArrayList<>();
 	private final List<StringProperty> showSkills = new ArrayList<>();
 	private final List<BooleanProperty> showInventory = new ArrayList<>();
+	private final List<List<BooleanProperty>> showInventories = new ArrayList<>();
+	private final List<List<IntegerProperty>> additionalInventoriesRows = new ArrayList<>();
 
 	private JSONArray animals = null;
 
@@ -106,7 +108,7 @@ public class AnimalSheet extends Sheet {
 			case 'R' -> "Reittier";
 			default -> "Tier";
 		};
-		addAnimal(type, new JSONObject(null));
+		addAnimal(new JSONObject(null), type, new JSONObject(null));
 	}
 
 	public TitledPane addAnimal(final JSONObject animal, final String type, final JSONObject settings) {
@@ -138,12 +140,32 @@ public class AnimalSheet extends Sheet {
 		final StringProperty skills = new SimpleStringProperty(settings.getStringOrDefault("Fertigkeiten", "Erlernbare"));
 		showSkills.add(skills);
 		settingsPage.addStringChoice("Fertigkeiten", skills, Arrays.asList("Alle", "Erlernbare", "Erlernte", "Keine"));
-		final BooleanProperty inventory = new SimpleBooleanProperty(settings.getBoolOrDefault("Inventar", true));
-		showInventory.add(inventory);
-		settingsPage.addBooleanChoice("Inventar", inventory);
+		final BooleanProperty inventorySetting = new SimpleBooleanProperty(settings.getBoolOrDefault("Inventar", true));
+		showInventory.add(inventorySetting);
+		settingsPage.addBooleanChoice("Inventar", inventorySetting);
 		final IntegerProperty numInventory = new SimpleIntegerProperty(settings.getIntOrDefault("Zusätzliche Zeilen für Inventar", 40));
 		additionalInventoryRows.add(numInventory);
 		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Inventar", numInventory, 0, 200);
+
+		final JSONArray inventories = animal != null ? animal.getArrOrDefault("Inventare", null) : null;
+		if (inventories != null) {
+			final List<BooleanProperty> inventorySettings = new ArrayList<>();
+			showInventories.add(inventorySettings);
+			final List<IntegerProperty> inventoryRows = new ArrayList<>();
+			additionalInventoriesRows.add(inventoryRows);
+			final JSONObject namedInventories = settings.getObjOrDefault("Inventare", new JSONObject(null));
+			for (int i = 0; i < inventories.size(); ++i) {
+				final JSONObject inventory = inventories.getObj(i);
+				final String name = inventory.getStringOrDefault("Name", "");
+				final JSONObject setting = namedInventories.getObjOrDefault(name, null);
+				final BooleanProperty showCurrentInventory = new SimpleBooleanProperty(setting != null ? setting.getBoolOrDefault("Anzeigen", true) : true);
+				inventorySettings.add(showCurrentInventory);
+				final IntegerProperty additionalRows = new SimpleIntegerProperty(setting != null ? setting.getIntOrDefault("Zusätzliche Zeilen", 0) : 0);
+				inventoryRows.add(additionalRows);
+				settingsPage.addBooleanChoice(name, showCurrentInventory);
+				settingsPage.addIntegerChoice("Zusätzliche Zeilen für " + name, additionalRows, 0, 200);
+			}
+		}
 
 		final ContextMenu menu = new ContextMenu();
 		final MenuItem removeItem = new MenuItem("Entfernen");
@@ -221,6 +243,7 @@ public class AnimalSheet extends Sheet {
 				ErrorLogger.logError(e);
 			}
 		}
+		rightTable.getRows().remove(rightTable.getRows().size() - 1);
 
 		final Table leftTable = new Table().setBorder(0, 0, 0, 0);
 		leftTable.addColumn(new Column(102, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
@@ -243,6 +266,7 @@ public class AnimalSheet extends Sheet {
 		}
 
 		baseTable.addRow(new TableCell(leftTable), new TableCell(rightTable));
+		baseTable.addRow("");
 
 		if (isMagical) {
 			try {
@@ -271,6 +295,25 @@ public class AnimalSheet extends Sheet {
 				ErrorLogger.logError(e);
 			}
 		}
+
+		if (animal != null) {
+			final JSONArray inventories = animal.getArrOrDefault("Inventare", null);
+			if (inventories != null) {
+				for (int i = 0; i < inventories.size(); ++i) {
+					if (showInventories.get(index).get(i).get()) {
+						try {
+							final JSONObject inventory = inventories.getObj(i);
+							baseTable.addRow(new TableCell(getInventoryTable(inventory.getStringOrDefault("Name", "Unbekanntes Inventar"),
+									inventory.getArr("Ausrüstung"), additionalInventoriesRows.get(index).get(i).get())).setColSpan(2));
+							baseTable.addRow("");
+						} catch (final Exception e) {
+							ErrorLogger.logError(e);
+						}
+					}
+				}
+			}
+		}
+		baseTable.getRows().remove(baseTable.getRows().size() - 1);
 
 		bottom.bottom = baseTable.render(document, 571, 12, bottom.bottom, 54, 10) - 5;
 	}
@@ -460,8 +503,8 @@ public class AnimalSheet extends Sheet {
 			mod = actualValue.containsKey("Boden")
 					? new TextCell(isMagical ? DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Boden:Kauf", 0))
 							: SheetUtil.threeDecimalPlacesSigned.format(actualValue.getIntOrDefault("Boden:Modifikator", 0))).addText("/")
-									.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault(isMagical ? "Luft:Kauf" : "Luft:Modifikator", 0)))
-									.setEquallySpaced(true)
+							.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault(isMagical ? "Luft:Kauf" : "Luft:Modifikator", 0)))
+							.setEquallySpaced(true)
 					: new TextCell(isMagical ? DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Kauf", 0))
 							: SheetUtil.threeDecimalPlacesSigned.format(actualValue.getIntOrDefault("Modifikator", 0)));
 			table.addRow("", "Geschwindigkeit", actual, mod);
@@ -767,24 +810,28 @@ public class AnimalSheet extends Sheet {
 		return table;
 	}
 
-	private Table getInventoryTable() {
+	private Table getInventoryTable(final String inventoryName, final JSONArray inventory, final int additionalRows) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		table.addColumn(new Column(283, FontManager.serif, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(5, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(283, FontManager.serif, fontSize, HAlign.LEFT));
 
-		SheetUtil.addTitle(table, "Inventar");
+		SheetUtil.addTitle(table, inventoryName);
 
 		int rows = additionalRows + 1;
 		final Queue<JSONObject> equipment = new LinkedList<>();
 
-		JSONArray items = null;
-		if (animal != null) {
-			items = animal.getArr("Ausrüstung");
-			DSAUtil.foreach(item -> (!item.containsKey("Kategorien") || !item.getArr("Kategorien").contains("Pferderüstung")), item -> {
-				equipment.add(item);
-			}, items);
+		if (inventory != null) {
+			if (((JSONObject) inventory.getParent()).containsKey("Name")) {
+				DSAUtil.foreach(item -> true, item -> {
+					equipment.add(item);
+				}, inventory);
+			} else {
+				DSAUtil.foreach(item -> (!item.containsKey("Kategorien") || !item.getArr("Kategorien").contains("Pferderüstung")), item -> {
+					equipment.add(item);
+				}, inventory);
+			}
 			rows += equipment.size();
 		}
 		rows = Math.max(rows, 2);
@@ -807,7 +854,7 @@ public class AnimalSheet extends Sheet {
 			tables[i].addRow(nameTitle, notesTitle, weightTitle, valueTitle);
 
 			for (int j = 0; j < rows / 2; ++j) {
-				if (animal != null && fill && !equipment.isEmpty()) {
+				if (hero != null && fill && !equipment.isEmpty()) {
 					final JSONObject item = equipment.poll();
 					final String name = item.getStringOrDefault("Name", "Unbenannt");
 					final String notes = HeroUtil.getItemNotes(item, item);
@@ -913,25 +960,36 @@ public class AnimalSheet extends Sheet {
 		final JSONObject namedAnimals = new JSONObject(settings);
 		final JSONArray additional = new JSONArray(settings);
 		for (int i = 0; i < types.size(); ++i) {
-			if (!"Kein".equals(types.get(i).get())) {
-				final JSONObject animal = animals == null ? null : i < animals.size() ? animals.getObj(i) : null;
-				JSONObject setting;
-				if (animal != null) {
-					setting = new JSONObject(namedAnimals);
-					namedAnimals.put(animal.getObj("Biografie").getStringOrDefault("Name", ""), setting);
-				} else {
-					setting = new JSONObject(additional);
-					additional.add(setting);
-				}
-				setting.put("Typ", types.get(i).get());
-				setting.put("Zusätzliche Zeilen für Angriffe", additionalAttacks.get(i).get());
-				setting.put("Vor-/Nachteile", showProsCons.get(i).get());
-				setting.put("Zusätzliche Zeilen für Vor-/Nachteile", additionalProConRows.get(i).get());
-				setting.put("Rüstung", showArmor.get(i).get());
-				setting.put("Zusätzliche Zeilen für Rüstung", additionalArmorRows.get(i).get());
-				setting.put("Fertigkeiten", showSkills.get(i).get());
-				setting.put("Inventar", showInventory.get(i).get());
-				setting.put("Zusätzliche Zeilen für Inventar", additionalInventoryRows.get(i).get());
+			final JSONObject animal = animals == null ? null : i < animals.size() ? animals.getObj(i) : null;
+			JSONObject animalSetting;
+			if (animal != null) {
+				animalSetting = new JSONObject(namedAnimals);
+				namedAnimals.put(animal.getObj("Biografie").getStringOrDefault("Name", ""), animalSetting);
+			} else {
+				animalSetting = new JSONObject(additional);
+				additional.add(animalSetting);
+			}
+			animalSetting.put("Typ", types.get(i).get());
+			animalSetting.put("Zusätzliche Zeilen für Angriffe", additionalAttacks.get(i).get());
+			animalSetting.put("Vor-/Nachteile", showProsCons.get(i).get());
+			animalSetting.put("Zusätzliche Zeilen für Vor-/Nachteile", additionalProConRows.get(i).get());
+			animalSetting.put("Rüstung", showArmor.get(i).get());
+			animalSetting.put("Zusätzliche Zeilen für Rüstung", additionalArmorRows.get(i).get());
+			animalSetting.put("Fertigkeiten", showSkills.get(i).get());
+			animalSetting.put("Inventar", showInventory.get(i).get());
+			animalSetting.put("Zusätzliche Zeilen für Inventar", additionalInventoryRows.get(i).get());
+
+			final JSONArray inventories = animal != null ? animal.getArrOrDefault("Inventare", null) : null;
+			final JSONObject namedInventories = new JSONObject(animalSetting);
+			for (int j = 0; j < showInventories.get(i).size(); ++j) {
+				final JSONObject inventory = inventories == null ? null : j < inventories.size() ? inventories.getObj(j) : null;
+				final JSONObject inventorySetting = new JSONObject(namedInventories);
+				namedInventories.put(inventory.getStringOrDefault("Name", ""), inventorySetting);
+				inventorySetting.put("Anzeigen", showInventories.get(i).get(j).get());
+				inventorySetting.put("Zusätzliche Zeilen", additionalInventoriesRows.get(i).get(j).get());
+			}
+			if (namedInventories.size() != 0) {
+				animalSetting.put("Inventare", namedInventories);
 			}
 		}
 		if (namedAnimals.size() != 0) {
@@ -1007,6 +1065,8 @@ public class AnimalSheet extends Sheet {
 		showSkills.clear();
 		showInventory.clear();
 		additionalInventoryRows.clear();
+		showInventories.clear();
+		additionalInventoriesRows.clear();
 
 		animals = hero != null ? hero.getArrOrDefault("Tiere", null) : null;
 		if (animals != null) {
@@ -1016,7 +1076,7 @@ public class AnimalSheet extends Sheet {
 				final String name = animal.getObj("Biografie").getStringOrDefault("Name", "");
 				final JSONObject setting = namedAnimals.getObjOrDefault(name, new JSONObject(null));
 				final String type = setting.getStringOrDefault("Typ", animal.getObj("Biografie").getStringOrDefault("Typ", "Tier"));
-				final TitledPane control = addAnimal(type, setting);
+				final TitledPane control = addAnimal(animal, type, setting);
 				control.setText(name);
 				control.setContextMenu(null);
 			}
@@ -1026,7 +1086,7 @@ public class AnimalSheet extends Sheet {
 		for (int i = 0; i < additional.size(); ++i) {
 			final JSONObject setting = additional.getObj(i);
 			final String type = setting.getStringOrDefault("Typ", "Tier");
-			final TitledPane control = addAnimal(type, setting);
+			final TitledPane control = addAnimal(new JSONObject(null), type, setting);
 			control.setText(type);
 			control.setContextMenu(null);
 		}
