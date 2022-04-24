@@ -83,11 +83,8 @@ public class AnimalSheet extends Sheet {
 
 	private JSONArray animals = null;
 
-	private JSONObject animal = null;
-
 	private boolean isMagical;
 	private boolean isHorse;
-	private int current = 0;
 
 	public AnimalSheet() {
 		super(788);
@@ -112,7 +109,7 @@ public class AnimalSheet extends Sheet {
 		addAnimal(type, new JSONObject(null));
 	}
 
-	public TitledPane addAnimal(final String type, final JSONObject settings) {
+	public TitledPane addAnimal(final JSONObject animal, final String type, final JSONObject settings) {
 		final TitledPane control = new TitledPane();
 		animalControls.add(control);
 		animalsBox.getChildren().add(animalsBox.getChildren().size() - 1, control);
@@ -170,38 +167,59 @@ public class AnimalSheet extends Sheet {
 		return control;
 	}
 
-	private void addAnimalTable(final PDDocument document) throws IOException {
+	private void addAnimalTable(final PDDocument document, final int index) throws IOException {
 		final Table baseTable = new Table();
 		baseTable.addEventHandler(EventType.BEGIN_PAGE, header);
 		baseTable.addColumn(new Column(267, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
 		baseTable.addColumn(new Column(304, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
 
-		final String type = types.get(current).get();
+		final String type = types.get(index).get();
 		SheetUtil.addTitle(baseTable, type);
 
-		animal = animals == null ? null : current < animals.size() ? animals.getObj(current) : null;
+		final JSONObject animal = animals == null ? null : index < animals.size() ? animals.getObj(index) : null;
 		isMagical = "Vertrautentier".equals(type);
 		isHorse = "Reittier".equals(type);
 
-		baseTable.addRow(new TableCell(getBiographyTable()).setColSpan(2));
+		try {
+			baseTable.addRow(new TableCell(getBiographyTable(animal)).setColSpan(2));
+			baseTable.addRow("");
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
 
 		final Table rightTable = new Table().setBorder(0, 0, 0, 0);
 		rightTable.addColumn(new Column(304, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
 		final Cell emptyDesc = new TextCell(" ", FontManager.serif, 6, 6);
 		rightTable.addRow(emptyDesc);
 		if (isMagical) {
-			rightTable.addRow(new TableCell(getAPRkWTable()));
-			rightTable.addRow("");
+			try {
+				rightTable.addRow(new TableCell(getAPRkWTable(animal)));
+				rightTable.addRow("");
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
-		if (showProsCons.get(current).get()) {
-			rightTable.addRow(new TableCell(getProsConsTable()));
-			rightTable.addRow("");
+		if (showProsCons.get(index).get()) {
+			try {
+				rightTable.addRow(new TableCell(getProsConsTable(animal, index)));
+				rightTable.addRow("");
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
-		rightTable.addRow(new TableCell(getAttacksTable()));
-		rightTable.addRow("");
-		if (showArmor.get(current).get()) {
-			rightTable.addRow(new TableCell(getHorseArmorTable()));
+		try {
+			rightTable.addRow(new TableCell(getAttacksTable(animal, index)));
 			rightTable.addRow("");
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+		if (showArmor.get(index).get()) {
+			try {
+				rightTable.addRow(new TableCell(getHorseArmorTable(animal, index)));
+				rightTable.addRow("");
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
 		final Table leftTable = new Table().setBorder(0, 0, 0, 0);
@@ -209,29 +227,49 @@ public class AnimalSheet extends Sheet {
 		leftTable.addColumn(new Column(158, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
 		leftTable.addColumn(new Column(7, FontManager.serif, 5, HAlign.LEFT).setBorder(0, 0, 0, 0));
 		if (isHorse) {
-			leftTable.addRow(new TableCell(getHorseStatsTable()).setColSpan(2));
-			leftTable.addRow(new ImageCell(new File(Util.getAppDir() + "/resources/images/zones/animals/Pferd.jpg")).setColSpan(2).setHAlign(HAlign.CENTER)
-					.setVAlign(VAlign.TOP).setMinHeight(rightTable.getHeight(304) - 86).setPadding(1, 0, 0, 0)).setBorder(0, 0, 0, 0);
-			leftTable.addRow(new TextCell(" ", FontManager.serif, 0.5f, 0.5f).setColSpan(3));
+			try {
+				leftTable.addRow(new TableCell(getHorseStatsTable(animal)).setColSpan(2));
+				leftTable.addRow(new ImageCell(new File(Util.getAppDir() + "/resources/images/zones/animals/Pferd.jpg")).setColSpan(2).setHAlign(HAlign.CENTER)
+						.setVAlign(VAlign.TOP).setMinHeight(rightTable.getHeight(304) - 86).setPadding(1, 0, 0, 0)).setBorder(0, 0, 0, 0);
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		} else {
-			leftTable.addRow(new TableCell(getAttributesTable()), new TableCell(getBaseValuesTable()));
-			leftTable.addRow("");
+			try {
+				leftTable.addRow(new TableCell(getAttributesTable(animal)), new TableCell(getBaseValuesTable(animal)));
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
 		baseTable.addRow(new TableCell(leftTable), new TableCell(rightTable));
 
 		if (isMagical) {
-			baseTable.addRow(new TableCell(getRitualsTable()).setColSpan(2));
-			baseTable.addRow("");
+			try {
+				baseTable.addRow(new TableCell(getRitualsTable(animal)).setColSpan(2));
+				baseTable.addRow("");
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
-		if (showSkills.get(current).get()) {
-			baseTable.addRow(new TableCell(isHorse ? getHorseSkillsTable() : getSkillsTable()).setColSpan(2));
-			baseTable.addRow("");
+		if (showSkills.get(index).get() != "Keine") {
+			try {
+				baseTable.addRow(new TableCell(isHorse ? getHorseSkillsTable(animal, index) : getSkillsTable(animal, index)).setColSpan(2));
+				baseTable.addRow("");
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
-		if (showInventory.get(current).get()) {
-			baseTable.addRow(new TableCell(getInventoryTable()).setColSpan(2));
+		if (showInventory.get(index).get()) {
+			try {
+				baseTable.addRow(
+						new TableCell(getInventoryTable("Inventar", animal.getArr("Ausrüstung"), additionalInventoryRows.get(index).get())).setColSpan(2));
+				baseTable.addRow("");
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
+			}
 		}
 
 		bottom.bottom = baseTable.render(document, 571, 12, bottom.bottom, 54, 10) - 5;
@@ -246,9 +284,8 @@ public class AnimalSheet extends Sheet {
 
 			for (int i = 0; i < types.size(); ++i) {
 				if (!"Kein".equals(types.get(i).get())) {
-					current = i;
 					try {
-						addAnimalTable(document);
+						addAnimalTable(document, i);
 					} catch (final Exception e) {
 						ErrorLogger.logError(e);
 					}
@@ -259,7 +296,7 @@ public class AnimalSheet extends Sheet {
 		}
 	}
 
-	private Table getAPRkWTable() {
+	private Table getAPRkWTable(final JSONObject animal) {
 		final Table table = new Table().setBorder(0, 0, 0, 0).setNumHeaderRows(0);
 
 		table.addColumn(new Column(17, FontManager.serif, valueSize, HAlign.RIGHT).setBorder(0, 0, 0, 0));
@@ -283,7 +320,7 @@ public class AnimalSheet extends Sheet {
 		return table;
 	}
 
-	private Table getAttacksTable() {
+	private Table getAttacksTable(final JSONObject animal, final int index) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		table.addColumn(new Column(65, 65, FontManager.serif, 4, valueSize, HAlign.LEFT));
@@ -334,14 +371,14 @@ public class AnimalSheet extends Sheet {
 			}
 		}
 
-		for (int i = 0; i < additionalAttacks.get(current).get(); ++i) {
+		for (int i = 0; i < additionalAttacks.get(index).get(); ++i) {
 			table.addRow(" ", "", "", "", "/");
 		}
 
 		return table;
 	}
 
-	private Table getAttributesTable() {
+	private Table getAttributesTable(final JSONObject animal) {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
 
 		table.addColumn(new Column(62, FontManager.serif, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0));
@@ -379,7 +416,7 @@ public class AnimalSheet extends Sheet {
 		return table;
 	}
 
-	private Table getBaseValuesTable() {
+	private Table getBaseValuesTable(final JSONObject animal) {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
 
 		table.addColumn(new Column(10, FontManager.serif, valueSize, HAlign.CENTER).setBorder(0, 0, 0, 0));
@@ -484,7 +521,7 @@ public class AnimalSheet extends Sheet {
 		return table;
 	}
 
-	private Table getBiographyTable() {
+	private Table getBiographyTable(final JSONObject animal) {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
 
 		table.addColumn(new Column(160, 160, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0.5f, 0, 0, 0));
@@ -510,7 +547,7 @@ public class AnimalSheet extends Sheet {
 		return table;
 	}
 
-	private Table getHorseArmorTable() {
+	private Table getHorseArmorTable(final JSONObject animal, final int index) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		table.addColumn(new Column(86, 86, FontManager.serif, 4, valueSize, HAlign.LEFT));
@@ -575,14 +612,14 @@ public class AnimalSheet extends Sheet {
 				}
 			}
 		}
-		for (int i = 0; i < additionalArmorRows.get(current).get(); ++i) {
+		for (int i = 0; i < additionalArmorRows.get(index).get(); ++i) {
 			table.addRow(" ", " ", " ", " ", " ", " ", " ", new TextCell(" "));
 		}
 
 		return table;
 	}
 
-	private Table getHorseSkillsTable() {
+	private Table getHorseSkillsTable(final JSONObject animal, final int index) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		table.addColumn(new Column(95, FontManager.serif, fontSize, HAlign.LEFT));
@@ -617,7 +654,7 @@ public class AnimalSheet extends Sheet {
 		return table;
 	}
 
-	private Table getHorseStatsTable() {
+	private Table getHorseStatsTable(final JSONObject animal) {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
 
 		table.addColumn(new Column(57, FontManager.serif, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0));
@@ -786,7 +823,7 @@ public class AnimalSheet extends Sheet {
 		return table;
 	}
 
-	private Table getProsConsTable() {
+	private Table getProsConsTable(final JSONObject animal, final int index) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		table.addColumn(new Column(88, 88, FontManager.serif, 4, valueSize, HAlign.LEFT));
@@ -796,7 +833,7 @@ public class AnimalSheet extends Sheet {
 		table.addRow(SheetUtil.createTitleCell("Vor-/Nachteil", 1), SheetUtil.createTitleCell("Wert", 1), SheetUtil.createTitleCell("Beschreibung", 1));
 
 		final JSONObject prosCons = ResourceManager.getResource("data/Tiereigenarten")
-				.getObj("Reittier".equals(types.get(current).get()) ? "Reittiere" : "Allgemein");
+				.getObj("Reittier".equals(types.get(index).get()) ? "Reittiere" : "Allgemein");
 		final JSONObject actualProsCons = animal != null ? animal.getObj("Eigenarten") : null;
 		if (actualProsCons != null) {
 			for (final String proConName : actualProsCons.keySet()) {
@@ -811,14 +848,14 @@ public class AnimalSheet extends Sheet {
 			}
 		}
 
-		for (int i = 0; i < additionalProConRows.get(current).get(); ++i) {
+		for (int i = 0; i < additionalProConRows.get(index).get(); ++i) {
 			table.addRow(" ");
 		}
 
 		return table;
 	}
 
-	private Table getRitualsTable() {
+	private Table getRitualsTable(final JSONObject animal) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		table.addColumn(new Column(75, 75, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -893,7 +930,7 @@ public class AnimalSheet extends Sheet {
 		return settings;
 	}
 
-	private Table getSkillsTable() {
+	private Table getSkillsTable(final JSONObject animal, final int index) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		table.addColumn(new Column(70, FontManager.serif, fontSize, HAlign.LEFT));
