@@ -171,7 +171,7 @@ public class TalentsSheet extends Sheet {
 
 			String tawString;
 			if (hero != null && fillAll) {
-				tawString = taw != Double.NEGATIVE_INFINITY ? Integer.toString(Math.min((int) Math.round(taw / numTalents), 2 * min)) : " ";
+				tawString = taw != Double.NEGATIVE_INFINITY ? DSAUtil.oneDecimalPlace.format(Math.min(taw / numTalents, 2 * min)) : " ";
 			} else {
 				tawString = " ";
 			}
@@ -494,7 +494,7 @@ public class TalentsSheet extends Sheet {
 		for (final String talentName : talents.keySet()) {
 			final JSONObject talent = talents.get(talentName);
 
-			if ((isLanguage && talent.getBoolOrDefault("Schrift", false)) || (isWriting && !talent.getBoolOrDefault("Schrift", false))) {
+			if (isLanguage && talent.getBoolOrDefault("Schrift", false) || isWriting && !talent.getBoolOrDefault("Schrift", false)) {
 				continue;
 			}
 
