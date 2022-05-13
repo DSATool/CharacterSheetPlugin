@@ -168,7 +168,7 @@ public class CompactSheet extends Sheet {
 
 				final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
-				final Integer atValue = HeroUtil.getAT(hero, item, type, true, false, false);
+				final Integer atValue = HeroUtil.getAT(hero, item, type, true, false, null, false);
 				final String at = atValue != null ? Integer.toString(atValue) : "";
 				final Integer paValue = HeroUtil.getPA(hero, item, type, false, false);
 				final String pa = paValue != null ? Integer.toString(paValue) : "—";
@@ -185,9 +185,9 @@ public class CompactSheet extends Sheet {
 
 				final Cell wm = new TextCell(Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0)
 						+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Attackemodifikator", 0) : 0))).addText("/")
-								.addText(Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Parademodifikator", 0)
-										+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Parademodifikator", 0) : 0)))
-								.setEquallySpaced(true);
+						.addText(Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Parademodifikator", 0)
+								+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Parademodifikator", 0) : 0)))
+						.setEquallySpaced(true);
 
 				final String ini = Util
 						.getSignedIntegerString(item.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0)
@@ -272,12 +272,12 @@ public class CompactSheet extends Sheet {
 		final int TPKKModifier = (HeroUtil.getCurrentValue(hero.getObj("Eigenschaften").getObj("KK"), false) - 10) / 3;
 
 		final String tp = "1W" + (TPKKModifier == 0 ? "" : Util.getSignedIntegerString(TPKKModifier)) + "(A)";
-		final String at1 = Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Raufen", true, false, false));
+		final String at1 = Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Raufen", true, false, null, false));
 		final String pa1 = Integer.toString(HeroUtil.getPA(hero, HeroUtil.infight, "Raufen", false, false));
 
 		table.addRow("Raufen", tp, at1, pa1);
 
-		final String at2 = Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Ringen", true, false, false));
+		final String at2 = Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Ringen", true, false, null, false));
 		final String pa2 = Integer.toString(HeroUtil.getPA(hero, HeroUtil.infight, "Ringen", false, false));
 
 		table.addRow("Ringen", tp, at2, pa2);
@@ -447,7 +447,7 @@ public class CompactSheet extends Sheet {
 
 				final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
-				final Integer atValue = HeroUtil.getAT(hero, item, type, false, false, false);
+				final Integer atValue = HeroUtil.getAT(hero, item, type, false, false, null, false);
 				final String at = atValue != null ? Integer.toString(atValue) : "";
 
 				final String load = Integer.toString(HeroUtil.getLoadTime(hero, item, type));

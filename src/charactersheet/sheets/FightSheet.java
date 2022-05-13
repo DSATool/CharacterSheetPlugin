@@ -187,7 +187,7 @@ public class FightSheet extends Sheet {
 
 						final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
-						final Integer atValue = HeroUtil.getAT(hero, item, type, true, false, false);
+						final Integer atValue = HeroUtil.getAT(hero, item, type, true, false, null, false);
 						final String at = fillAll && atValue != null ? Integer.toString(atValue) : " ";
 
 						final Integer paValue = HeroUtil.getPA(hero, item, type, false, false);
@@ -262,13 +262,6 @@ public class FightSheet extends Sheet {
 		table.addRow(nameTitle, typeTitle, paTitle, wmTitle, iniTitle, bfTitle, notesTitle);
 
 		if (hero != null) {
-			final JSONObject skills = hero.getObj("Sonderfertigkeiten");
-			final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero,
-					hero.getObj("Basiswerte").getObj("Parade-Basis"), false);
-			final int shieldMod = skills.containsKey("Waffenmeister (Schild)") ? 7
-					: skills.containsKey("Schildkampf II") ? 5 : skills.containsKey("Schildkampf I") ? 3 : skills.containsKey("Linkhand") ? 1 : 0;
-			final int defensiveMod = skills.containsKey("Parierwaffen II") ? 2
-					: skills.containsKey("Parierwaffen I") ? -1 : skills.containsKey("Linkhand") ? -4 : Integer.MIN_VALUE;
 			final JSONArray items = hero.getObj("Besitz").getArr("Ausrüstung");
 			for (int i = 0; i < items.size(); ++i) {
 				JSONObject item = items.getObj(i);
@@ -283,7 +276,7 @@ public class FightSheet extends Sheet {
 						final String name = item.getStringOrDefault("Name", baseWeapon.getStringOrDefault("Name", ""));
 
 						final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
-						final String pa = fillAll ? Integer.toString(PABase + shieldMod + weaponModifier.getIntOrDefault("Parademodifikator", 0)) : " ";
+						final String pa = fillAll ? Integer.toString(HeroUtil.getShieldPA(hero, baseWeapon, null, false)) : " ";
 
 						final String atMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0));
 						final String paMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Parademodifikator", 0));
@@ -317,8 +310,8 @@ public class FightSheet extends Sheet {
 
 						final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
 
-						final String pa = defensiveMod != Integer.MIN_VALUE
-								? Util.getSignedIntegerString(defensiveMod + weaponModifier.getIntOrDefault("Parademodifikator", 0)) : "—";
+						final int pa = HeroUtil.getDefensiveWeaponPA(hero, baseWeapon, null, false);
+						final String paString = pa != Integer.MIN_VALUE ? Util.getSignedIntegerString(pa) : "—";
 
 						final String atMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0));
 						final String paMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Parademodifikator", 0));
@@ -337,7 +330,7 @@ public class FightSheet extends Sheet {
 
 						final String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
 
-						table.addRow(name, "P", pa, wm, ini, bf, notes);
+						table.addRow(name, "P", paString, wm, ini, bf, notes);
 					} else {
 						table.addRow(" ", " ", " ", "/");
 					}
@@ -594,11 +587,11 @@ public class FightSheet extends Sheet {
 		if (hero != null && fill) {
 			TPKKModifier = (HeroUtil.getCurrentValue(hero.getObj("Eigenschaften").getObj("KK"), false) - 10) / 3;
 			final String tp = "1W" + (TPKKModifier == 0 ? "" : Util.getSignedIntegerString(TPKKModifier)) + "(A)";
-			final String at1 = fillAll ? Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Raufen", true, false, false)) : " ";
+			final String at1 = fillAll ? Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Raufen", true, false, null, false)) : " ";
 			final String pa1 = fillAll ? Integer.toString(HeroUtil.getPA(hero, HeroUtil.infight, "Raufen", false, false)) : " ";
 			final String notes1 = HeroUtil.getWeaponNotes(HeroUtil.infight, HeroUtil.infight, "Raufen", hero);
 			table.addRow("Raufen", tp, at1, pa1, tpkk, "±0", notes1);
-			final String at2 = fillAll ? Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Ringen", true, false, false)) : " ";
+			final String at2 = fillAll ? Integer.toString(HeroUtil.getAT(hero, HeroUtil.infight, "Ringen", true, false, null, false)) : " ";
 			final String pa2 = fillAll ? Integer.toString(HeroUtil.getPA(hero, HeroUtil.infight, "Ringen", false, false)) : " ";
 			final String notes2 = HeroUtil.getWeaponNotes(HeroUtil.infight, HeroUtil.infight, "Ringen", hero);
 			table.addRow("Ringen", tp, at2, pa2, tpkk, "±0", notes2);
@@ -665,7 +658,7 @@ public class FightSheet extends Sheet {
 
 						final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
 
-						final Integer atValue = HeroUtil.getAT(hero, item, type, false, false, false);
+						final Integer atValue = HeroUtil.getAT(hero, item, type, false, false, null, false);
 						final String at = fillAll && atValue != null ? Integer.toString(atValue) : " ";
 
 						final String load = Integer.toString(HeroUtil.getLoadTime(hero, item, type));
