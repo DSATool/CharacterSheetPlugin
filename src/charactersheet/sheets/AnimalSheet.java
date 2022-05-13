@@ -742,8 +742,8 @@ public class AnimalSheet extends Sheet {
 			table.addRow("Körperkraft", actual, mod, "", "Magieresistenz", actualRight, "—");
 
 			actualValue = actualValues.getObj("Tragkraft");
-			actual = Integer.toString(actualValue.getIntOrDefault("Wert", 0));
-			mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
+			actual = DSAUtil.oneDecimalPlace.format(actualValue.getDoubleOrDefault("Wert", 0.0));
+			mod = Util.getSignedDoubleString(actualValue.getDoubleOrDefault("Modifikator", 0.0), DSAUtil.oneDecimalPlace);
 
 			actualValue = actualValues.getObj("Futterbedarf");
 			actualRight = new TextCell(Integer.toString(actualValue.getIntOrDefault("Erhaltung", 0))).addText("/")
@@ -754,8 +754,8 @@ public class AnimalSheet extends Sheet {
 			table.addRow("Tragkraft", "x" + actual, mod, "", "Futterbedarf", actualRight, "—");
 
 			actualValue = actualValues.getObj("Zugkraft");
-			actual = Integer.toString(actualValue.getIntOrDefault("Wert", 0));
-			mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));
+			actual = DSAUtil.oneDecimalPlace.format(actualValue.getDoubleOrDefault("Wert", 0.0));
+			mod = Util.getSignedDoubleString(actualValue.getDoubleOrDefault("Modifikator", 0.0), DSAUtil.oneDecimalPlace);
 
 			actualValue = actualValues.getObj("Geschwindigkeit");
 			actualRight = new TextCell(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Schritt", 0.0))).addText("/")
