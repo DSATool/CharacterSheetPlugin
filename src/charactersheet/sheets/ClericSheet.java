@@ -47,19 +47,14 @@ import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
 import dsatool.util.Util;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
 public class ClericSheet extends Sheet {
 
-	final StringProperty deity = new SimpleStringProperty();
-	private final BooleanProperty ownLiturgiesOnly = new SimpleBooleanProperty(false);
-	private final BooleanProperty modTable = new SimpleBooleanProperty(true);
-	private final BooleanProperty categoriesTable = new SimpleBooleanProperty(true);
+	private static final String OWN_LITURGIES_ONLY = "Nur erlernte/verbilligte Liturgien";
 
 	public ClericSheet() {
 		super(771);
@@ -73,7 +68,7 @@ public class ClericSheet extends Sheet {
 
 		final JSONObject categories = ResourceManager.getResource("data/Liturgiekategorien");
 
-		final float width = 70;
+		final float width = 80;
 		int maxRows = 0;
 
 		for (final String categoryName : categories.keySet()) {
@@ -92,7 +87,7 @@ public class ClericSheet extends Sheet {
 						categoryTable.addColumn(new Column(0, width, FontManager.serif, 4, 7, HAlign.CENTER));
 					}
 				}
-				categoryTable.addCells(entryName);
+				categoryTable.addCells(entryName + ' ');
 				if (hasText) {
 					categoryTable.addCells(entry.getStringOrDefault("Text", ""));
 				}
@@ -142,7 +137,7 @@ public class ClericSheet extends Sheet {
 		return left + 5 + width * numCols;
 	}
 
-	private void addMiraclesTable(final PDDocument document) throws IOException {
+	private void addMiraclesTable(final PDDocument document, final String deity) throws IOException {
 		final Table table = new Table().setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -162,8 +157,8 @@ public class ClericSheet extends Sheet {
 
 		JSONObject miraclePlus = null;
 		JSONObject miracleMinus = null;
-		if (!"".equals(deity.get())) {
-			final JSONObject actualDeity = ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").getObj(deity.get());
+		if (!"".equals(deity)) {
+			final JSONObject actualDeity = ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").getObj(deity);
 			miraclePlus = actualDeity.getObj("Mirakel+");
 			miracleMinus = actualDeity.getObj("Mirakel-");
 		}
@@ -223,10 +218,10 @@ public class ClericSheet extends Sheet {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		table.addColumn(new Column(90, 90, FontManager.serif, 4, 7, HAlign.LEFT));
+		table.addColumn(new Column(105, 105, FontManager.serif, 4, 7, HAlign.LEFT));
 		table.addColumn(new Column(30, 30, FontManager.serif, 4, 7, HAlign.CENTER));
-		table.addColumn(new Column(90, 90, FontManager.serif, 4, 7, HAlign.LEFT));
-		table.addColumn(new Column(30, 30, FontManager.serif, 4, 7, HAlign.CENTER));
+		table.addColumn(new Column(110, 110, FontManager.serif, 4, 7, HAlign.LEFT));
+		table.addColumn(new Column(45, 45, FontManager.serif, 4, 7, HAlign.CENTER));
 
 		SheetUtil.addTitle(table, "Modifikationen");
 
@@ -248,9 +243,9 @@ public class ClericSheet extends Sheet {
 			table.addCells(new TextCell(rightMod._1).setPadding(0, 2, 1, 0), new TextCell(rightMod._2).setPadding(0, 1, 1, 0));
 		}
 
-		bottom.bottom = table.render(document, 240, left, bottom.bottom, 72, 10) - 5;
+		bottom.bottom = table.render(document, 290, left, bottom.bottom, 72, 10) - 5;
 
-		return left + 245;
+		return left + 295;
 	}
 
 	private void addStatusTable(final PDDocument document) throws IOException {
@@ -277,6 +272,8 @@ public class ClericSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
+		final String deity = settingsPage.getString("Gottheit").get();
+
 		header = SheetUtil.createHeader("Geweihtenbrief", true, false, false, hero, fill, fillAll, showName, showDate).andThen(event -> {
 			final Table table = new Table().setBorder(0, 0, 0, 0);
 			table.addColumn(new Column(29, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0, 0, 0, 0));
@@ -291,8 +288,9 @@ public class ClericSheet extends Sheet {
 			if (hero != null) {
 				actualAttributes = hero.getObj("Eigenschaften");
 			}
+
 			final JSONObject liturgyKnowledgeGroup = ResourceManager.getResource("data/Talentgruppen").getObj("Liturgiekenntnis");
-			final JSONObject liturgyKnowledge = ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").getObj(deity.get());
+			final JSONObject liturgyKnowledge = ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").getObj(deity);
 			final JSONArray challenge = liturgyKnowledge.getArrOrDefault("Probe", liturgyKnowledgeGroup.getArr("Probe"));
 			for (int i = 0; i < 3; ++i) {
 				String value = " ";
@@ -302,18 +300,18 @@ public class ClericSheet extends Sheet {
 				}
 				table.addCells(attribute, value);
 			}
-			String enhancementCost = DSAUtil.getEnhancementGroupString(liturgyKnowledgeGroup.getIntOrDefault("Steigerung", 6) + ("".equals(deity.get()) ? 0
-					: ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").getObj(deity.get()).getIntOrDefault("Steigerung", 0)));
-			if (hero != null && fill && !"".equals(deity.get())) {
-				enhancementCost = DSAUtil.getEnhancementGroupString(HeroUtil.getTalentComplexity(hero, deity.get()));
+			String enhancementCost = DSAUtil.getEnhancementGroupString(liturgyKnowledgeGroup.getIntOrDefault("Steigerung", 6) + ("".equals(deity) ? 0
+					: ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").getObj(deity).getIntOrDefault("Steigerung", 0)));
+			if (hero != null && fill && !"".equals(deity)) {
+				enhancementCost = DSAUtil.getEnhancementGroupString(HeroUtil.getTalentComplexity(hero, deity));
 			}
-			final String name = "Liturgiekenntnis (" + ("".equals(deity.get()) ? "                                   " : deity.get()) + ") (" + enhancementCost
+			final String name = "Liturgiekenntnis (" + ("".equals(deity) ? "                                   " : deity) + ") (" + enhancementCost
 					+ "): ";
 			String value = " ";
-			if (hero != null && !"".equals(deity.get()) && fillAll) {
+			if (hero != null && !"".equals(deity) && fillAll) {
 				final JSONObject liturgyKnowledges = hero.getObj("Talente").getObjOrDefault("Liturgiekenntnis", null);
 				if (liturgyKnowledges != null) {
-					final JSONObject actualLiturgyKnowledge = liturgyKnowledges.getObj(deity.get());
+					final JSONObject actualLiturgyKnowledge = liturgyKnowledges.getObj(deity);
 					value = Integer.toString(actualLiturgyKnowledge != null ? actualLiturgyKnowledge.getIntOrDefault("TaW", 0) : 0);
 				} else {
 					value = "0";
@@ -329,55 +327,50 @@ public class ClericSheet extends Sheet {
 
 		startCreate(document);
 
-		try {
-			addStatusTable(document);
-		} catch (final Exception e) {
-			ErrorLogger.logError(e);
-		}
-
-		try {
-			addMiraclesTable(document);
-		} catch (final Exception e) {
-			ErrorLogger.logError(e);
-		}
-
-		try {
-			fillLiturgies(document);
-		} catch (final Exception e) {
-			ErrorLogger.logError(e);
-		}
-
 		float left = 12;
 
-		final float currentBottom = bottom.bottom;
+		float currentBottom = bottom.bottom;
 		float minBottom = bottom.bottom;
 
-		if (modTable.get()) {
-			bottom.bottom = currentBottom;
-			try {
-				left = addModificationTable(document, left);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
+		for (final TitledPane section : settingsPage.getSections()) {
+			if (settingsPage.getBool(section, "").get()) {
+				try {
+					final String name = settingsPage.getString(section, null).get();
+					switch (name) {
+						case "Modifikationen", "Kategorien" -> {
+							bottom.bottom = currentBottom;
+							left = switch (name) {
+								case "Modifikationen" -> addModificationTable(document, left);
+								case "Kategorien" -> addCategoriesTable(document, left);
+								default -> left;
+							};
+							minBottom = Math.min(minBottom, bottom.bottom);
+						}
+						default -> {
+							bottom.bottom = minBottom;
+							switch (name) {
+								case "Weihe" -> addStatusTable(document);
+								case "Mirakel" -> addMiraclesTable(document, deity);
+								case "Liturgien" -> {
+									final boolean ownLiturgiesOnly = settingsPage.getBool(section, OWN_LITURGIES_ONLY).get();
+									fillLiturgies(document, deity, ownLiturgiesOnly);
+								}
+							}
+							left = 12;
+							currentBottom = bottom.bottom;
+							minBottom = bottom.bottom;
+						}
+					}
+				} catch (final Exception e) {
+					ErrorLogger.logError(e);
+				}
 			}
-			minBottom = Math.min(minBottom, bottom.bottom);
 		}
-
-		if (categoriesTable.get()) {
-			bottom.bottom = currentBottom;
-			try {
-				left = addCategoriesTable(document, left);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-			minBottom = Math.min(minBottom, bottom.bottom);
-		}
-
-		bottom.bottom = minBottom;
 
 		endCreate(document);
 	}
 
-	private void fillLiturgies(final PDDocument document) throws IOException {
+	private void fillLiturgies(final PDDocument document, final String deity, final boolean ownLiturgiesOnly) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe()).setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -413,9 +406,9 @@ public class ClericSheet extends Sheet {
 			liturgiesByLevel[i] = new TreeMap<>(SheetUtil.comparator);
 		}
 
-		DSAUtil.foreach(liturgy -> liturgy.getObj("Gottheiten").containsKey(deity.get()), (liturgyName, liturgy) -> {
-			final int grade = liturgy.getObj("Gottheiten").getObj(deity.get()).getIntOrDefault("Grad", liturgy.getIntOrDefault("Grad", 1));
-			final String name = liturgy.getObj("Gottheiten").getObj(deity.get()).getStringOrDefault("Name", liturgyName);
+		DSAUtil.foreach(liturgy -> liturgy.getObj("Gottheiten").containsKey(deity), (liturgyName, liturgy) -> {
+			final int grade = liturgy.getObj("Gottheiten").getObj(deity).getIntOrDefault("Grad", liturgy.getIntOrDefault("Grad", 1));
+			final String name = liturgy.getObj("Gottheiten").getObj(deity).getStringOrDefault("Name", liturgyName);
 			if (grade >= numLevels || grade < 0) {
 				liturgiesByLevel[numLevels - 1].put(name, liturgyName);
 			} else {
@@ -433,7 +426,7 @@ public class ClericSheet extends Sheet {
 			titleCell.addText(new Text("(" + level.getIntOrDefault("KaP", 0) + " KaP, " + (pKaP != 0 ? pKaP + " pKaP, " : "") + "Probe "
 					+ Util.getSignedIntegerString(level.getIntOrDefault("Probe", 0)) + ", Wirkung: "
 					+ DSAUtil.getModificationString(level.getObj("Wirkung"), Units.NONE, false) + ", " + level.getIntOrDefault("Kosten", 0) + " AP)")
-							.setFont(FontManager.serif));
+					.setFont(FontManager.serif));
 
 			table.addRow(titleCell.setColSpan(8));
 
@@ -462,10 +455,10 @@ public class ClericSheet extends Sheet {
 				final String baseName = liturgiesByLevel[i].get(name);
 				final JSONObject liturgy = liturgies.getObj(baseName);
 				if (hero != null && fill) {
-					fillLiturgy(table, baseName, name, liturgy, actualSkills.getObjOrDefault(baseName, null), cheaperSkills.getObjOrDefault(baseName, null),
-							cost);
+					fillLiturgy(table, deity, ownLiturgiesOnly, baseName, name, liturgy, actualSkills.getObjOrDefault(baseName, null),
+							cheaperSkills.getObjOrDefault(baseName, null), cost);
 				} else {
-					fillLiturgy(table, baseName, name, liturgy, null, null, cost);
+					fillLiturgy(table, deity, ownLiturgiesOnly, baseName, name, liturgy, null, null, cost);
 				}
 			}
 			++i;
@@ -474,11 +467,11 @@ public class ClericSheet extends Sheet {
 		bottom.bottom = table.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
 	}
 
-	private void fillLiturgy(final Table table, final String baseName, final String name, final JSONObject baseLiturgy, final JSONObject actualLiturgy,
-			final JSONObject cheaperLiturgy, final int origCost) {
-		if (ownLiturgiesOnly.get() && actualLiturgy == null && cheaperLiturgy == null) return;
+	private void fillLiturgy(final Table table, final String deity, final boolean ownLiturgiesOnly, final String baseName, final String name,
+			final JSONObject baseLiturgy, final JSONObject actualLiturgy, final JSONObject cheaperLiturgy, final int origCost) {
+		if (ownLiturgiesOnly && actualLiturgy == null && cheaperLiturgy == null) return;
 
-		final JSONObject liturgy = baseLiturgy.getObj("Gottheiten").getObj(deity.get());
+		final JSONObject liturgy = baseLiturgy.getObj("Gottheiten").getObj(deity);
 
 		String actual = " ";
 		String cost = " ";
@@ -518,13 +511,17 @@ public class ClericSheet extends Sheet {
 
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
-		final JSONObject settings = new JSONObject(parent);
-		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
-		settings.put("Leerseite einfügen", emptyPage.get());
-		settings.put("Gottheit", deity.get());
-		settings.put("Nur erlernte/verbilligte Liturgien", ownLiturgiesOnly.get());
-		settings.put("Modifikationen", modTable.get());
-		settings.put("Kategorien", categoriesTable.get());
+		final JSONObject settings = super.getSettings(parent);
+		settings.put("Gottheit", settingsPage.getString("Gottheit").get());
+
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			settings.put(name, settingsPage.getBool(section, "").get());
+			if ("Liturgien".equals(name)) {
+				settings.put(OWN_LITURGIES_ONLY, settingsPage.getBool(section, OWN_LITURGIES_ONLY).get());
+			}
+		}
+
 		return settings;
 	}
 
@@ -532,16 +529,23 @@ public class ClericSheet extends Sheet {
 	public void load() {
 		super.load();
 		final Set<String> deities = ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").keySet();
-		deity.set(deities.iterator().next());
-		settingsPage.addStringChoice("Gottheit", deity, deities);
-		settingsPage.addBooleanChoice("Nur erlernte/verbilligte Liturgien", ownLiturgiesOnly);
-		settingsPage.addBooleanChoice("Modifikationen", modTable);
-		settingsPage.addBooleanChoice("Kategorien", categoriesTable);
+		settingsPage.addStringChoice("Gottheit", deities);
+		settingsPage.getString("Gottheit").set(deities.iterator().next());
+
+		sections.put("Weihe", settingsPage.addSection("Weihe", true));
+		sections.put("Mirakel", settingsPage.addSection("Mirakel", true));
+
+		sections.put("Liturgien", settingsPage.addSection("Liturgien", true));
+		settingsPage.addBooleanChoice(OWN_LITURGIES_ONLY);
+
+		sections.put("Modifikationen", settingsPage.addSection("Modifikationen", true));
+		sections.put("Kategorien", settingsPage.addSection("Kategorien", true));
 	}
 
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
+		final StringProperty deity = settingsPage.getString("Gottheit");
 		if (settings.containsKey("Gottheit")) {
 			deity.set(settings.getString("Gottheit"));
 		} else if (HeroUtil.isClerical(hero, true)) {
@@ -552,9 +556,19 @@ public class ClericSheet extends Sheet {
 		} else {
 			deity.set(null);
 		}
-		ownLiturgiesOnly.set(settings.getBoolOrDefault("Nur erlernte/verbilligte Liturgien", false));
-		modTable.set(settings.getBoolOrDefault("Modifikationen", true));
-		categoriesTable.set(settings.getBoolOrDefault("Kategorien", true));
+
+		settingsPage.getBool(sections.get("Weihe"), "").set(settings.getBoolOrDefault("Weihe", true));
+		settingsPage.getBool(sections.get("Mirakel"), "").set(settings.getBoolOrDefault("Mirakel", true));
+
+		final TitledPane liturgies = sections.get("Liturgien");
+		settingsPage.getBool(liturgies, "").set(settings.getBoolOrDefault("Liturgien", true));
+		settingsPage.getBool(liturgies, OWN_LITURGIES_ONLY).set(settings.getBoolOrDefault(OWN_LITURGIES_ONLY, false));
+
+		orderSections(List.of("Weihe", "Mirakel", "Liturgien", "Modifikationen", "Kategorien"));
+		orderSections(settings.keySet());
+
+		settingsPage.getBool(sections.get("Modifikationen"), "").set(settings.getBoolOrDefault("Modifikationen", true));
+		settingsPage.getBool(sections.get("Kategorien"), "").set(settings.getBoolOrDefault("Kategorien", true));
 	}
 
 	@Override

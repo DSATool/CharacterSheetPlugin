@@ -16,7 +16,6 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,14 +33,19 @@ import charactersheet.util.SheetUtil;
 import dsa41basis.hero.ProOrCon;
 import dsa41basis.util.RequirementsUtil;
 import dsatool.resources.ResourceManager;
+import dsatool.ui.ReactiveSpinner;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
 public class SpecialSkillsSheet extends Sheet {
+
+	private static final String ADDITIONAL_CHOICE_ROWS = "Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl";
+	private static final String OWN_SKILLS_ONLY = "Nur erlernte/verbilligte Sonderfertigkeiten";
+	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
 
 	private static Map<String, Object> emptyChoiceText = new HashMap<>();
 	static {
@@ -49,10 +53,7 @@ public class SpecialSkillsSheet extends Sheet {
 		emptyChoiceText.put("Freitext", "");
 	}
 
-	private final IntegerProperty additionalChoiceRows = new SimpleIntegerProperty(1);
-
-	private final float fontSize = 6;
-	private final Map<String, StringProperty> skillGroups = new HashMap<>();
+	private final float fontSize = 6f;
 
 	public SpecialSkillsSheet() {
 		super(788);
@@ -147,13 +148,14 @@ public class SpecialSkillsSheet extends Sheet {
 
 		final JSONObject specialSkills = ResourceManager.getResource("data/Sonderfertigkeiten");
 
-		for (final String groupName : specialSkills.keySet()) {
-			if ("Keine".equals(skillGroups.get(groupName).get())) {
+		for (final TitledPane section : settingsPage.getSections()) {
+			if (!settingsPage.getBool(section, "").get()) {
 				continue;
 			}
 
 			final Table table = baseTable.duplicate().setFiller(SheetUtil.stripe().invert(true)).setBorder(0, 0, 0, 0);
 
+			final String groupName = settingsPage.getString(section, null).get();
 			final JSONObject group = specialSkills.getObj(groupName);
 
 			table.addRow(new TextCell(groupName, FontManager.serifBold, 0, fontSize).setColSpan(7));
@@ -165,7 +167,8 @@ public class SpecialSkillsSheet extends Sheet {
 				cheaperSkills = hero.getObj("Verbilligte Sonderfertigkeiten");
 			}
 
-			final boolean ownSkills = "Erlernte".equals(skillGroups.get(groupName).get());
+			final boolean ownSkills = settingsPage.getBool(section, OWN_SKILLS_ONLY).get();
+			final int additionalChoiceRows = settingsPage.getInt(section, ADDITIONAL_CHOICE_ROWS).get();
 
 			for (final String name : group.keySet()) {
 				final JSONObject skill = group.getObj(name);
@@ -205,7 +208,7 @@ public class SpecialSkillsSheet extends Sheet {
 								}
 							}
 						}
-						for (int i = !exists && additionalChoiceRows.get() == 0 ? -1 : 0; i < additionalChoiceRows.get(); ++i) {
+						for (int i = !exists && additionalChoiceRows == 0 ? -1 : 0; i < additionalChoiceRows; ++i) {
 							fillSkill(table, ownSkills, name, skill, null, null);
 						}
 					} else {
@@ -216,6 +219,10 @@ public class SpecialSkillsSheet extends Sheet {
 						}
 					}
 				}
+			}
+
+			for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS).get(); ++i) {
+				table.addRow("");
 			}
 
 			if (table.getNumRows() > 1) {
@@ -229,46 +236,76 @@ public class SpecialSkillsSheet extends Sheet {
 
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
-		final JSONObject settings = new JSONObject(parent);
-		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
-		settings.put("Leerseite einfügen", emptyPage.get());
-		settings.put("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", additionalChoiceRows.get());
+		final JSONObject settings = super.getSettings(parent);
+		settings.put(ADDITIONAL_CHOICE_ROWS, settingsPage.getInt(ADDITIONAL_CHOICE_ROWS).get());
+
 		final JSONObject groups = new JSONObject(settings);
-		for (final String name : skillGroups.keySet()) {
-			groups.put(name, skillGroups.get(name).get());
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			final JSONObject group = new JSONObject(groups);
+			group.put("Anzeigen", settingsPage.getBool(section, "").get());
+			group.put(ADDITIONAL_CHOICE_ROWS, settingsPage.getInt(section, ADDITIONAL_CHOICE_ROWS).get());
+			group.put(OWN_SKILLS_ONLY, settingsPage.getBool(section, OWN_SKILLS_ONLY).get());
+			group.put(ADDITIONAL_ROWS, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+			groups.put(name, group);
 		}
 		settings.put("Gruppen", groups);
+
 		return settings;
 	}
 
 	@Override
 	public void load() {
 		super.load();
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", additionalChoiceRows, 0, 30);
 
 		final boolean[] lock = { false };
 
-		final StringProperty showGroups = new SimpleStringProperty("");
-		settingsPage.addStringChoice("Sonderfertigkeiten anzeigen", showGroups, Arrays.asList("Alle", "Erlernte", "Keine", ""));
-		showGroups.addListener((o, oldV, newV) -> {
-			if (!"".equals(newV)) {
+		final ReactiveSpinner<Integer> choiceRows = settingsPage.addIntegerChoice(ADDITIONAL_CHOICE_ROWS, 0, 30);
+		choiceRows.valueProperty().addListener((o, oldV, newV) -> {
+			if (!lock[0]) {
 				lock[0] = true;
-				for (final StringProperty group : skillGroups.values()) {
-					group.setValue(newV);
+				for (final TitledPane section : settingsPage.getSections()) {
+					settingsPage.getInt(section, ADDITIONAL_CHOICE_ROWS).setValue(newV);
 				}
 				lock[0] = false;
 			}
 		});
 
+		final CheckBox ownSkillsOnly = settingsPage.addBooleanChoice(OWN_SKILLS_ONLY);
+		ownSkillsOnly.setIndeterminate(true);
+		ownSkillsOnly.selectedProperty().addListener((o, oldV, newV) -> {
+			lock[0] = true;
+			for (final TitledPane section : settingsPage.getSections()) {
+				settingsPage.getBool(section, OWN_SKILLS_ONLY).setValue(newV);
+			}
+			lock[0] = false;
+		});
+
 		final JSONObject skillGroupNames = ResourceManager.getResource("data/Sonderfertigkeiten");
 		for (final String skillGroupName : skillGroupNames.keySet()) {
-			skillGroups.put(skillGroupName, new SimpleStringProperty("Schwarze Gaben".equals(skillGroupName) ? "Erlernte" : "Alle"));
-			final StringProperty group = skillGroups.get(skillGroupName);
-			settingsPage.addStringChoice(skillGroupName, skillGroups.get(skillGroupName), Arrays.asList("Alle", "Erlernte", "Keine"));
-			group.addListener((o, oldV, newV) -> {
+			final TitledPane section = settingsPage.addSection(skillGroupName, true);
+			sections.put(skillGroupName, section);
+
+			settingsPage.addIntegerChoice(ADDITIONAL_CHOICE_ROWS, 0, 30);
+			final IntegerProperty additional = settingsPage.getInt(section, ADDITIONAL_CHOICE_ROWS);
+			additional.addListener((o, oldV, newV) -> {
 				if (!lock[0]) {
-					showGroups.setValue("");
+					lock[0] = true;
+					choiceRows.getValueFactory().setValue(0);
+					lock[0] = false;
 				}
+			});
+
+			final BooleanProperty own = settingsPage.addBooleanChoice(OWN_SKILLS_ONLY).selectedProperty();
+
+			final ReactiveSpinner<Integer> additionalRowsControl = settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
+			additionalRowsControl.setDisable(true);
+
+			own.addListener((o, oldV, newV) -> {
+				if (!lock[0]) {
+					ownSkillsOnly.setIndeterminate(true);
+				}
+				additionalRowsControl.setDisable(!newV);
 			});
 		}
 	}
@@ -276,10 +313,19 @@ public class SpecialSkillsSheet extends Sheet {
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
-		additionalChoiceRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Sonderfertigkeiten mit Auswahl", 1));
+		settingsPage.getInt(ADDITIONAL_CHOICE_ROWS).set(settings.getIntOrDefault(ADDITIONAL_CHOICE_ROWS, 1));
+
+		orderSections(ResourceManager.getResource("data/Sonderfertigkeiten").keySet());
 		final JSONObject groups = settings.getObjOrDefault("Gruppen", new JSONObject(null));
-		for (final String name : skillGroups.keySet()) {
-			skillGroups.get(name).set(groups.getStringOrDefault(name, "Schwarze Gaben".equals(name) ? "Erlernte" : "Alle"));
+		orderSections(groups.keySet());
+
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			final JSONObject group = groups.getObjOrDefault(name, new JSONObject(null));
+			settingsPage.getBool(section, "").set(group.getBoolOrDefault("Anzeigen", true));
+			settingsPage.getInt(section, ADDITIONAL_CHOICE_ROWS).set(group.getIntOrDefault(ADDITIONAL_CHOICE_ROWS, "Schwarze Gaben".equals(name) ? 0 : 1));
+			settingsPage.getBool(section, OWN_SKILLS_ONLY).set(group.getBoolOrDefault(OWN_SKILLS_ONLY, "Schwarze Gaben".equals(name) ? true : false));
+			settingsPage.getInt(section, ADDITIONAL_ROWS).set(group.getIntOrDefault(ADDITIONAL_ROWS, 0));
 		}
 	}
 

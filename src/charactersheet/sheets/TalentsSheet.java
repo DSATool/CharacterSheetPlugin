@@ -16,7 +16,7 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,30 +40,39 @@ import charactersheet.util.SheetUtil;
 import dsa41basis.util.DSAUtil;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
+import dsatool.ui.ReactiveSpinner;
 import dsatool.util.ErrorLogger;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 import jsonant.value.JSONValue;
 
 public class TalentsSheet extends Sheet {
+
+	private static final String ADDITIONAL_TALENT_ROWS = "Zusätzliche Zeilen";
+	private static final String BASIC_VALUES_IN_WEAPON_TALENTS = "Basiswerte berücksichtigen";
+	private static final String GROUP_BASIC_TALENTS = "Basistalente gruppieren";
+	private static final String MARK_BASIC_TALENTS = "Basistalente markieren";
+	private static final String OWN_TALENTS_ONLY = "Nur erlernte Talente anzeigen";
+	private static final String SHOW_PRIMARY = "Leittalente anzeigen";
+
+	private static final List<String> specialGroups = List.of("Gaben", "Ritualkenntnis", "Liturgiekenntnis");
+
 	private static float fontSize = 8.4f;
 
-	private static String getGroupTableHeader(final String name, final JSONObject talentGroup) {
+	private static String getGroupTableHeader(final String name, final JSONObject talentGroup, final boolean addEnhancement, final boolean addChallenge) {
 		final StringBuilder title = new StringBuilder(name);
 
-		if (talentGroup.containsKey("Steigerung")) {
+		if (addEnhancement && talentGroup.containsKey("Steigerung")) {
 			title.append(" (");
 			title.append(DSAUtil.getEnhancementGroupString(talentGroup.getInt("Steigerung")));
 			title.append(')');
 		}
 
-		if (talentGroup.containsKey("Probe")) {
+		if (addChallenge && talentGroup.containsKey("Probe")) {
 			title.append(" (");
 			title.append(DSAUtil.getChallengeString(talentGroup.getArr("Probe")));
 			title.append(')');
@@ -72,24 +81,15 @@ public class TalentsSheet extends Sheet {
 		return title.toString();
 	}
 
-	private final BooleanProperty ownTalentsOnly = new SimpleBooleanProperty(false);
-	private final IntegerProperty additionalTalentRows = new SimpleIntegerProperty(3);
-	private final BooleanProperty groupBasis = new SimpleBooleanProperty(true);
-	private final BooleanProperty markBasis = new SimpleBooleanProperty(false);
-	private final BooleanProperty primaryTalents = new SimpleBooleanProperty(false);
-	private final StringProperty showMetaTalents = new SimpleStringProperty("Alle");
-	private final BooleanProperty showRitualOrLiturgyKnowledge = new SimpleBooleanProperty(false);
-	private final BooleanProperty basicValuesInWeaponTalent = new SimpleBooleanProperty(true);
-
 	public TalentsSheet() {
 		super(771);
 	}
 
-	private void addMetaTable(final PDDocument document) throws IOException {
+	private boolean addMetaTable(final PDDocument document, final TitledPane section, final float top, final float left) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe()).setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		table.addColumn(new Column(65, 65, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(70, 70, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(45, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -109,7 +109,6 @@ public class TalentsSheet extends Sheet {
 			metaTalents.put(talentName, talents.getObj(talentName));
 		}
 
-		int leftOut = 0;
 		for (final String talentName : metaTalents.keySet()) {
 			final JSONObject talent = metaTalents.get(talentName);
 
@@ -164,8 +163,7 @@ public class TalentsSheet extends Sheet {
 				}
 			}
 
-			if (taw == Double.NEGATIVE_INFINITY && "Aktivierte".equals(showMetaTalents.get())) {
-				++leftOut;
+			if (taw == Double.NEGATIVE_INFINITY && settingsPage.getBool(section, OWN_TALENTS_ONLY).get()) {
 				continue;
 			}
 
@@ -190,8 +188,8 @@ public class TalentsSheet extends Sheet {
 				}
 				final String currentTalent = calculation.getString(i);
 				int j = 1;
-				for (; i + 1 < calculation.size() && currentTalent.equals(calculation.getString(i + 1)); ++i, ++j) {
-
+				for (; i + 1 < calculation.size() && currentTalent.equals(calculation.getString(i + 1)); ++i) {
+					++j;
 				}
 				if (j > 1) {
 					calculationString.append(j);
@@ -209,48 +207,53 @@ public class TalentsSheet extends Sheet {
 			table.addRow(talentName, tawString, challengeCell, calculationString.toString());
 		}
 
-		if ("Aktivierte".equals(showMetaTalents.get())) {
-			for (int i = 0; i < Math.min(leftOut, additionalTalentRows.get()); ++i) {
+		if (settingsPage.getBool(section, OWN_TALENTS_ONLY).get()) {
+			for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_TALENT_ROWS).get(); ++i) {
 				table.addRow("");
 			}
 		}
 
-		bottom.bottom = table.render(document, 370, 12, bottom.bottom, 72, 10) - 5;
+		if (table.getNumRows() > 2) {
+			bottom.bottom = table.render(document, 379, left, top, 72, 10) - 5;
+			return true;
+		}
+
+		return false;
 	}
 
-	private void addSpecialTable(final PDDocument document) throws IOException {
-		if (hero == null) return;
-		final JSONObject actualGroup = hero.getObj("Talente").getObjOrDefault("Gaben", null);
-		if (actualGroup == null) return;
+	private boolean addSpecialTable(final PDDocument document, final TitledPane section, final String groupName, final float top, final float left)
+			throws IOException {
+		if (hero == null) return false;
+		final JSONObject actualGroup = hero.getObj("Talente").getObjOrDefault(groupName, null);
+		if (actualGroup == null) return false;
 
 		final Table table = new Table().setFiller(SheetUtil.stripe()).setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		table.addColumn(new Column(70, 70, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(105, 105, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(15, FontManager.serif, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(45, FontManager.serif, fontSize, HAlign.CENTER));
 
-		final JSONObject talentGroupInfo = ResourceManager.getResource("data/Talentgruppen").getObj("Gaben");
+		final JSONObject talentGroupInfo = ResourceManager.getResource("data/Talentgruppen").getObj(groupName);
 
-		table.addRow(SheetUtil.createTitleCell(getGroupTableHeader("Gaben", talentGroupInfo), table.getNumColumns()));
+		table.addRow(SheetUtil.createTitleCell(
+				getGroupTableHeader(groupName, talentGroupInfo, !"Ritualkenntnis".equals(groupName), !"Liturgiekenntnis".equals(groupName)),
+				table.getNumColumns()));
 
 		final Cell nameTitle = new TextCell("Talent", FontManager.serifBold, fontSize, fontSize);
 		final Cell tawTitle = new TextCell("TaW", FontManager.serifBold, fontSize, fontSize).setPadding(0, 0, 0, 0);
 		final Cell seTitle = new TextCell("SE", FontManager.serifBold, fontSize, fontSize);
-		final Cell challengeTitle = new TextCell("Probe", FontManager.serifBold, fontSize, fontSize);
-
+		final Cell challengeTitle = new TextCell("Ritualkenntnis".equals(groupName) ? "Leiteig." : "Probe", FontManager.serifBold, fontSize, fontSize);
 		table.addRow(nameTitle, tawTitle, seTitle, challengeTitle);
 
-		final JSONObject talents = ResourceManager.getResource("data/Talente").getObj("Gaben");
+		final Map<String, JSONObject> talents = new TreeMap<>(SheetUtil.comparator);
+		DSAUtil.foreach(o -> true, (name, talent) -> {
+			talents.put(name, talent);
+		}, ResourceManager.getResource("data/Talente").getObj(groupName));
 
-		final Map<String, JSONObject> specialTalents = new TreeMap<>(SheetUtil.comparator);
 		for (final String talentName : talents.keySet()) {
-			specialTalents.put(talentName, talents.getObj(talentName));
-		}
-
-		for (final String talentName : specialTalents.keySet()) {
-			final JSONObject talent = specialTalents.get(talentName);
+			final JSONObject talent = talents.get(talentName);
 
 			final List<JSONObject> actualTalents = new LinkedList<>();
 			if (!actualGroup.containsKey(talentName)) {
@@ -275,7 +278,7 @@ public class TalentsSheet extends Sheet {
 
 				if (fill) {
 					final int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
-					if (enhancement != talentGroupInfo.getIntOrDefault("Steigerung", 0)) {
+					if (enhancement != talentGroupInfo.getIntOrDefault("Steigerung", 0) || "Ritualkenntnis".equals(groupName)) {
 						name += " (" + DSAUtil.getEnhancementGroupString(enhancement) + ")";
 					}
 				} else {
@@ -311,17 +314,31 @@ public class TalentsSheet extends Sheet {
 					se = " ";
 				}
 
-				final JSONArray challenge = talent.getArrOrDefault("Probe", null);
-				final Cell challengeCell = challenge != null ? new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
-						.addText(challenge.getString(2)).setEquallySpaced(true).setPadding(0, 1, 1, 0) : new TextCell("—");
-
-				table.addRow(nameCell, taw, se, challengeCell);
+				if ("Ritualkenntnis".equals(groupName)) {
+					final String attribute = talent.getStringOrDefault("Leiteigenschaft", null);
+					table.addRow(nameCell, taw, se, attribute != null ? attribute : "—");
+				} else {
+					final JSONArray challenge = talent.getArrOrDefault("Probe",
+							"Liturgiekenntnis".equals(groupName) ? talentGroupInfo.getArrOrDefault("Probe", null) : null);
+					final Cell challengeCell = challenge != null
+							? new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
+									.addText(challenge.getString(2)).setEquallySpaced(true).setPadding(0, 1, 1, 0)
+							: new TextCell("—");
+					table.addRow(nameCell, taw, se, challengeCell);
+				}
 			}
 		}
 
-		if (table.getNumRows() > 2) {
-			bottom.bottom = table.render(document, 152, !"Keine".equals(showMetaTalents.get()) ? 431 : 12, bottom.bottom, 72, 10) - 5;
+		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_TALENT_ROWS).get(); ++i) {
+			table.addRow("");
 		}
+
+		if (table.getNumRows() > 2) {
+			bottom.bottom = table.render(document, 187, left, top, 72, 10) - 5;
+			return true;
+		}
+
+		return false;
 	}
 
 	@Override
@@ -333,58 +350,98 @@ public class TalentsSheet extends Sheet {
 		final JSONObject talents = ResourceManager.getResource("data/Talente");
 		final JSONObject talentGroups = ResourceManager.getResource("data/Talentgruppen");
 
-		for (final String talentGroupName : talentGroups.keySet()) {
-			if (!"Gaben".equals(talentGroupName) && !"Ritualkenntnis".equals(talentGroupName) && !"Liturgiekenntnis".equals(talentGroupName)) {
-				if ("Sprachen und Schriften".equals(talentGroupName)) {
-					try {
-						createGroupTable(document, "Sprachen", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName).getObj("Sprachen"));
-					} catch (final Exception e) {
-						ErrorLogger.logError(e);
+		float wideBottom = bottom.bottom;
+		float minBottom = bottom.bottom;
+
+		// 0: Next table left, 1: Small tables right, 2: Small tables left, 3: Small table middle, 4: Small table right
+		int layoutMode = 0;
+
+		final TitledPane[] sections = settingsPage.getSections().toArray(new TitledPane[0]);
+		for (int i = 0; i < sections.length; ++i) {
+			final TitledPane section = sections[i];
+			if (!settingsPage.getBool(section, "").get()) {
+				continue;
+			}
+
+			final String name = settingsPage.getString(section, null).get();
+			try {
+				switch (name) {
+					case "Meta-Talente" -> {
+						final boolean addedTable = addMetaTable(document, section, layoutMode == 2 ? wideBottom : minBottom, layoutMode == 2 ? 204 : 12);
+						if (addedTable) {
+							layoutMode = layoutMode == 2 ? 0 : 1;
+							if (layoutMode == 1) {
+								minBottom = bottom.bottom;
+								bottom.bottom = wideBottom;
+							}
+						}
 					}
 
-					try {
-						createGroupTable(document, "Schriften", talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName).getObj("Schriften"));
-					} catch (final Exception e) {
-						ErrorLogger.logError(e);
+					case "Gaben", "Ritualkenntnis", "Liturgiekenntnis" -> {
+						final float left = layoutMode == 3 ? 204 : layoutMode == 1 || layoutMode == 4 ? 396 : 12;
+						final boolean addedTable = addSpecialTable(document, section, name, bottom.bottom, left);
+						if (addedTable) {
+							switch (layoutMode) {
+								case 0 -> {
+									layoutMode = 3;
+									if (bottom.bottom < minBottom) {
+										minBottom = bottom.bottom;
+										bottom.bottom = wideBottom;
+									} else {
+										minBottom = bottom.bottom;
+										bottom.bottom = height;
+									}
+									for (int j = i + 1; j < i + 4 && j < sections.length; ++j) {
+										if ("Meta-Talente".equals(settingsPage.getString(sections[j], null).get())) {
+											layoutMode = 2;
+											bottom.bottom = minBottom;
+										}
+									}
+								}
+								case 3 -> {
+									layoutMode = 4;
+									if (bottom.bottom < wideBottom) {
+										minBottom = Math.min(bottom.bottom, minBottom);
+										bottom.bottom = wideBottom;
+									} else {
+										bottom.bottom = 72;
+									}
+								}
+								default -> minBottom = Math.min(bottom.bottom, minBottom);
+							}
+						}
 					}
-				} else {
-					try {
-						createGroupTable(document, talentGroupName, talents.getObj(talentGroupName), talentGroups.getObj(talentGroupName));
-					} catch (final Exception e) {
-						ErrorLogger.logError(e);
+
+					default -> {
+						bottom.bottom = minBottom;
+
+						final boolean addedTable;
+						if (List.of("Sprachen", "Schriften").contains(name)) {
+							addedTable = createGroupTable(document, section, name, talents.getObj("Sprachen und Schriften"),
+									talentGroups.getObj("Sprachen und Schriften").getObj(name));
+						} else {
+							addedTable = createGroupTable(document, section, name, talents.getObj(name), talentGroups.getObj(name));
+						}
+
+						if (addedTable) {
+							wideBottom = bottom.bottom;
+							minBottom = wideBottom;
+							layoutMode = 0;
+						}
 					}
 				}
-			}
-		}
-
-		float metaBottom = bottom.bottom;
-
-		if (!"Keine".equals(showMetaTalents.get())) {
-			final float currentBottom = bottom.bottom;
-			try {
-				addMetaTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-			metaBottom = bottom.bottom;
-			bottom.bottom = currentBottom;
-		}
-
-		if (hero != null) {
-			try {
-				addSpecialTable(document);
 			} catch (final Exception e) {
 				ErrorLogger.logError(e);
 			}
 		}
 
-		bottom.bottom = Math.min(metaBottom, bottom.bottom);
+		bottom.bottom = minBottom;
 
 		endCreate(document);
 	}
 
-	private void createGroupTable(final PDDocument document, final String groupName, final JSONObject talentGroup, final JSONObject talentGroupInfo)
-			throws IOException {
+	private boolean createGroupTable(final PDDocument document, final TitledPane section, final String groupName, final JSONObject talentGroup,
+			final JSONObject talentGroupInfo) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe()).setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -397,6 +454,8 @@ public class TalentsSheet extends Sheet {
 		boolean needsBE = false;
 		boolean isLanguage = false;
 		boolean isWriting = false;
+		final boolean basicValuesInWeaponTalent = groupName.endsWith("kampftalente") && settingsPage
+				.getBool(section, BASIC_VALUES_IN_WEAPON_TALENTS + (groupName.startsWith("Nah") ? " bei AT/PA-Verteilung" : " bei FK-Wert")).get();
 
 		final Map<String, Integer> languageFamilies = new HashMap<>();
 
@@ -434,7 +493,7 @@ public class TalentsSheet extends Sheet {
 				break;
 		}
 
-		table.addRow(SheetUtil.createTitleCell(getGroupTableHeader(groupName, talentGroupInfo), table.getNumColumns()));
+		table.addRow(SheetUtil.createTitleCell(getGroupTableHeader(groupName, talentGroupInfo, true, true), table.getNumColumns()));
 
 		String derivation;
 		final int groupDerive = talentGroupInfo.getIntOrDefault("Ableiten", 10);
@@ -483,7 +542,8 @@ public class TalentsSheet extends Sheet {
 
 		final Map<String, JSONObject> talents = new TreeMap<>((s1, s2) -> {
 			final boolean firstIsBasis = talentGroup.getObj(s1).getBoolOrDefault("Basis", false);
-			if (groupBasis.get() && firstIsBasis != talentGroup.getObj(s2).getBoolOrDefault("Basis", false)) return firstIsBasis ? -1 : 1;
+			if (settingsPage.getBool(GROUP_BASIC_TALENTS).get() && firstIsBasis != talentGroup.getObj(s2).getBoolOrDefault("Basis", false))
+				return firstIsBasis ? -1 : 1;
 			return SheetUtil.comparator.compare(s1, s2);
 		});
 		for (final String talentName : talentGroup.keySet()) {
@@ -514,13 +574,14 @@ public class TalentsSheet extends Sheet {
 			}
 
 			for (final JSONObject actualTalent : actualTalents) {
-				if (actualTalent == null && ownTalentsOnly.get()) {
+				if (actualTalent == null && settingsPage.getBool(section, OWN_TALENTS_ONLY).get()) {
 					++leftOut;
 					break;
 				}
 
 				TextCell nameCell;
-				final PDFont font = markBasis.get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic : FontManager.serif;
+				final PDFont font = settingsPage.getBool(MARK_BASIC_TALENTS).get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic
+						: FontManager.serif;
 				if (talent.containsKey("Sprachfamilien")) {
 					String name = "Geheiligte Glyphen von Unau".equals(talentName) ? "Geh. Glyphen von Unau" : talentName.replace(" (Schrift)", "");
 					if (talent.containsKey("Auswahl")) {
@@ -552,7 +613,7 @@ public class TalentsSheet extends Sheet {
 						int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
 
 						if (talent.getBoolOrDefault("Leittalent", false) || actualTalent != null && actualTalent.getBoolOrDefault("Leittalent", false)) {
-							if (primaryTalents.get()) {
+							if (settingsPage.getBool(SHOW_PRIMARY).get()) {
 								nameCell.addText(new Text("(L)").setFont(FontManager.serif));
 							}
 						} else if (hero.getObj("Nachteile").containsKey("Elfische Weltsicht")) {
@@ -578,7 +639,7 @@ public class TalentsSheet extends Sheet {
 						int enhancement = HeroUtil.getTalentComplexity(hero, talentName);
 
 						if (talent.getBoolOrDefault("Leittalent", false) || actualTalent != null && actualTalent.getBoolOrDefault("Leittalent", false)) {
-							if (primaryTalents.get()) {
+							if (settingsPage.getBool(SHOW_PRIMARY).get()) {
 								nameCell.addText(new Text("(L)").setFont(FontManager.serif));
 							}
 						} else if (hero.getObj("Nachteile").containsKey("Elfische Weltsicht")) {
@@ -630,11 +691,11 @@ public class TalentsSheet extends Sheet {
 						pa = "—";
 					}
 					if (hero != null && fillAll) {
-						final int ATBase = basicValuesInWeaponTalent.get()
+						final int ATBase = basicValuesInWeaponTalent
 								? HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Attacke-Basis"), hero,
 										hero.getObj("Basiswerte").getObj("Attacke-Basis"), false)
 								: 0;
-						final int PABase = basicValuesInWeaponTalent.get()
+						final int PABase = basicValuesInWeaponTalent
 								? HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero,
 										hero.getObj("Basiswerte").getObj("Parade-Basis"), false)
 								: 0;
@@ -654,7 +715,7 @@ public class TalentsSheet extends Sheet {
 					table.addCells(new TextCell(at).addText("/").addText(pa).setEquallySpaced(true));
 				} else if (isFightGroup) {
 					String fk;
-					if (hero != null && fillAll && basicValuesInWeaponTalent.get()) {
+					if (hero != null && fillAll && basicValuesInWeaponTalent) {
 						final int FKBase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Fernkampf-Basis"), hero,
 								hero.getObj("Basiswerte").getObj("Fernkampf-Basis"), false);
 						if (actualTalent != null && actualTalent.getBoolOrDefault("aktiviert", true)) {
@@ -850,7 +911,7 @@ public class TalentsSheet extends Sheet {
 				table.completeRow();
 			}
 
-			if (groupBasis.get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
+			if (settingsPage.getBool(GROUP_BASIC_TALENTS).get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
 				table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
 					try {
 						final PDPageContentStream stream = event.getStream();
@@ -866,61 +927,178 @@ public class TalentsSheet extends Sheet {
 			basicTalent = talent.getBoolOrDefault("Basis", false);
 		}
 
-		if (ownTalentsOnly.get()) {
-			for (int i = 0; i < Math.min(leftOut, additionalTalentRows.get()); ++i) {
+		if (settingsPage.getBool(section, OWN_TALENTS_ONLY).get()) {
+			for (int i = 0; i < Math.min(leftOut, settingsPage.getInt(section, ADDITIONAL_TALENT_ROWS).get()); ++i) {
 				table.addRow("");
 			}
 		}
 
-		bottom.bottom = table.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
+		if (table.getNumRows() > 2) {
+			bottom.bottom = table.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
+			return true;
+		}
+
+		return false;
+	}
+
+	private void createSection(final String name, final boolean[] lock, final ReactiveSpinner<Integer> additionalRows, final CheckBox ownTalentsOnly) {
+		final TitledPane section = settingsPage.addSection(name, true);
+		sections.put(name, section);
+
+		BooleanProperty own = null;
+		if (!specialGroups.contains(name)) {
+			own = settingsPage.addBooleanChoice(OWN_TALENTS_ONLY).selectedProperty();
+		}
+
+		final ReactiveSpinner<Integer> additionalControl = settingsPage.addIntegerChoice(ADDITIONAL_TALENT_ROWS, 0, 30);
+		additionalControl.setDisable(true);
+		final IntegerProperty additional = settingsPage.getInt(section, ADDITIONAL_TALENT_ROWS);
+		additional.addListener((o, oldV, newV) -> {
+			if (!lock[0]) {
+				lock[0] = true;
+				additionalRows.getValueFactory().setValue(0);
+				lock[0] = false;
+			}
+		});
+
+		if (!specialGroups.contains(name)) {
+			own.addListener((o, oldV, newV) -> {
+				if (!lock[0]) {
+					ownTalentsOnly.setIndeterminate(true);
+				}
+				additionalControl.setDisable(!newV);
+			});
+		}
+
+		if (name.endsWith("kampftalente")) {
+			settingsPage.addBooleanChoice(BASIC_VALUES_IN_WEAPON_TALENTS + (name.startsWith("Nah") ? " bei AT/PA-Verteilung" : " bei FK-Wert"));
+		}
 	}
 
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
-		final JSONObject settings = new JSONObject(parent);
-		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
-		settings.put("Leerseite einfügen", emptyPage.get());
-		settings.put("Nur erlernte Talente anzeigen", ownTalentsOnly.get());
-		if (ownTalentsOnly.get()) {
-			settings.put("Zusätzliche Zeilen für Talente", additionalTalentRows.get());
+		final JSONObject settings = super.getSettings(parent);
+
+		settings.put(GROUP_BASIC_TALENTS, settingsPage.getBool(GROUP_BASIC_TALENTS).get());
+		settings.put(MARK_BASIC_TALENTS, settingsPage.getBool(MARK_BASIC_TALENTS).get());
+		settings.put(SHOW_PRIMARY, settingsPage.getBool(SHOW_PRIMARY).get());
+
+		final JSONObject groups = new JSONObject(settings);
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			final JSONObject group = new JSONObject(groups);
+			group.put("Anzeigen", settingsPage.getBool(section, "").get());
+			if (!specialGroups.contains(name)) {
+				group.put(OWN_TALENTS_ONLY, settingsPage.getBool(section, OWN_TALENTS_ONLY).get());
+			}
+			group.put(ADDITIONAL_TALENT_ROWS, settingsPage.getInt(section, ADDITIONAL_TALENT_ROWS).get());
+			if (name.endsWith("kampftalente")) {
+				group.put(BASIC_VALUES_IN_WEAPON_TALENTS, settingsPage
+						.getBool(section, BASIC_VALUES_IN_WEAPON_TALENTS + (name.startsWith("Nah") ? " bei AT/PA-Verteilung" : " bei FK-Wert")).get());
+			}
+			groups.put(name, group);
 		}
-		settings.put("Basistalente gruppieren", groupBasis.get());
-		settings.put("Basistalente markieren", markBasis.get());
-		settings.put("Leittalente anzeigen", primaryTalents.get());
-		settings.put("Metatalente anzeigen", showMetaTalents.get());
-		settings.put("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent.get());
+		settings.put("Gruppen", groups);
+
 		return settings;
 	}
 
 	@Override
 	public void load() {
 		super.load();
-		settingsPage.addBooleanChoice("Nur erlernte Talente anzeigen", ownTalentsOnly);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 15);
-		settingsPage.addBooleanChoice("Basistalente gruppieren", groupBasis);
-		settingsPage.addBooleanChoice("Basistalente markieren", markBasis);
-		settingsPage.addBooleanChoice("Leittalente anzeigen", primaryTalents);
-		settingsPage.addStringChoice("Metatalente anzeigen", showMetaTalents, Arrays.asList("Alle", "Aktivierte", "Keine"));
-		settingsPage.addBooleanChoice("Basiswerte bei AT/PA-Verteilung berücksichtigen", basicValuesInWeaponTalent);
 
-		ownTalentsOnly.addListener((o, oldV, newV) -> {
-			if (!"Keine".equals(showMetaTalents.get())) {
-				showMetaTalents.set(newV ? "Aktivierte" : "Alle");
+		final boolean[] lock = { false };
+
+		settingsPage.addBooleanChoice(GROUP_BASIC_TALENTS);
+		settingsPage.addBooleanChoice(MARK_BASIC_TALENTS);
+		settingsPage.addBooleanChoice(SHOW_PRIMARY);
+
+		final CheckBox ownTalentsOnly = settingsPage.addBooleanChoice(OWN_TALENTS_ONLY);
+
+		final ReactiveSpinner<Integer> additionalRows = settingsPage.addIntegerChoice(ADDITIONAL_TALENT_ROWS, 0, 30);
+		additionalRows.valueProperty().addListener((o, oldV, newV) -> {
+			if (!lock[0]) {
+				lock[0] = true;
+				for (final TitledPane section : settingsPage.getSections()) {
+					final String name = settingsPage.getString(section, null).get();
+					if (!specialGroups.contains(name) && !"Meta-Talente".equals(name)) {
+						settingsPage.getInt(section, ADDITIONAL_TALENT_ROWS).setValue(newV);
+					}
+				}
+				lock[0] = false;
 			}
 		});
+		additionalRows.setDisable(true);
+
+		ownTalentsOnly.setIndeterminate(true);
+		ownTalentsOnly.selectedProperty().addListener((o, oldV, newV) -> {
+			lock[0] = true;
+			for (final TitledPane section : settingsPage.getSections()) {
+				if (!specialGroups.contains(settingsPage.getString(section, null).get())) {
+					settingsPage.getBool(section, OWN_TALENTS_ONLY).setValue(newV);
+				}
+				additionalRows.setDisable(!newV);
+			}
+			lock[0] = false;
+		});
+
+		final JSONObject talentGroupNames = ResourceManager.getResource("data/Talente");
+		for (final String name : talentGroupNames.keySet()) {
+			if ("Sprachen und Schriften".equals(name)) {
+				createSection("Sprachen", lock, additionalRows, ownTalentsOnly);
+				createSection("Schriften", lock, additionalRows, ownTalentsOnly);
+			} else {
+				createSection(name, lock, additionalRows, ownTalentsOnly);
+			}
+		}
 	}
 
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
-		ownTalentsOnly.set(settings.getBoolOrDefault("Nur erlernte Talente anzeigen", false));
-		additionalTalentRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Talente", 3));
-		groupBasis.set(settings.getBoolOrDefault("Basistalente gruppieren", true));
-		markBasis.set(settings.getBoolOrDefault("Basistalente markieren", false));
-		primaryTalents.set(settings.getBoolOrDefault("Leittalente anzeigen", hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht")));
-		showMetaTalents.set(settings.getStringOrDefault("Metatalente anzeigen", "Alle"));
-		showRitualOrLiturgyKnowledge.set(settings.getBoolOrDefault("Ritual-/Liturgiekenntnis anzeigen", false));
-		basicValuesInWeaponTalent.set(settings.getBoolOrDefault("Basiswerte bei AT/PA-Verteilung berücksichtigen", true));
+		settingsPage.getBool(GROUP_BASIC_TALENTS).set(settings.getBoolOrDefault(GROUP_BASIC_TALENTS, true));
+		settingsPage.getBool(MARK_BASIC_TALENTS).set(settings.getBoolOrDefault(MARK_BASIC_TALENTS, false));
+		settingsPage.getBool(SHOW_PRIMARY)
+				.set(settings.getBoolOrDefault(SHOW_PRIMARY, hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht")));
+
+		orderSections(ResourceManager.getResource("data/Talente").keySet());
+		final JSONObject groups = settings.getObjOrDefault("Gruppen", new JSONObject(null));
+		orderSections(groups.keySet());
+
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			final JSONObject group = groups.getObjOrDefault(name, new JSONObject(null));
+			settingsPage.getBool(section, "").set(group.getBoolOrDefault("Anzeigen", true));
+			if (!specialGroups.contains(name)) {
+				settingsPage.getBool(section, OWN_TALENTS_ONLY).set(group.getBoolOrDefault(OWN_TALENTS_ONLY, false));
+			}
+			settingsPage.getInt(section, ADDITIONAL_TALENT_ROWS)
+					.set(group.getIntOrDefault(ADDITIONAL_TALENT_ROWS, specialGroups.contains(name) || "Meta-Talente".equals(name) ? 0 : 3));
+			if (name.endsWith("kampftalente")) {
+				settingsPage.getBool(section, BASIC_VALUES_IN_WEAPON_TALENTS + (name.startsWith("Nah") ? " bei AT/PA-Verteilung" : " bei FK-Wert"))
+						.set(group.getBoolOrDefault(BASIC_VALUES_IN_WEAPON_TALENTS, true));
+			}
+		}
+	}
+
+	@Override
+	protected void orderSections(final Collection<String> order) {
+		int index = 0;
+		for (final String key : order) {
+			if ("Sprachen und Schriften".equals(key)) {
+				if (sections.containsKey("Sprachen")) {
+					settingsPage.moveSection(sections.get("Sprachen"), index);
+					++index;
+				}
+				if (sections.containsKey("Schriften")) {
+					settingsPage.moveSection(sections.get("Schriften"), index);
+					++index;
+				}
+			} else if (sections.containsKey(key)) {
+				settingsPage.moveSection(sections.get(key), index);
+				++index;
+			}
+		}
 	}
 
 	@Override

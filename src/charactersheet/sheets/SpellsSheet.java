@@ -17,7 +17,6 @@ package charactersheet.sheets;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -39,21 +38,15 @@ import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
 public class SpellsSheet extends Sheet {
-	private final IntegerProperty additionalRows = new SimpleIntegerProperty(5);
-	private final Map<String, BooleanProperty> representations = new HashMap<>();
-	private final BooleanProperty spoMoTable = new SimpleBooleanProperty(true);
-	private final BooleanProperty traitTable = new SimpleBooleanProperty(true);
-	private final BooleanProperty targetTable = new SimpleBooleanProperty(true);
 
-	private final float fontSize = 8;
+	private static final String ADDITIONAL_SPELL_ROWS = "Zusätzliche Zeilen";
+
+	private final float fontSize = 8f;
 
 	public SpellsSheet() {
 		super(536);
@@ -102,34 +95,21 @@ public class SpellsSheet extends Sheet {
 		final float currentBottom = bottom.bottom;
 		float minBottom = bottom.bottom;
 
-		if (spoMoTable.get()) {
-			bottom.bottom = bottom.bottom > currentBottom ? height : currentBottom;
-			try {
-				left = createSpoMoTable(document, left);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
+		for (final TitledPane section : settingsPage.getSections()) {
+			if (settingsPage.getBool(section, "").get()) {
+				bottom.bottom = bottom.bottom > currentBottom ? height : currentBottom;
+				try {
+					left = switch (settingsPage.getString(section, null).get()) {
+						case "Spontane Modifikationen" -> createSpoMoTable(document, left);
+						case "Merkmale" -> createTraitTable(document, left);
+						case "Zielobjekte" -> createTargetTable(document, left);
+						default -> left;
+					};
+				} catch (final Exception e) {
+					ErrorLogger.logError(e);
+				}
+				minBottom = Math.min(minBottom, bottom.bottom);
 			}
-			minBottom = Math.min(minBottom, bottom.bottom);
-		}
-
-		if (traitTable.get()) {
-			bottom.bottom = bottom.bottom > currentBottom ? height : currentBottom;
-			try {
-				left = createTraitTable(document, left);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-			minBottom = Math.min(minBottom, bottom.bottom);
-		}
-
-		if (targetTable.get()) {
-			bottom.bottom = bottom.bottom > currentBottom ? height : currentBottom;
-			try {
-				left = createTargetTable(document, left);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-			minBottom = Math.min(minBottom, bottom.bottom);
 		}
 
 		bottom.bottom = minBottom;
@@ -221,6 +201,8 @@ public class SpellsSheet extends Sheet {
 			spells.put(spellName, talents.getObj(spellName));
 		}
 
+		final JSONObject representationNames = ResourceManager.getResource("data/Repraesentationen");
+
 		for (final String spellName : spells.keySet()) {
 			final JSONObject spell = spells.get(spellName);
 			final JSONObject spellRepresentations = spell.getObj("Repräsentationen");
@@ -250,7 +232,9 @@ public class SpellsSheet extends Sheet {
 						} else {
 							for (final String knownRepresentation : spellRepresentations.getObj(representation)
 									.getObjOrDefault("Verbreitung", new JSONObject(null)).keySet()) {
-								if (representations.get(knownRepresentation).get()) {
+								if (settingsPage.getBool(
+										"Repräsentation " + representationNames.getObj(knownRepresentation).getStringOrDefault("Name", knownRepresentation))
+										.get()) {
 									orderedRepresentations.put(representation, null);
 									break;
 								}
@@ -261,7 +245,10 @@ public class SpellsSheet extends Sheet {
 					for (final String representation : spellRepresentations.keySet()) {
 						for (final String knownRepresentation : spellRepresentations.getObj(representation).getObjOrDefault("Verbreitung", new JSONObject(null))
 								.keySet()) {
-							if (representations.get(knownRepresentation).get()) {
+							if (settingsPage
+									.getBool(
+											"Repräsentation " + representationNames.getObj(knownRepresentation).getStringOrDefault("Name", knownRepresentation))
+									.get()) {
 								orderedRepresentations.put(representation, null);
 								break;
 							}
@@ -274,7 +261,7 @@ public class SpellsSheet extends Sheet {
 			}
 		}
 
-		for (int i = 0; i < additionalRows.get(); ++i) {
+		for (int i = 0; i < settingsPage.getInt(ADDITIONAL_SPELL_ROWS).get(); ++i) {
 			table.addRow("");
 		}
 
@@ -480,19 +467,21 @@ public class SpellsSheet extends Sheet {
 
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
-		final JSONObject settings = new JSONObject(parent);
-		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
+		final JSONObject settings = super.getSettings(parent);
 		final JSONArray reps = new JSONArray(settings);
-		for (final String name : representations.keySet()) {
-			if (representations.get(name).get()) {
-				reps.add(name);
+		final JSONObject representationNames = ResourceManager.getResource("data/Repraesentationen");
+		for (final String representationName : representationNames.keySet()) {
+			if (settingsPage.getBool("Repräsentation " + representationNames.getObj(representationName).getStringOrDefault("Name", representationName)).get()) {
+				reps.add(representationName);
 			}
 		}
 		settings.put("Repräsentationen", reps);
-		settings.put("Zusätzliche Zeilen für Zauber", additionalRows.get());
-		settings.put("Spontane Modifikationen", spoMoTable.get());
-		settings.put("Merkmale", traitTable.get());
-		settings.put("Zielobjekte", targetTable.get());
+		settings.put(ADDITIONAL_SPELL_ROWS, settingsPage.getInt(ADDITIONAL_SPELL_ROWS).get());
+
+		for (final TitledPane section : settingsPage.getSections()) {
+			settings.put(settingsPage.getString(section, null).get(), settingsPage.getBool(section, "").get());
+		}
+
 		return settings;
 	}
 
@@ -501,27 +490,32 @@ public class SpellsSheet extends Sheet {
 		super.load();
 		final JSONObject representationNames = ResourceManager.getResource("data/Repraesentationen");
 		for (final String representationName : representationNames.keySet()) {
-			representations.put(representationName, new SimpleBooleanProperty(false));
-			final JSONObject representation = representationNames.getObj(representationName);
-			settingsPage.addBooleanChoice("Repräsentation " + representation.getStringOrDefault("Name", "unbekannt"), representations.get(representationName));
+			settingsPage.addBooleanChoice("Repräsentation " + representationNames.getObj(representationName).getStringOrDefault("Name", representationName));
 		}
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Zauber", additionalRows, 0, 60);
-		settingsPage.addBooleanChoice("Spontane Modifikationen", spoMoTable);
-		settingsPage.addBooleanChoice("Merkmale", traitTable);
-		settingsPage.addBooleanChoice("Zielobjekte", targetTable);
+		settingsPage.addIntegerChoice(ADDITIONAL_SPELL_ROWS, 0, 60);
+
+		sections.put("Spontane Modifikationen", settingsPage.addSection("Spontane Modifikationen", true));
+		sections.put("Merkmale", settingsPage.addSection("Merkmale", true));
+		sections.put("Zielobjekte", settingsPage.addSection("Zielobjekte", true));
 	}
 
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
 		final JSONArray reps = settings.getArrOrDefault("Repräsentationen", new JSONArray(null));
-		for (final String name : representations.keySet()) {
-			representations.get(name).set(reps.contains(name));
+		final JSONObject representationNames = ResourceManager.getResource("data/Repraesentationen");
+		for (final String representationName : representationNames.keySet()) {
+			settingsPage.getBool("Repräsentation " + representationNames.getObj(representationName).getStringOrDefault("Name", representationName))
+					.set(reps.contains(representationName));
 		}
-		additionalRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Zauber", 5));
-		spoMoTable.set(settings.getBoolOrDefault("Spontane Modifikationen", true));
-		traitTable.set(settings.getBoolOrDefault("Merkmale", true));
-		targetTable.set(settings.getBoolOrDefault("Zielobjekte", true));
+		settingsPage.getInt(ADDITIONAL_SPELL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_SPELL_ROWS, 5));
+
+		orderSections(List.of("Spontane Modifikationen", "Merkmale", "Zielobjekte"));
+		orderSections(settings.keySet());
+
+		settingsPage.getBool(sections.get("Spontane Modifikationen"), "").set(settings.getBoolOrDefault("Spontane Modifikationen", true));
+		settingsPage.getBool(sections.get("Merkmale"), "").set(settings.getBoolOrDefault("Merkmale", true));
+		settingsPage.getBool(sections.get("Zielobjekte"), "").set(settings.getBoolOrDefault("Zielobjekte", true));
 	}
 
 	@Override

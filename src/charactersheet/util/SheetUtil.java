@@ -658,7 +658,10 @@ public class SheetUtil {
 	}
 
 	public static boolean matchesPageSize(final PDDocument document, final PDRectangle pageSize) {
-		final PDRectangle current = document.getPage(document.getNumberOfPages() - 1).getMediaBox();
+		final int numPages = document.getNumberOfPages();
+		if (numPages == 0)
+			return true;
+		final PDRectangle current = document.getPage(numPages - 1).getMediaBox();
 		return current.getWidth() == pageSize.getWidth() && current.getHeight() == pageSize.getHeight();
 	}
 

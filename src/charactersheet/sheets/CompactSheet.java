@@ -44,30 +44,19 @@ import dsatool.resources.Settings;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
 import dsatool.util.Util;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 import jsonant.value.JSONValue;
 
 public class CompactSheet extends Sheet {
-	private static final float fontSize = 10;
 
-	private final IntegerProperty additionalArmorRows = new SimpleIntegerProperty(0);
-	private final IntegerProperty additionalCloseCombatWeaponRows = new SimpleIntegerProperty(0);
-	private final IntegerProperty additionalRangedWeaponRows = new SimpleIntegerProperty(0);
-	private final IntegerProperty additionalTalentRows = new SimpleIntegerProperty(0);
-	private final BooleanProperty showSpells = new SimpleBooleanProperty(true);
-	private final IntegerProperty additionalSpellRows = new SimpleIntegerProperty(0);
-	private final BooleanProperty groupBasis = new SimpleBooleanProperty(true);
-	private final BooleanProperty markBasis = new SimpleBooleanProperty(false);
+	private static final String ATTRIBUTES = "Eigenschaften und Basiswerte";
+	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
+	private static final String GROUP_BASIC_TALENTS = "Basistalente gruppieren";
+	private static final String MARK_BASIC_TALENTS = "Basistalente markieren";
 
-	private final BooleanProperty showTotalArmor = new SimpleBooleanProperty(
-			!"Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart")));
-	private final BooleanProperty showZoneArmor = new SimpleBooleanProperty(
-			"Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart")));
+	private static final float fontSize = 10f;
 
 	public CompactSheet() {
 		super(842, false);
@@ -115,16 +104,19 @@ public class CompactSheet extends Sheet {
 
 		table.addRow("Name: " + bio.getStringOrDefault("Vorname", "") + " " + bio.getStringOrDefault("Nachname", ""),
 				new TextCell("Spieler: " + hero.getStringOrDefault("Spieler", "")).setColSpan(2));
-		table.addRow("Rasse: " + SheetUtil.getRaceString(bio), new TextCell("AP: " + bio.getIntOrDefault("Abenteuerpunkte", 0)).setColSpan(2));
-		table.addRow("Kultur: " + SheetUtil.getCultureString(bio),
-				new TextCell("Geschlecht: " + ("weiblich".equals(bio.getString("Geschlecht")) ? "♀" : "♂")).setColSpan(2));
-		table.addRow("Profession: " + HeroUtil.getProfessionString(hero, bio, ResourceManager.getResource("data/Professionen"), true),
-				"Größe: " + bio.getIntOrDefault("Größe", 0), "Gewicht: " + bio.getIntOrDefault("Gewicht", 0));
+
+		if (settingsPage.getBool("Allgemein").get()) {
+			table.addRow("Rasse: " + SheetUtil.getRaceString(bio), new TextCell("AP: " + bio.getIntOrDefault("Abenteuerpunkte", 0)).setColSpan(2));
+			table.addRow("Kultur: " + SheetUtil.getCultureString(bio),
+					new TextCell("Geschlecht: " + ("weiblich".equals(bio.getString("Geschlecht")) ? "♀" : "♂")).setColSpan(2));
+			table.addRow("Profession: " + HeroUtil.getProfessionString(hero, bio, ResourceManager.getResource("data/Professionen"), true),
+					"Größe: " + bio.getIntOrDefault("Größe", 0), "Gewicht: " + bio.getIntOrDefault("Gewicht", 0));
+		}
 
 		bottom.bottom = table.render(document, 583, 6, bottom.bottom - 5, 10, 10);
 	}
 
-	private void addCloseCombatTable(final PDDocument document) throws IOException {
+	private void addCloseCombatTable(final PDDocument document, final TitledPane section) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(92, 92, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -207,7 +199,7 @@ public class CompactSheet extends Sheet {
 			}
 		}
 
-		for (int i = 0; i < additionalCloseCombatWeaponRows.get(); ++i) {
+		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS + " für Nahkampfwaffen").get(); ++i) {
 			table.addRow(" ", " ", " ", " ", "/", "/");
 		}
 
@@ -402,7 +394,7 @@ public class CompactSheet extends Sheet {
 		bottom.bottom = table.render(document, 583, 6, bottom.bottom - 5, 10, 10);
 	}
 
-	private void addRangedCombatTable(final PDDocument document) throws IOException {
+	private void addRangedCombatTable(final PDDocument document, final TitledPane section) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(92, 92, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -494,7 +486,7 @@ public class CompactSheet extends Sheet {
 			}
 		}
 
-		for (int i = 0; i < additionalRangedWeaponRows.get(); ++i) {
+		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS + " für Fernkampfwaffen").get(); ++i) {
 			table.addRow("");
 		}
 
@@ -503,12 +495,12 @@ public class CompactSheet extends Sheet {
 		}
 	}
 
-	private void addSpecialSkillsTable(final PDDocument document) throws IOException {
+	private void addSpecialSkillsTable(final PDDocument document, final String type) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(583, FontManager.serif, fontSize, HAlign.LEFT));
 
-		SheetUtil.addTitle(table, "Sonderfertigkeiten");
+		SheetUtil.addTitle(table, type);
 
 		final StringBuilder skillsString = new StringBuilder();
 
@@ -518,19 +510,24 @@ public class CompactSheet extends Sheet {
 		final JSONObject liturgies = ResourceManager.getResource("data/Liturgien");
 		final JSONObject actualSkills = hero.getObj("Sonderfertigkeiten");
 
-		final JSONObject[] skillGroups = new JSONObject[regularSkills.size() + rituals.size() + 2];
+		final JSONObject[] skillGroups = new JSONObject["Rituale".equals(type) ? rituals.size() + 1 : "Liturgien".equals(type) ? 1 : regularSkills.size()];
 		int i = 0;
-		for (final String skillGroupName : regularSkills.keySet()) {
-			skillGroups[i] = regularSkills.getObj(skillGroupName);
-			++i;
+		switch (type) {
+			case "Sonderfertigkeiten" -> {
+				for (final String skillGroupName : regularSkills.keySet()) {
+					skillGroups[i] = regularSkills.getObj(skillGroupName);
+					++i;
+				}
+			}
+			case "Rituale" -> {
+				for (final String skillGroupName : rituals.keySet()) {
+					skillGroups[i] = rituals.getObj(skillGroupName);
+					++i;
+				}
+				skillGroups[i] = shamanRituals;
+			}
+			case "Liturgien" -> skillGroups[0] = liturgies;
 		}
-		for (final String skillGroupName : rituals.keySet()) {
-			skillGroups[i] = rituals.getObj(skillGroupName);
-			++i;
-		}
-		skillGroups[i] = shamanRituals;
-		++i;
-		skillGroups[i] = liturgies;
 
 		final Map<String, JSONObject> skills = new TreeMap<>(SheetUtil.comparator);
 		for (final String skillName : actualSkills.keySet()) {
@@ -561,7 +558,7 @@ public class CompactSheet extends Sheet {
 		bottom.bottom = table.render(document, 583, 6, bottom.bottom - 5, 10, 10);
 	}
 
-	private void addSpellTable(final PDDocument document) throws IOException {
+	private void addSpellTable(final PDDocument document, final TitledPane section) throws IOException {
 		final JSONObject spells = ResourceManager.getResource("data/Zauber");
 		final JSONObject actualSpells = hero.getObj("Zauber");
 
@@ -648,10 +645,10 @@ public class CompactSheet extends Sheet {
 		final Cell valueTitle = new TextCell("ZfW", FontManager.serifBold, 0, 8);
 		final Object[] tableHeader = { nameTitle, repTitle, challengeTitle, traitTitle, valueTitle };
 
-		addMulticolTable(document, "Zauber", tableHeader, table, 2, rows, null, additionalSpellRows.get());
+		addMulticolTable(document, "Zauber", tableHeader, table, 2, rows, null, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
 	}
 
-	private void addTalentsTable(final PDDocument document) throws IOException {
+	private void addTalentsTable(final PDDocument document, final TitledPane section) throws IOException {
 		final JSONObject talents = ResourceManager.getResource("data/Talente");
 		final JSONObject actualTalentGroups = hero.getObj("Talente");
 
@@ -697,7 +694,8 @@ public class CompactSheet extends Sheet {
 
 			final Map<String, JSONValue> actual = new TreeMap<>((s1, s2) -> {
 				final boolean firstIsBasis = talentGroup.getObj(s1).getBoolOrDefault("Basis", false);
-				if (groupBasis.get() && firstIsBasis != talentGroup.getObj(s2).getBoolOrDefault("Basis", false)) return firstIsBasis ? -1 : 1;
+				if (settingsPage.getBool(section, GROUP_BASIC_TALENTS).get() && firstIsBasis != talentGroup.getObj(s2).getBoolOrDefault("Basis", false))
+					return firstIsBasis ? -1 : 1;
 				final boolean firstIsWriting = talentGroup.getObj(s1).getBoolOrDefault("Schrift", false);
 				if (firstIsWriting != talentGroup.getObj(s2).getBoolOrDefault("Schrift", false)) return firstIsWriting ? 1 : -1;
 				return SheetUtil.comparator.compare(s1, s2);
@@ -789,11 +787,13 @@ public class CompactSheet extends Sheet {
 					}
 
 					final TextCell nameCell = new TextCell(name,
-							markBasis.get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic : FontManager.serif, 8, 8);
+							settingsPage.getBool(section, MARK_BASIC_TALENTS).get() && talent.getBoolOrDefault("Basis", false) ? FontManager.serifItalic
+									: FontManager.serif,
+							8, 8);
 					final Object beOrLanguage = "Sprachen und Schriften".equals(talentGroupName) ? language : be;
 					rows.add(new Object[] { nameCell, special, beOrLanguage, taw });
 
-					if (groupBasis.get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
+					if (settingsPage.getBool(section, GROUP_BASIC_TALENTS).get() && basicTalent && !talent.getBoolOrDefault("Basis", false)) {
 						dividers.add(index);
 					}
 					basicTalent = talent.getBoolOrDefault("Basis", false);
@@ -809,10 +809,11 @@ public class CompactSheet extends Sheet {
 		table.addColumn(new Column(25, FontManager.serif, 8, HAlign.CENTER));
 		table.addColumn(new Column(23, FontManager.serif, 8, HAlign.CENTER));
 
-		addMulticolTable(document, "Talente", null, table, 3, rows, groupBasis.get() ? dividers : null, additionalTalentRows.get());
+		addMulticolTable(document, "Talente", null, table, 3, rows, settingsPage.getBool(section, GROUP_BASIC_TALENTS).get() ? dividers : null,
+				settingsPage.getInt(section, ADDITIONAL_ROWS).get());
 	}
 
-	private void addTotalArmorTable(final PDDocument document) throws IOException {
+	private void addTotalArmorTable(final PDDocument document, final TitledPane section) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(91, 91, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -879,7 +880,7 @@ public class CompactSheet extends Sheet {
 			RS += pros.getObj("Natürlicher Rüstungsschutz").getIntOrDefault("Stufe", 0);
 		}
 
-		for (int i = 0; i < additionalArmorRows.get(); ++i) {
+		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS + " für Rüstung").get(); ++i) {
 			table.addRow("");
 		}
 
@@ -888,7 +889,7 @@ public class CompactSheet extends Sheet {
 		bottom.bottom = table.render(document, 135, 454, bottom.bottom - 5, 10, 10);
 	}
 
-	private void addZoneArmorTable(final PDDocument document) throws IOException {
+	private void addZoneArmorTable(final PDDocument document, final TitledPane section) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(91, 91, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -970,7 +971,7 @@ public class CompactSheet extends Sheet {
 			}
 		}
 
-		for (int i = 0; i < additionalArmorRows.get(); ++i) {
+		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS + " für Rüstung").get(); ++i) {
 			table.addRow("");
 		}
 
@@ -1002,81 +1003,82 @@ public class CompactSheet extends Sheet {
 				ErrorLogger.logError(e);
 			}
 
-			try {
-				addAttributesTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-
-			try {
-				addDerivedValuesTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-
-			try {
-				addProsAndConsTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-
-			try {
-				addSpecialSkillsTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-
-			final float smallTop = bottom.bottom;
-
-			try {
-				addCloseCombatTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-
-			try {
-				addRangedCombatTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-
-			final float smallBottom = bottom.bottom;
-			bottom.bottom = smallTop;
-
-			try {
-				addInfightTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-
-			final float secondBottom = bottom.bottom;
-			bottom.bottom = smallTop;
-			if (showTotalArmor.get()) {
-				try {
-					addTotalArmorTable(document);
-				} catch (final Exception e) {
-					ErrorLogger.logError(e);
+			for (final TitledPane section : settingsPage.getSections()) {
+				if (!settingsPage.getBool(section, "").get()) {
+					continue;
 				}
-			}
-			bottom.bottom = Math.min(secondBottom, bottom.bottom);
-			if (showZoneArmor.get()) {
 				try {
-					addZoneArmorTable(document);
-				} catch (final Exception e) {
-					ErrorLogger.logError(e);
-				}
-			}
-			bottom.bottom = Math.min(bottom.bottom, smallBottom);
+					final String name = settingsPage.getString(section, null).get();
+					switch (name) {
+						case ATTRIBUTES -> {
+							try {
+								addAttributesTable(document);
+							} catch (final Exception e) {
+								ErrorLogger.logError(e);
+							}
+							try {
+								addDerivedValuesTable(document);
+							} catch (final Exception e) {
+								ErrorLogger.logError(e);
+							}
+						}
 
-			try {
-				addTalentsTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
+						case "Vor-/Nachteile" -> addProsAndConsTable(document);
 
-			if (showSpells.get()) {
-				try {
-					addSpellTable(document);
+						case "Sonderfertigkeiten", "Rituale", "Liturgien" -> addSpecialSkillsTable(document, name);
+
+						case "Kampf" -> {
+							float smallTop = bottom.bottom;
+
+							try {
+								addCloseCombatTable(document, section);
+							} catch (final Exception e) {
+								ErrorLogger.logError(e);
+							}
+
+							try {
+								addRangedCombatTable(document, section);
+							} catch (final Exception e) {
+								ErrorLogger.logError(e);
+							}
+
+							final float smallBottom = bottom.bottom;
+							smallTop = smallTop > smallBottom ? smallTop : height - 5;
+							bottom.bottom = smallTop;
+
+							try {
+								addInfightTable(document);
+							} catch (final Exception e) {
+								ErrorLogger.logError(e);
+							}
+
+							final float secondBottom = bottom.bottom;
+							bottom.bottom = smallTop;
+
+							if (settingsPage.getBool(section, "Gesamtrüstung").get()) {
+								try {
+									addTotalArmorTable(document, section);
+								} catch (final Exception e) {
+									ErrorLogger.logError(e);
+								}
+							}
+							bottom.bottom = Math.min(secondBottom, bottom.bottom);
+
+							if (settingsPage.getBool(section, "Zonenrüstung").get()) {
+								try {
+									addZoneArmorTable(document, section);
+								} catch (final Exception e) {
+									ErrorLogger.logError(e);
+								}
+							}
+
+							bottom.bottom = Math.min(bottom.bottom, smallBottom);
+						}
+
+						case "Talente" -> addTalentsTable(document, section);
+
+						case "Zauber" -> addSpellTable(document, section);
+					}
 				} catch (final Exception e) {
 					ErrorLogger.logError(e);
 				}
@@ -1088,51 +1090,94 @@ public class CompactSheet extends Sheet {
 
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
-		final JSONObject settings = new JSONObject(parent);
-		settings.put("Leerseite einfügen", emptyPage.get());
-		settings.put("Gesamtrüstung", showTotalArmor.get());
-		settings.put("Zonenrüstung", showZoneArmor.get());
-		settings.put("Zusätzliche Zeilen für Nahkampfwaffen", additionalCloseCombatWeaponRows.get());
-		settings.put("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows.get());
-		settings.put("Zusätzliche Zeilen für Rüstung", additionalArmorRows.get());
-		settings.put("Zusätzliche Zeilen für Talente", additionalTalentRows.get());
-		settings.put("Zauber", showSpells.get());
-		settings.put("Zusätzliche Zeilen für Zauber", additionalSpellRows.get());
-		settings.put("Basistalente gruppieren", groupBasis.get());
-		settings.put("Basistalente markieren", markBasis.get());
+		final JSONObject settings = super.getSettings(parent);
+		settings.put("Allgemein", settingsPage.getBool("Allgemein").get());
+
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			settings.put(name, settingsPage.getBool(section, "").get());
+			switch (name) {
+				case "Kampf" -> {
+					settings.put("Gesamtrüstung", settingsPage.getBool(section, "Gesamtrüstung").get());
+					settings.put("Zonenrüstung", settingsPage.getBool(section, "Zonenrüstung").get());
+					settings.put(ADDITIONAL_ROWS + " für Nahkampfwaffen", settingsPage.getInt(section, ADDITIONAL_ROWS + " für Nahkampfwaffen").get());
+					settings.put(ADDITIONAL_ROWS + " für Fernkampfwaffen", settingsPage.getInt(section, ADDITIONAL_ROWS + " für Fernkampfwaffen").get());
+					settings.put(ADDITIONAL_ROWS + " für Rüstung", settingsPage.getInt(section, ADDITIONAL_ROWS + " für Rüstung").get());
+				}
+				case "Talente" -> {
+					settings.put("Basistalente gruppieren", settingsPage.getBool(section, GROUP_BASIC_TALENTS).get());
+					settings.put("Basistalente markieren", settingsPage.getBool(section, MARK_BASIC_TALENTS).get());
+					settings.put(ADDITIONAL_ROWS + " für Talente", settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+				}
+				case "Zauber" -> settings.put(ADDITIONAL_ROWS + " für Zauber", settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+			}
+		}
 		return settings;
 	}
 
 	@Override
 	public void load() {
 		super.load();
-		settingsPage.addBooleanChoice("Gesamtrüstung", showTotalArmor);
-		settingsPage.addBooleanChoice("Zonenrüstung", showZoneArmor);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Nahkampfwaffen", additionalCloseCombatWeaponRows, 0, 30);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Fernkampfwaffen", additionalRangedWeaponRows, 0, 30);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Rüstung", additionalArmorRows, 0, 30);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Talente", additionalTalentRows, 0, 60);
-		settingsPage.addBooleanChoice("Zauber", showSpells);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Zauber", additionalSpellRows, 0, 60);
-		settingsPage.addBooleanChoice("Basistalente gruppieren", groupBasis);
-		settingsPage.addBooleanChoice("Basistalente markieren", markBasis);
+
+		settingsPage.addBooleanChoice("Allgemein");
+		sections.put(ATTRIBUTES, settingsPage.addSection(ATTRIBUTES, true));
+		sections.put("Vor-/Nachteile", settingsPage.addSection("Vor-/Nachteile", true));
+		sections.put("Sonderfertigkeiten", settingsPage.addSection("Sonderfertigkeiten", true));
+
+		sections.put("Kampf", settingsPage.addSection("Kampf", true));
+		settingsPage.addBooleanChoice("Gesamtrüstung");
+		settingsPage.addBooleanChoice("Zonenrüstung");
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS + " für Nahkampfwaffen", 0, 30);
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS + " für Fernkampfwaffen", 0, 30);
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS + " für Rüstung", 0, 30);
+
+		sections.put("Talente", settingsPage.addSection("Talente", true));
+		settingsPage.addBooleanChoice(GROUP_BASIC_TALENTS);
+		settingsPage.addBooleanChoice(MARK_BASIC_TALENTS);
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 60);
+
+		sections.put("Zauber", settingsPage.addSection("Zauber", true));
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 60);
+
+		sections.put("Rituale", settingsPage.addSection("Rituale", true));
+		sections.put("Liturgien", settingsPage.addSection("Liturgien", true));
 	}
 
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
-		showTotalArmor.set(
+
+		settingsPage.getBool("Allgemein").set(settings.getBoolOrDefault("Allgemein", true));
+
+		orderSections(List.of(ATTRIBUTES, "Vor-/Nachteile", "Sonderfertigkeiten", "Kampf", "Talente", "Zauber", "Rituale", "Liturgien"));
+		orderSections(settings.keySet());
+
+		settingsPage.getBool(sections.get(ATTRIBUTES), "").set(settings.getBoolOrDefault(ATTRIBUTES, true));
+		settingsPage.getBool(sections.get("Vor-/Nachteile"), "").set(settings.getBoolOrDefault("Vor-/Nachteile", true));
+		settingsPage.getBool(sections.get("Sonderfertigkeiten"), "").set(settings.getBoolOrDefault("Sonderfertigkeiten", true));
+
+		final TitledPane fight = sections.get("Kampf");
+		settingsPage.getBool(fight, "").set(settings.getBoolOrDefault("Kampf", true));
+		settingsPage.getBool(fight, "Gesamtrüstung").set(
 				settings.getBoolOrDefault("Gesamtrüstung", !"Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart"))));
-		showZoneArmor.set(
+		settingsPage.getBool(fight, "Zonenrüstung").set(
 				settings.getBoolOrDefault("Zonenrüstung", "Zonenrüstung".equals(Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart"))));
-		additionalCloseCombatWeaponRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Nahkampfwaffen", 0));
-		additionalRangedWeaponRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Fernkampfwaffen", 0));
-		additionalArmorRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Rüstung", 0));
-		additionalTalentRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Talente", 0));
-		showSpells.set(settings.getBoolOrDefault("Zauber", true));
-		additionalSpellRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Zauber", 0));
-		groupBasis.set(settings.getBoolOrDefault("Basistalente gruppieren", true));
-		markBasis.set(settings.getBoolOrDefault("Basistalente markieren", false));
+		settingsPage.getInt(fight, "Zusätzliche Zeilen für Nahkampfwaffen").set(settings.getIntOrDefault("Zusätzliche Zeilen für Nahkampfwaffen", 0));
+		settingsPage.getInt(fight, "Zusätzliche Zeilen für Fernkampfwaffen").set(settings.getIntOrDefault("Zusätzliche Zeilen für Fernkampfwaffen", 0));
+		settingsPage.getInt(fight, "Zusätzliche Zeilen für Rüstung").set(settings.getIntOrDefault("Zusätzliche Zeilen für Rüstung", 0));
+
+		final TitledPane talents = sections.get("Talente");
+		settingsPage.getBool(talents, "").set(settings.getBoolOrDefault("Talente", true));
+		settingsPage.getBool(talents, GROUP_BASIC_TALENTS).set(settings.getBoolOrDefault("Basistalente gruppieren", true));
+		settingsPage.getBool(talents, MARK_BASIC_TALENTS).set(settings.getBoolOrDefault("Basistalente markieren", false));
+		settingsPage.getInt(talents, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Talente", 0));
+
+		final TitledPane spells = sections.get("Zauber");
+		settingsPage.getBool(spells, "").set(settings.getBoolOrDefault("Zauber", true));
+		settingsPage.getInt(spells, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Zauber", 0));
+
+		settingsPage.getBool(sections.get("Rituale"), "").set(settings.getBoolOrDefault("Sonderfertigkeiten", true));
+		settingsPage.getBool(sections.get("Liturgien"), "").set(settings.getBoolOrDefault("Sonderfertigkeiten", true));
 	}
 
 	@Override

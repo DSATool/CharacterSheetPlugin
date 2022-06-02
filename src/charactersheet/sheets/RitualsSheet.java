@@ -17,11 +17,8 @@ package charactersheet.sheets;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -45,28 +42,77 @@ import dsa41basis.util.DSAUtil;
 import dsa41basis.util.DSAUtil.Units;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
+import dsatool.ui.ReactiveSpinner;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.Property;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
 public class RitualsSheet extends Sheet {
-	private static JSONObject apport;
 
-	private final BooleanProperty ownRitualsOnly = new SimpleBooleanProperty(false);
+	private static final String OWN_RITUALS_ONLY = "Nur erlernte/verbilligte Rituale";
+	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
 
-	private final float fontSize = 7;
+	private static final float fontSize = 7f;
 
-	private final Map<String, Property<?>> ritualGroupCounts = new HashMap<>();
-	Table ritualKnowledgeTable;
+	private final boolean[] lock = { false };
+
+	private CheckBox ownRitualsOnly;
 
 	public RitualsSheet() {
 		super(536);
+	}
+
+	private void addSection(final String name, final Tuple<String, JSONObject> data, final boolean selected) {
+		final TitledPane section = settingsPage.addSection(name, true);
+		sections.put(name, section);
+		section.setUserData(data);
+		settingsPage.getBool(section, "").set(selected);
+		final BooleanProperty own = settingsPage.addBooleanChoice(OWN_RITUALS_ONLY).selectedProperty();
+		final ReactiveSpinner<Integer> additionalRows = settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 20);
+		additionalRows.setDisable(true);
+		own.addListener((o, oldV, newV) -> {
+			if (!lock[0]) {
+				ownRitualsOnly.setIndeterminate(true);
+			}
+			additionalRows.setDisable(!newV);
+		});
+	}
+
+	private void addUnspecificSection(final String name, final JSONObject groups) {
+		boolean show = false;
+		if (groups.containsKey(name)) {
+			show = groups.getBoolOrDefault(name, false);
+		} else if (hero != null) {
+			show = switch (name) {
+				case "Stabzauber" -> false;
+				case "Zauberzeichen" -> hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen");
+				case "Bann- und Schutzkreise" -> {
+					yield hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen") || hero.getObj("Zauber").containsKey("Invocatio minor")
+							|| hero.getObj("Zauber").containsKey("Invocatio maior");
+				}
+				case "Elfenlieder" -> hero.getObj("Vorteile").containsKey("Zweistimmiger Gesang");
+				default -> {
+					final List<String> requiredKnowledges = getRequiredKnowledges(name);
+					if (requiredKnowledges.isEmpty()) {
+						yield true;
+					} else {
+						final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", new JSONArray(null));
+						boolean found = false;
+						for (int i = 0; !found && i < ritualKnowledges.size(); ++i) {
+							if (requiredKnowledges.contains(ritualKnowledges.getObj(i).getString("Auswahl"))) {
+								found = true;
+							}
+						}
+						yield found;
+					}
+				}
+			};
+		}
+		addSection(name, null, show);
 	}
 
 	@Override
@@ -76,160 +122,121 @@ public class RitualsSheet extends Sheet {
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll, showName, showDate);
+		final Table[] ritualKnowledgeTable = new Table[] { getRitualKnowledgeTable(pageSize != SheetUtil.landscape) };
+
+		header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll, showName, showDate).andThen(event -> {
+			try {
+				if (pageSize == SheetUtil.landscape) {
+					bottom.bottom = ritualKnowledgeTable[0].render(document, 818, 12, 536, 59, 10) - 5;
+				} else {
+					bottom.bottom = ritualKnowledgeTable[0].render(document, 571, 12, 771, 72, 10) - 5;
+				}
+			} catch (final IOException e) {
+				ErrorLogger.logError(e);
+			}
+		});
 
 		final JSONObject rituals = ResourceManager.getResource("data/Rituale");
 		final JSONObject ritualGroupData = ResourceManager.getResource("data/Ritualgruppen");
 
-		apport = rituals.getObj("Allgemeine Rituale").getObj("Apport");
+		final JSONObject apport = rituals.getObj("Allgemeine Rituale").getObj("Apport");
 
-		final JSONArray items = hero != null ? hero.getObj("Besitz").getArrOrDefault("Ausrüstung", null) : null;
+		final List<Tuple<Table, Boolean>> tables = new ArrayList<>(settingsPage.getSections().size());
 
-		final List<Table> landscapeTables = new ArrayList<>();
-		final List<Table> portraitTables = new ArrayList<>();
-		Table commonRituals = null;
+		for (final TitledPane section : settingsPage.getSections()) {
+			if (!settingsPage.getBool(section, "").get()) {
+				continue;
+			}
 
-		for (final String ritualGroupName : rituals.keySet()) {
+			@SuppressWarnings("unchecked")
+			final Tuple<String, JSONObject> data = (Tuple<String, JSONObject>) section.getUserData();
+			final String ritualGroupName = data == null ? settingsPage.getString(section, null).get() : data._1;
 			final JSONObject ritualGroup = ritualGroupData.getObj(ritualGroupName);
-			if (items != null && ritualGroup.getString("Ritualobjekt") != null) {
+			JSONObject item = data == null ? null : data._2;
+			final JSONObject baseItem = item;
+			if (item != null) {
 				final String ritualObjectName = ritualGroup.getString("Ritualobjekt");
-				for (int i = 0; i < items.size(); ++i) {
-					JSONObject item = items.getObj(i);
-					final JSONArray categories = item.getArr("Kategorien");
-					if (categories.contains(ritualObjectName)) {
-						final JSONObject baseItem = item;
-						if (item.containsKey(ritualObjectName)) {
-							item = item.getObj(ritualObjectName);
-						}
-						try {
-							final Tuple<Table, Boolean> table = createTable(document, ritualGroupName, rituals.getObj(ritualGroupName), ritualGroup, item,
-									baseItem);
-							if (table._1.getNumRows() > 2) {
-								if (table._2) {
-									portraitTables.add(table._1);
-								} else {
-									landscapeTables.add(table._1);
-								}
-							}
-						} catch (final Exception e) {
-							ErrorLogger.logError(e);
-						}
-					}
+				if (item.containsKey(ritualObjectName)) {
+					item = item.getObj(ritualObjectName);
 				}
 			}
-			if (ritualGroupCounts.containsKey(ritualGroupName)) {
-				int tables;
-				final Property<?> ritualGroupCount = ritualGroupCounts.get(ritualGroupName);
-				if (ritualGroupCount instanceof IntegerProperty) {
-					tables = ((IntegerProperty) ritualGroupCount).get();
-				} else {
-					tables = ((BooleanProperty) ritualGroupCount).get() ? 1 : 0;
+
+			try {
+				final String name = settingsPage.getString(section, null).get();
+				final JSONObject ritual = rituals.getObj(ritualGroupName);
+				final Tuple<Table, Boolean> table = createTable(document, name, ritualGroupName, ritual, ritualGroup, item, baseItem, apport);
+				if (table._1.getNumRows() > 2) {
+					tables.add(table);
 				}
-				for (int i = 0; i < tables; ++i) {
-					try {
-						final Tuple<Table, Boolean> table = createTable(document, ritualGroupName, rituals.getObj(ritualGroupName), ritualGroup, null, null);
-						if ("Allgemeine Rituale".equals(ritualGroupName)) {
-							commonRituals = table._1;
-						} else if (table._1.getNumRows() > 2) {
-							if (table._2) {
-								portraitTables.add(table._1);
-							} else {
-								landscapeTables.add(table._1);
-							}
-						}
-					} catch (final Exception e) {
-						ErrorLogger.logError(e);
-					}
-				}
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
 			}
 		}
 
-		if (SheetUtil.matchesPageSize(document, PDRectangle.A4)) {
-			pageSize = PDRectangle.A4;
-			height = 771;
-		} else {
-			pageSize = SheetUtil.landscape;
-		}
+		for (int i = 0; i < tables.size(); ++i) {
+			final Table table = tables.get(i)._1;
+			Boolean portrait = tables.get(i)._2;
 
-		startCreate(document);
-
-		boolean firstTable = true;
-
-		ritualKnowledgeTable = getRitualKnowledgeTable(pageSize != SheetUtil.landscape);
-
-		if (commonRituals != null) {
-			firstTable = false;
-			if (pageSize == SheetUtil.landscape) {
-				bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
-				bottom.bottom = commonRituals.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable.getHeight(818), 10) - 5;
-			} else {
-				bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
-				bottom.bottom = commonRituals.render(document, 571, 12, bottom.bottom, 77 + ritualKnowledgeTable.getHeight(571), 10) - 5;
-			}
-		}
-
-		final Consumer<TableEvent> ritualHeader = header;
-
-		for (int i = 0; i < 2; ++i) {
-			header = ritualHeader.andThen(event -> {
-				try {
-					if (pageSize == SheetUtil.landscape) {
-						bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, 536, 59, 10) - 5;
+			if (portrait == null) {
+				if (settingsPage.getBool(AS_SEPARATE_SHEET).get()) {
+					if (tables.size() > i + 1) {
+						portrait = tables.get(i + 1)._2;
 					} else {
-						bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, 771, 72, 10) - 5;
+						portrait = false;
 					}
-				} catch (final IOException e) {
-					ErrorLogger.logError(e);
+				} else {
+					portrait = pageSize != SheetUtil.landscape;
 				}
-			});
+			}
 
-			if (pageSize == SheetUtil.landscape && !landscapeTables.isEmpty()) {
-				if (!SheetUtil.matchesPageSize(document, SheetUtil.landscape)) {
-					final PDPage page = new PDPage(SheetUtil.landscape);
-					document.addPage(page);
-					final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
-					ritualHeader.accept(new TableEvent(document, stream, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
-					stream.close();
-					bottom = new BottomObserver(536);
+			if (i == 0) {
+				if (portrait) {
+					pageSize = PDRectangle.A4;
+					height = 766 - Math.round(ritualKnowledgeTable[0].getHeight(571));
+				} else {
+					pageSize = SheetUtil.landscape;
+					height = 531 - Math.round(ritualKnowledgeTable[0].getHeight(818));
 				}
-				for (final Table table : landscapeTables) {
-					if (firstTable) {
-						bottom.bottom = ritualKnowledgeTable.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
-						firstTable = false;
-					}
-					table.addEventHandler(EventType.BEGIN_PAGE, header);
-					bottom.bottom = table.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable.getHeight(818), 10) - 5;
-				}
-			} else if (pageSize == PDRectangle.A4 && !portraitTables.isEmpty()) {
+
+				startCreate(document);
+			}
+
+			table.addEventHandler(EventType.BEGIN_PAGE, header);
+			if (portrait) {
 				if (!SheetUtil.matchesPageSize(document, PDRectangle.A4)) {
+					bottom = new BottomObserver(771);
+					pageSize = PDRectangle.A4;
+					ritualKnowledgeTable[0] = getRitualKnowledgeTable(true);
 					final PDPage page = new PDPage(PDRectangle.A4);
 					document.addPage(page);
 					final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
-					ritualHeader.accept(new TableEvent(document, stream, 0, PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight()));
+					header.accept(
+							new TableEvent(document, stream, 0, PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight()));
 					stream.close();
-					bottom = new BottomObserver(771);
 				}
-				for (final Table table : portraitTables) {
-					if (firstTable) {
-						bottom.bottom = ritualKnowledgeTable.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
-						firstTable = false;
-					}
-					table.addEventHandler(EventType.BEGIN_PAGE, header);
-					bottom.bottom = table.render(document, 571, 12, bottom.bottom, 77 + ritualKnowledgeTable.getHeight(571), 10) - 5;
+				bottom.bottom = table.render(document, 571, 12, bottom.bottom, 77 + ritualKnowledgeTable[0].getHeight(571), 10) - 5;
+			} else {
+				if (!SheetUtil.matchesPageSize(document, SheetUtil.landscape)) {
+					bottom = new BottomObserver(536);
+					pageSize = SheetUtil.landscape;
+					ritualKnowledgeTable[0] = getRitualKnowledgeTable(false);
+					final PDPage page = new PDPage(SheetUtil.landscape);
+					document.addPage(page);
+					final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
+					header.accept(
+							new TableEvent(document, stream, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
+					stream.close();
 				}
+				bottom.bottom = table.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable[0].getHeight(818), 10) - 5;
 			}
-
-			pageSize = pageSize == SheetUtil.landscape ? PDRectangle.A4 : SheetUtil.landscape;
-			ritualKnowledgeTable = getRitualKnowledgeTable(pageSize != SheetUtil.landscape);
-
-			firstTable = true;
 		}
 
 		endCreate(document);
 	}
 
-	private Tuple<Table, Boolean> createTable(final PDDocument document, final String groupName, final JSONObject actualGroup, final JSONObject group,
-			final JSONObject item, final JSONObject baseItem) throws IOException {
+	private Tuple<Table, Boolean> createTable(final PDDocument document, final String name, final String groupName, final JSONObject actualGroup,
+			final JSONObject group,
+			final JSONObject item, final JSONObject baseItem, final JSONObject apport) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		final Cell nameTitle = new TextCell("Ritual", FontManager.serifBold, 8.5f, 8.5f);
@@ -403,8 +410,8 @@ public class RitualsSheet extends Sheet {
 		});
 
 		final List<JSONObject> preconditions = new ArrayList<>();
-		DSAUtil.foreach(o -> true, (name, ritual) -> {
-			if (!"Apport".equals(name)) {
+		DSAUtil.foreach(o -> true, (ritualName, ritual) -> {
+			if (!"Apport".equals(ritualName)) {
 				preconditions.add(ritual.getObjOrDefault("Voraussetzungen", null));
 			}
 			return true;
@@ -509,7 +516,7 @@ public class RitualsSheet extends Sheet {
 
 		final String additionalHeader = headerString.toString();
 
-		table.addRowAtIndex(0, SheetUtil.createTitleCell(groupName, table.getNumColumns() - 1).setBorder(0, 0, 0, 0.25f),
+		table.addRowAtIndex(0, SheetUtil.createTitleCell(name, table.getNumColumns() - 1).setBorder(0, 0, 0, 0.25f),
 				new TextCell(additionalHeader).setHAlign(HAlign.RIGHT).setColSpan(1).setBorder(0, 0, 0, 0.25f));
 
 		JSONObject actualSkills = null;
@@ -537,12 +544,12 @@ public class RitualsSheet extends Sheet {
 			}
 		}
 
-		return new Tuple<>(table, width[0] < 400);
+		return new Tuple<>(table, "Allgemeine Rituale".equals(groupName) ? null : width[0] < 400);
 	}
 
 	private void fillRitual(final Table table, final JSONObject actualGroup, final boolean isObjectRitual, final String ritualName, final JSONObject ritual,
 			final JSONObject actualSkill, final JSONObject cheaperSkill, final JSONObject item, final JSONObject baseItem, final boolean needsPrecondition) {
-		if (ownRitualsOnly.get() && actualSkill == null && cheaperSkill == null) return;
+		if (settingsPage.getBool(OWN_RITUALS_ONLY).get() && actualSkill == null && cheaperSkill == null) return;
 
 		String actual = " ";
 		if (actualSkill != null) {
@@ -818,7 +825,7 @@ public class RitualsSheet extends Sheet {
 			}
 		}
 
-		if (((BooleanProperty) ritualGroupCounts.get("Elfenlieder")).get()) {
+		if (settingsPage.getBool(sections.get("Elfenlieder"), "").get()) {
 			if (firstLine) {
 				firstLine = false;
 			} else {
@@ -835,8 +842,9 @@ public class RitualsSheet extends Sheet {
 				singVal = Integer.toString(singing != null ? singing.getIntOrDefault("TaW", 0) : 0);
 			}
 
-			table.addCells("Singen (" + DSAUtil.getChallengeString(
-					HeroUtil.findTalent("Singen")._1.getArrOrDefault("Probe", new JSONArray(Arrays.asList("IN", "CH", "CH"), null))) + "): ", singVal);
+			table.addCells("Singen ("
+					+ DSAUtil.getChallengeString(HeroUtil.findTalent("Singen")._1.getArrOrDefault("Probe", new JSONArray(List.of("IN", "CH", "CH"), null)))
+					+ "): ", singVal);
 
 			++count;
 
@@ -856,12 +864,9 @@ public class RitualsSheet extends Sheet {
 				musicVal = Integer.toString(music != null ? music.getIntOrDefault("TaW", 0) : 0);
 			}
 
-			table.addCells(
-					"Musizieren ("
-							+ DSAUtil.getChallengeString(
-									HeroUtil.findTalent("Musizieren")._1.getArrOrDefault("Probe", new JSONArray(Arrays.asList("IN", "CH", "FF"), null)))
-							+ "): ",
-					musicVal);
+			table.addCells("Musizieren ("
+					+ DSAUtil.getChallengeString(HeroUtil.findTalent("Musizieren")._1.getArrOrDefault("Probe", new JSONArray(List.of("IN", "CH", "FF"), null)))
+					+ "): ", musicVal);
 
 			++count;
 		}
@@ -876,20 +881,19 @@ public class RitualsSheet extends Sheet {
 
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
-		final JSONObject settings = new JSONObject(parent);
-		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
-		settings.put("Leerseite einfügen", emptyPage.get());
-		settings.put("Nur erlernte/verbilligte Rituale", ownRitualsOnly.get());
+		final JSONObject settings = super.getSettings(parent);
+
 		final JSONObject groups = new JSONObject(settings);
-		for (final String name : ritualGroupCounts.keySet()) {
-			final Property<?> ritualGroupCount = ritualGroupCounts.get(name);
-			if (ritualGroupCount instanceof IntegerProperty) {
-				groups.put(name, ((IntegerProperty) ritualGroupCount).get());
-			} else {
-				groups.put(name, ((BooleanProperty) ritualGroupCount).get());
-			}
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			final JSONObject group = new JSONObject(groups);
+			group.put("Anzeigen", settingsPage.getBool(section, "").get());
+			group.put(OWN_RITUALS_ONLY, settingsPage.getBool(section, OWN_RITUALS_ONLY).get());
+			group.put(ADDITIONAL_ROWS, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+			groups.put(name, group);
 		}
 		settings.put("Gruppen", groups);
+
 		return settings;
 	}
 
@@ -906,82 +910,53 @@ public class RitualsSheet extends Sheet {
 	@Override
 	public void load() {
 		super.load();
-		settingsPage.addBooleanChoice("Nur erlernte/verbilligte Rituale", ownRitualsOnly);
-		final JSONObject ritualGroupData = ResourceManager.getResource("data/Ritualgruppen");
-		for (final String ritualGroupName : ritualGroupData.keySet()) {
-			if (ritualGroupData.getObj(ritualGroupName).getString("Ritualobjekt") != null) {
-				final IntegerProperty property = new SimpleIntegerProperty(0);
-				ritualGroupCounts.put(ritualGroupName, property);
-				settingsPage.addIntegerChoice("Zusätzliche Tabellen für " + ritualGroupName, property, 0, 5);
-			} else {
-				final BooleanProperty property = new SimpleBooleanProperty(false);
-				ritualGroupCounts.put(ritualGroupName, property);
-				settingsPage.addBooleanChoice(ritualGroupName, property);
+
+		ownRitualsOnly = settingsPage.addBooleanChoice(OWN_RITUALS_ONLY);
+		ownRitualsOnly.setIndeterminate(true);
+		ownRitualsOnly.selectedProperty().addListener((o, oldV, newV) -> {
+			lock[0] = true;
+			for (final TitledPane section : settingsPage.getSections()) {
+				settingsPage.getBool(section, OWN_RITUALS_ONLY).setValue(newV);
 			}
-		}
+			lock[0] = false;
+		});
 	}
 
 	@Override
 	public void loadSettings(final JSONObject settings) {
-		super.loadSettings(settings);
-		ownRitualsOnly.set(settings.getBoolOrDefault("Nur erlernte/verbilligte Rituale", false));
 
+		settingsPage.clear();
+		sections.clear();
+		load();
+		super.loadSettings(settings);
+
+		final JSONObject ritualGroupData = ResourceManager.getResource("data/Ritualgruppen");
+		final JSONArray items = hero != null ? hero.getObj("Besitz").getArrOrDefault("Ausrüstung", null) : null;
 		final JSONObject groups = settings.getObjOrDefault("Gruppen", new JSONObject(null));
-		for (final String name : ritualGroupCounts.keySet()) {
-			final Property<?> ritualGroupCount = ritualGroupCounts.get(name);
-			if (ritualGroupCount instanceof IntegerProperty) {
-				int value = 0;
-				if (groups.containsKey(name) && groups.getInt(name) != null) {
-					value = groups.getInt(name);
-				} else if ("Stabzauber".equals(name)) {
-					value = 0;
-				} else if (hero != null) {
-					final List<String> requiredKnowledges = getRequiredKnowledges(name);
-					if (requiredKnowledges.isEmpty()) {
-						value = 1;
-					} else {
-						final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", new JSONArray(null));
-						for (int i = 0; i < ritualKnowledges.size(); ++i) {
-							if (requiredKnowledges.contains(ritualKnowledges.getObj(i).getString("Auswahl"))) {
-								value = 1;
-								break;
-							}
-						}
+
+		for (final String ritualGroupName : ritualGroupData.keySet()) {
+			final JSONObject ritualGroup = ritualGroupData.getObj(ritualGroupName);
+			if (items != null && ritualGroup.getString("Ritualobjekt") != null) {
+				final String ritualObjectName = ritualGroup.getString("Ritualobjekt");
+				boolean found = false;
+				for (int i = 0; i < items.size(); ++i) {
+					final JSONObject item = items.getObj(i);
+					final JSONArray categories = item.getArr("Kategorien");
+					if (categories.contains(ritualObjectName)) {
+						final String name = item.containsKey("Name") ? ritualGroupName + ": " + item.getString("Name") : ritualGroupName;
+						addSection(name, new Tuple<>(ritualGroupName, item), true);
+						found = true;
 					}
 				}
-				((IntegerProperty) ritualGroupCount).set(groups.getIntOrDefault(name, value));
-			} else {
-				boolean value = false;
-				if (groups.containsKey(name) && groups.getBool(name) != null) {
-					value = groups.getBool(name);
-				} else if (hero != null) {
-					value = switch (name) {
-						case "Zauberzeichen" -> hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen");
-						case "Bann- und Schutzkreise" -> {
-							yield hero.getObj("Sonderfertigkeiten").containsKey("Zauberzeichen") || hero.getObj("Zauber").containsKey("Invocatio minor")
-									|| hero.getObj("Zauber").containsKey("Invocatio maior");
-						}
-						case "Elfenlieder" -> hero.getObj("Vorteile").containsKey("Zweistimmiger Gesang");
-						default -> {
-							final List<String> requiredKnowledges = getRequiredKnowledges(name);
-							if (requiredKnowledges.isEmpty()) {
-								yield true;
-							} else {
-								final JSONArray ritualKnowledges = hero.getObj("Sonderfertigkeiten").getArrOrDefault("Ritualkenntnis", new JSONArray(null));
-								boolean found = false;
-								for (int i = 0; !found && i < ritualKnowledges.size(); ++i) {
-									if (requiredKnowledges.contains(ritualKnowledges.getObj(i).getString("Auswahl"))) {
-										found = true;
-									}
-								}
-								yield found;
-							}
-						}
-					};
+				if (!found) {
+					addUnspecificSection(ritualGroupName, groups);
 				}
-				((BooleanProperty) ritualGroupCount).set(value);
+			} else {
+				addUnspecificSection(ritualGroupName, groups);
 			}
 		}
+
+		orderSections(groups.keySet());
 	}
 
 	@Override

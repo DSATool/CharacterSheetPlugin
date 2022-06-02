@@ -16,7 +16,6 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -38,14 +37,17 @@ import dsa41basis.util.DSAUtil.Units;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
 public class InventorySheet extends Sheet {
+
+	private static final String SHOW_ATTRIBUTES = "Eigenschaften anzeigen";
+	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
+
+	private final static float fontSize = 9f;
+
 	private final static Map<String, String> types = new HashMap<>();
 	static {
 		types.put("Applicatus", "Ap");
@@ -56,6 +58,7 @@ public class InventorySheet extends Sheet {
 		types.put("Zaubertalisman", "ZT");
 		types.put("Infinitum", "INF");
 	}
+
 	private final static Map<String, String> stabilities = new HashMap<>();
 	static {
 		types.put("labil", "labil");
@@ -63,26 +66,12 @@ public class InventorySheet extends Sheet {
 		types.put("sehr stabil", "s. stabil");
 		types.put("unempfindlic", "unempf.");
 	}
-	private final IntegerProperty additionalClothingRows = new SimpleIntegerProperty(20);
-	private final IntegerProperty additionalInventoryRows = new SimpleIntegerProperty(60);
-	private final IntegerProperty additionalPotionRows = new SimpleIntegerProperty(0);
-	private final IntegerProperty additionalValuablesRows = new SimpleIntegerProperty(0);
-	private final IntegerProperty additionalArtifactRows = new SimpleIntegerProperty(5);
-	private final int fontSize = 9;
-	private final BooleanProperty showAttributes = new SimpleBooleanProperty(false);
-	private final BooleanProperty showClothing = new SimpleBooleanProperty(true);
-	private final BooleanProperty showInventory = new SimpleBooleanProperty(true);
-	private final BooleanProperty showPotions = new SimpleBooleanProperty(false);
-	private final BooleanProperty showValuables = new SimpleBooleanProperty(false);
-	private final BooleanProperty showArtifacts = new SimpleBooleanProperty(true);
-	private final List<BooleanProperty> showInventories = new ArrayList<>();
-	private final List<IntegerProperty> additionalInventoriesRows = new ArrayList<>();
 
 	public InventorySheet() {
 		super(788);
 	}
 
-	private void addArtifactsTable(final PDDocument document) throws IOException {
+	private void addArtifactsTable(final PDDocument document, final int additionalRows) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -105,7 +94,7 @@ public class InventorySheet extends Sheet {
 		table.addRowAtIndex(0, SheetUtil.createTitleCell("Artefakte", 1).setBorder(0, 0, 0, 0.25f),
 				new TextCell("Artefaktkontrolle: ___ / " + controlValue).setHAlign(HAlign.RIGHT).setColSpan(6).setBorder(0, 0, 0, 0.25f));
 
-		int rows = additionalArtifactRows.get();
+		int rows = additionalRows;
 		final Queue<JSONObject> artifacts = new LinkedList<>();
 
 		JSONArray items = null;
@@ -183,10 +172,10 @@ public class InventorySheet extends Sheet {
 			}
 		}
 
-		bottom.bottom = table.render(document, 571, 12, bottom.bottom, showAttributes.get() ? 72 : 54, 10) - 5;
+		bottom.bottom = table.render(document, 571, 12, bottom.bottom, settingsPage.getBool(SHOW_ATTRIBUTES).get() ? 72 : 54, 10) - 5;
 	}
 
-	private void addClothingTable(final PDDocument document) throws IOException {
+	private void addClothingTable(final PDDocument document, final int additionalRows) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -196,7 +185,7 @@ public class InventorySheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Kleidung");
 
-		int rows = additionalClothingRows.get() + 1;
+		int rows = additionalRows + 1;
 		final Queue<JSONObject> clothing = new LinkedList<>();
 
 		JSONArray items = null;
@@ -243,7 +232,7 @@ public class InventorySheet extends Sheet {
 
 		table.addRow(new TableCell(tables[0]), "", new TableCell(tables[1]));
 
-		bottom.bottom = table.render(document, 571, 12, bottom.bottom, showAttributes.get() ? 72 : 54, 10) - 5;
+		bottom.bottom = table.render(document, 571, 12, bottom.bottom, settingsPage.getBool(SHOW_ATTRIBUTES).get() ? 72 : 54, 10) - 5;
 	}
 
 	private void addInventoryTable(final PDDocument document, final String inventoryName, final JSONArray inventory, final int additionalRows)
@@ -306,10 +295,10 @@ public class InventorySheet extends Sheet {
 
 		table.addRow(new TableCell(tables[0]), "", new TableCell(tables[1]));
 
-		bottom.bottom = table.render(document, 571, 12, bottom.bottom, showAttributes.get() ? 72 : 54, 10) - 5;
+		bottom.bottom = table.render(document, 571, 12, bottom.bottom, settingsPage.getBool(SHOW_ATTRIBUTES).get() ? 72 : 54, 10) - 5;
 	}
 
-	private void addPotionsTable(final PDDocument document) throws IOException {
+	private void addPotionsTable(final PDDocument document, final int additionalRows) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -321,7 +310,7 @@ public class InventorySheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Alchemika");
 
-		int rows = additionalPotionRows.get();
+		int rows = additionalRows;
 		final Queue<JSONObject> potions = new LinkedList<>();
 
 		JSONArray items = null;
@@ -360,10 +349,10 @@ public class InventorySheet extends Sheet {
 			}
 		}
 
-		bottom.bottom = table.render(document, 571, 12, bottom.bottom, showAttributes.get() ? 72 : 54, 10) - 5;
+		bottom.bottom = table.render(document, 571, 12, bottom.bottom, settingsPage.getBool(SHOW_ATTRIBUTES).get() ? 72 : 54, 10) - 5;
 	}
 
-	private void addValuablesTable(final PDDocument document) throws IOException {
+	private void addValuablesTable(final PDDocument document, final int additionalRows) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -373,7 +362,7 @@ public class InventorySheet extends Sheet {
 
 		SheetUtil.addTitle(table, "Wertgegenstände");
 
-		int rows = additionalValuablesRows.get() + 1;
+		int rows = additionalRows + 1;
 
 		final Queue<JSONObject> valuables = new LinkedList<>();
 
@@ -421,73 +410,42 @@ public class InventorySheet extends Sheet {
 
 		table.addRow(new TableCell(tables[0]), "", new TableCell(tables[1]));
 
-		bottom.bottom = table.render(document, 571, 12, bottom.bottom, showAttributes.get() ? 72 : 54, 10) - 5;
+		bottom.bottom = table.render(document, 571, 12, bottom.bottom, settingsPage.getBool(SHOW_ATTRIBUTES).get() ? 72 : 54, 10) - 5;
 	}
 
 	@Override
 	public void create(final PDDocument document) throws IOException {
-		if (showAttributes.get()) {
+		if (settingsPage.getBool(SHOW_ATTRIBUTES).get()) {
 			height = 771;
 		}
 
-		header = SheetUtil.createHeader("Ausrüstungsbrief", true, showAttributes.get(), false, hero, fill, fillAll, showName, showDate);
+		header = SheetUtil.createHeader("Ausrüstungsbrief", true, settingsPage.getBool(SHOW_ATTRIBUTES).get(), false, hero, fill, fillAll, showName, showDate);
 
 		startCreate(document);
 
-		if (showClothing.get()) {
-			try {
-				addClothingTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
+		for (final TitledPane section : settingsPage.getSections()) {
+			if (!settingsPage.getBool(section, "").get()) {
+				continue;
 			}
-		}
 
-		if (showValuables.get()) {
+			final String categoryName = settingsPage.getString(section, null).get();
+
 			try {
-				addValuablesTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-		}
-
-		if (showPotions.get()) {
-			try {
-				addPotionsTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-		}
-
-		if (showArtifacts.get()) {
-			try {
-				addArtifactsTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-		}
-
-		if (showInventory.get()) {
-			try {
-				addInventoryTable(document, "Inventar", hero != null ? hero.getObj("Besitz").getArr("Ausrüstung") : null, additionalInventoryRows.get());
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-		}
-
-		if (hero != null) {
-			final JSONArray inventories = hero.getObj("Besitz").getArrOrDefault("Inventare", null);
-			if (inventories != null) {
-				for (int i = 0; i < inventories.size(); ++i) {
-					if (showInventories.get(i).get()) {
-						try {
-							final JSONObject inventory = inventories.getObj(i);
-							addInventoryTable(document, inventory.getStringOrDefault("Name", "Unbekanntes Inventar"), inventory.getArr("Ausrüstung"),
-									additionalInventoriesRows.get(i).get());
-						} catch (final Exception e) {
-							ErrorLogger.logError(e);
-						}
+				final JSONObject inventory = (JSONObject) section.getUserData();
+				final int rows = settingsPage.getInt(section, ADDITIONAL_ROWS).get();
+				if (inventory == null) {
+					switch (categoryName) {
+						case "Kleidung" -> addClothingTable(document, rows);
+						case "Wertgegenstände" -> addValuablesTable(document, rows);
+						case "Alchemika" -> addPotionsTable(document, rows);
+						case "Artefakte" -> addArtifactsTable(document, rows);
+						case "Inventar" -> addInventoryTable(document, "Inventar", hero != null ? hero.getObj("Besitz").getArr("Ausrüstung") : null, rows);
 					}
+				} else {
+					addInventoryTable(document, inventory.getStringOrDefault("Name", "Unbenanntes Inventar"), inventory.getArr("Ausrüstung"), rows);
 				}
+			} catch (final Exception e) {
+				ErrorLogger.logError(e);
 			}
 		}
 
@@ -496,33 +454,18 @@ public class InventorySheet extends Sheet {
 
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
-		final JSONObject settings = new JSONObject(parent);
-		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
-		settings.put("Leerseite einfügen", emptyPage.get());
-		settings.put("Eigenschaften anzeigen", showAttributes.get());
-		settings.put("Kleidung", showClothing.get());
-		settings.put("Zusätzliche Zeilen für Kleidung", additionalClothingRows.get());
-		settings.put("Wertgegenstände", showValuables.get());
-		settings.put("Zusätzliche Zeilen für Wertgegenstände", additionalValuablesRows.get());
-		settings.put("Alchemika", showPotions.get());
-		settings.put("Zusätzliche Zeilen für Alchemika", additionalPotionRows.get());
-		settings.put("Artefakte", showArtifacts.get());
-		settings.put("Zusätzliche Zeilen für Artefakte", additionalArtifactRows.get());
-		settings.put("Inventar", showInventory.get());
-		settings.put("Zusätzliche Zeilen für Inventar", additionalInventoryRows.get());
+		final JSONObject settings = super.getSettings(parent);
+		settings.put(SHOW_ATTRIBUTES, settingsPage.getBool(SHOW_ATTRIBUTES).get());
 
-		final JSONArray inventories = hero != null ? hero.getObj("Besitz").getArrOrDefault("Inventare", null) : null;
-		final JSONObject namedInventories = new JSONObject(settings);
-		for (int i = 0; i < showInventories.size(); ++i) {
-			final JSONObject inventory = inventories == null ? null : i < inventories.size() ? inventories.getObj(i) : null;
-			final JSONObject setting = new JSONObject(namedInventories);
-			namedInventories.put(inventory.getStringOrDefault("Name", ""), setting);
-			setting.put("Anzeigen", showInventories.get(i).get());
-			setting.put("Zusätzliche Zeilen", additionalInventoriesRows.get(i).get());
+		final JSONObject categories = new JSONObject(settings);
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			final JSONObject category = new JSONObject(categories);
+			category.put("Anzeigen", settingsPage.getBool(section, "").get());
+			category.put(ADDITIONAL_ROWS, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+			categories.put(name, category);
 		}
-		if (namedInventories.size() != 0) {
-			settings.put("Inventare", namedInventories);
-		}
+		settings.put("Kategorien", categories);
 
 		return settings;
 	}
@@ -530,70 +473,61 @@ public class InventorySheet extends Sheet {
 	@Override
 	public void load() {
 		super.load();
-		settingsPage.addBooleanChoice("Eigenschaften anzeigen", showAttributes);
-		settingsPage.addBooleanChoice("Kleidung", showClothing);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Kleidung", additionalClothingRows, 0, 200);
-		settingsPage.addBooleanChoice("Wertgegenstände", showValuables);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Wertgegenstände", additionalValuablesRows, 0, 200);
-		settingsPage.addBooleanChoice("Alchemika", showPotions);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Alchemika", additionalPotionRows, 0, 200);
-		settingsPage.addBooleanChoice("Artefakte", showArtifacts);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Artefakte", additionalArtifactRows, 0, 200);
-		settingsPage.addBooleanChoice("Inventar", showInventory);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Inventar", additionalInventoryRows, 0, 200);
+		settingsPage.addBooleanChoice(SHOW_ATTRIBUTES);
+
+		sections.put("Kleidung", settingsPage.addSection("Kleidung", true));
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
+
+		sections.put("Wertgegenstände", settingsPage.addSection("Wertgegenstände", true));
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
+
+		sections.put("Alchemika", settingsPage.addSection("Alchemika", true));
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
+
+		sections.put("Artefakte", settingsPage.addSection("Artefakte", true));
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
+
+		sections.put("Inventar", settingsPage.addSection("Inventar", true));
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
 	}
 
 	@Override
 	public void loadSettings(final JSONObject settings) {
-		super.loadSettings(settings);
 
 		settingsPage.clear();
-		showInventories.clear();
-		additionalInventoriesRows.clear();
-		super.load();
+		sections.clear();
+		load();
+		super.loadSettings(settings);
 
-		showAttributes.set(settings.getBoolOrDefault("Eigenschaften anzeigen", false));
-		showClothing.set(settings.getBoolOrDefault("Kleidung", true));
-		additionalClothingRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Kleidung", 20));
-		if (settings.containsKey("Wertgegenstände") || hero == null) {
-			showValuables.set(settings.getBoolOrDefault("Wertgegenstände", false));
-		} else {
-			showValuables.set(hero.getObj("Besitz").getArr("Ausrüstung").getObjs().stream()
-					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Wertgegenstand"))));
-		}
-		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Alchemika", 0));
-		additionalValuablesRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Wertgegenstände", 0));
-		if (settings.containsKey("Alchemika") || hero == null) {
-			showPotions.set(settings.getBoolOrDefault("Alchemika", false));
-		} else {
-			showPotions.set(hero.getObj("Besitz").getArr("Ausrüstung").getObjs().stream()
-					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Alchemikum"))));
-		}
-		additionalPotionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Alchemika", 0));
-		if (settings.containsKey("Artefakte") || hero == null) {
-			showArtifacts.set(settings.getBoolOrDefault("Artefakte", false));
-		} else {
-			showArtifacts.set(hero.getObj("Besitz").getArr("Ausrüstung").getObjs().stream()
-					.anyMatch(item -> (item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Artefakt"))));
-		}
-		additionalArtifactRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Artefakte", 5));
-		showInventory.set(settings.getBoolOrDefault("Inventar", true));
-		additionalInventoryRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Inventar", 60));
+		settingsPage.getBool(SHOW_ATTRIBUTES).set(settings.getBoolOrDefault(SHOW_ATTRIBUTES, false));
 
 		final JSONArray inventories = hero != null ? hero.getObj("Besitz").getArrOrDefault("Inventare", null) : null;
 		if (inventories != null) {
-			final JSONObject namedInventories = settings.getObjOrDefault("Inventare", new JSONObject(null));
 			for (int i = 0; i < inventories.size(); ++i) {
 				final JSONObject inventory = inventories.getObj(i);
 				final String name = inventory.getStringOrDefault("Name", "");
-				final JSONObject setting = namedInventories.getObjOrDefault(name, null);
-				final BooleanProperty showCurrentInventory = new SimpleBooleanProperty(setting != null ? setting.getBoolOrDefault("Anzeigen", true) : true);
-				showInventories.add(showCurrentInventory);
-				final IntegerProperty additionalRows = new SimpleIntegerProperty(setting != null ? setting.getIntOrDefault("Zusätzliche Zeilen", 0) : 0);
-				additionalInventoriesRows.add(additionalRows);
-				settingsPage.addBooleanChoice(name, showCurrentInventory);
-				settingsPage.addIntegerChoice("Zusätzliche Zeilen für " + name, additionalRows, 0, 200);
+				final TitledPane section = settingsPage.addSection(name, true);
+				sections.put(name, section);
+				settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
+				section.setUserData(inventory);
 			}
+		}
+
+		orderSections(List.of("Kleidung", "Wertgegenstände", "Alchemika", "Artefakte", "Inventar"));
+		final JSONObject categories = settings.getObjOrDefault("Kategorien", new JSONObject(null));
+		orderSections(categories.keySet());
+
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			final JSONObject category = categories.getObjOrDefault(name, new JSONObject(null));
+			settingsPage.getBool(section, "").set(category.getBoolOrDefault("Anzeigen", true));
+			final int defaultRows = switch (name) {
+				case "Kleidung" -> 20;
+				case "Wertgegenstände", "Alchemika", "Artefakte" -> 5;
+				case "Inventar" -> 50;
+				default -> 10;
+			};
+			settingsPage.getInt(section, ADDITIONAL_ROWS).set(category.getIntOrDefault(ADDITIONAL_ROWS, defaultRows));
 		}
 	}
 

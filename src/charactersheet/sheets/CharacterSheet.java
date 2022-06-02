@@ -17,8 +17,10 @@ package charactersheet.sheets;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -40,33 +42,18 @@ import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Util;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.Button;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
 public class CharacterSheet extends Sheet {
-	private final IntegerProperty additionalConnectionRows = new SimpleIntegerProperty(5);
-	private final IntegerProperty additionalConRows = new SimpleIntegerProperty(5);
-	private final IntegerProperty additionalProRows = new SimpleIntegerProperty(5);
-	private final BooleanProperty showAge = new SimpleBooleanProperty(false);
-	private final BooleanProperty showAsP = new SimpleBooleanProperty(false);
-	private final BooleanProperty showBankMoney = new SimpleBooleanProperty(false);
-	private final BooleanProperty showBirthday = new SimpleBooleanProperty(false);
-	private final BooleanProperty showConnections = new SimpleBooleanProperty(false);
-	private final BooleanProperty showCons = new SimpleBooleanProperty(true);
-	private final BooleanProperty showImage = new SimpleBooleanProperty(false);
-	private final BooleanProperty showKaP = new SimpleBooleanProperty(false);
-	private final BooleanProperty showPros = new SimpleBooleanProperty(true);
-	private final ObjectProperty<File> image = new SimpleObjectProperty<>(null);
+
+	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
+
 	private final float fontSize = 10.5f;
-	private final float descSize = 9;
-	private final float rowFontSize = 7;
+	private final float descSize = 9f;
+	private final float rowFontSize = 7f;
 
 	public CharacterSheet() {
 		super(770, false);
@@ -91,8 +78,8 @@ public class CharacterSheet extends Sheet {
 		table.addRow("Neu", new TextCell(" ").setBorder(1, 1, 1, 1));
 
 		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
-		bottom.bottom = table.render(document, 95, showImage.get() ? 300 : 488,
-				page.getMediaBox().getHeight() - 265 + (showAsP.get() ? 0 : 12) + (showKaP.get() ? 0 : 12), 72, 10) - 5;
+		bottom.bottom = table.render(document, 95, settingsPage.getBool(sections.get("Bild"), "").get() ? 300 : 488, page.getMediaBox().getHeight() - 265
+				+ (settingsPage.getBool("Astralenergie").get() ? 0 : 12) + (settingsPage.getBool("Karmaenergie").get() ? 0 : 12), 72, 10) - 5;
 	}
 
 	private void addAttributesTable(final PDDocument document) throws IOException {
@@ -154,9 +141,15 @@ public class CharacterSheet extends Sheet {
 			bio = hero.getObj("Biografie");
 			final Cell name = new TextCell("Name: " + bio.getStringOrDefault("Vorname", "") + " " + bio.getStringOrDefault("Nachname", "")).setColSpan(3);
 			final JSONObject time = ResourceManager.getResource("data/Allgemein").getObj("Zeit");
-			final String age = showAge.get() ? "Alter: " + (time != null ? Integer.toString(DSAUtil.getDaysBetween(bio.getIntOrDefault("Geburtstag", 1),
-					bio.getIntOrDefault("Geburtsmonat", 1), bio.getIntOrDefault("Geburtsjahr", 1000), time.getIntOrDefault("Tag", 1),
-					time.getIntOrDefault("Monat", 1), time.getIntOrDefault("Jahr", 1000)) / 365) : " ") : " ";
+			final String age = settingsPage
+					.getBool("Alter").get()
+							? "Alter: "
+									+ (time != null
+											? Integer.toString(DSAUtil.getDaysBetween(bio.getIntOrDefault("Geburtstag", 1),
+													bio.getIntOrDefault("Geburtsmonat", 1), bio.getIntOrDefault("Geburtsjahr", 1000),
+													time.getIntOrDefault("Tag", 1), time.getIntOrDefault("Monat", 1), time.getIntOrDefault("Jahr", 1000)) / 365)
+											: " ")
+							: " ";
 			table.addRow(name, age);
 
 			final String eyeColor = "Augenfarbe: " + bio.getStringOrDefault("Augenfarbe", "");
@@ -168,7 +161,7 @@ public class CharacterSheet extends Sheet {
 				hairColor = "Haarfarbe: " + bio.getStringOrDefault("Haarfarbe", "");
 				skinColor = "Hautfarbe: " + bio.getStringOrDefault("Hautfarbe", "");
 			}
-			final String birthday = showBirthday.get() ? "Geburtstag: " + bio.getIntOrDefault("Geburtstag", 0) + ". "
+			final String birthday = settingsPage.getBool("Geburtstag").get() ? "Geburtstag: " + bio.getIntOrDefault("Geburtstag", 0) + ". "
 					+ DSAUtil.months[bio.getIntOrDefault("Geburtsmonat", 1) - 1] + " " + bio.getIntOrDefault("Geburtsjahr", 0) : " ";
 			table.addRow(eyeColor, hairColor, skinColor, birthday);
 
@@ -185,10 +178,10 @@ public class CharacterSheet extends Sheet {
 			final String weight = "Gewicht: " + bio.getIntOrDefault("Gewicht", 0);
 			table.addRow(profession, weight);
 		} else {
-			table.addRow("Name:", " ", " ", showAge.get() ? "Alter: " : " ");
+			table.addRow("Name:", " ", " ", settingsPage.getBool("Alter").get() ? "Alter: " : " ");
 			final boolean scalecolor = hero != null && hero.getObj("Biografie").containsKey("Schuppenfarbe 1");
 			table.addRow("Augenfarbe:", scalecolor ? "Schuppenfarbe 1:" : "Haarfarbe:", scalecolor ? "Schuppenfarbe 2" : "Hautfarbe:",
-					showBirthday.get() ? "Geburtstag:" : " ");
+					settingsPage.getBool("Geburtstag").get() ? "Geburtstag:" : " ");
 			table.addRow("Rasse:", " ", " ", "Geschlecht:");
 			table.addRow("Kultur:", " ", " ", "Größe:");
 			table.addRow("Profession:", " ", " ", "Gewicht:");
@@ -198,7 +191,7 @@ public class CharacterSheet extends Sheet {
 		table.render(document, 571, 12, page.getMediaBox().getHeight() - 36, 72, 10);
 	}
 
-	private void addConnectionsTable(final PDDocument document) throws IOException {
+	private void addConnectionsTable(final PDDocument document, final TitledPane section) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe()).setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -222,7 +215,7 @@ public class CharacterSheet extends Sheet {
 			}
 		}
 
-		for (int i = 0; i < additionalConnectionRows.get(); ++i) {
+		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS).get(); ++i) {
 			table.addRow("");
 		}
 
@@ -338,7 +331,8 @@ public class CharacterSheet extends Sheet {
 		final JSONObject derivedValues = ResourceManager.getResource("data/Basiswerte");
 		for (final String derivedName : new String[] { "Lebensenergie", "Ausdauer", "Magieresistenz", "Astralenergie", "Karmaenergie" }) {
 			final JSONObject derivedValue = derivedValues.getObjOrDefault(derivedName, new JSONObject(null));
-			if (!showAsP.get() && "Astralenergie".equals(derivedName) || !showKaP.get() && "Karmaenergie".equals(derivedName)) {
+			if (!settingsPage.getBool("Astralenergie").get() && "Astralenergie".equals(derivedName)
+					|| !settingsPage.getBool("Karmaenergie").get() && "Karmaenergie".equals(derivedName)) {
 				continue;
 			}
 
@@ -392,14 +386,14 @@ public class CharacterSheet extends Sheet {
 		table.render(document, 277, 12, page.getMediaBox().getHeight() - 258, 72, 10);
 	}
 
-	private void addImageTable(final PDDocument document) throws IOException {
+	private void addImageTable(final PDDocument document, final TitledPane section) throws IOException {
 		final Table table = new Table();
 		table.addColumn(new Column(178, FontManager.serif, 0, HAlign.RIGHT).setVAlign(VAlign.TOP));
 
-		final float height = 215.75f - (showAsP.get() ? 0 : 12) - (showKaP.get() ? 0 : 12);
+		final float height = 215.75f - (settingsPage.getBool("Astralenergie").get() ? 0 : 12) - (settingsPage.getBool("Karmaenergie").get() ? 0 : 12);
 		final float width = 178;
 
-		final File file = image.get();
+		final File file = settingsPage.getFile(section, "Bild").get();
 
 		if (file != null) {
 			if (file.exists()) {
@@ -419,7 +413,8 @@ public class CharacterSheet extends Sheet {
 	private void addMoneyTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
 
-		final boolean needsSmallTable = showBankMoney.get() && showImage.get() && !showAsP.get() && !showKaP.get();
+		final boolean needsSmallTable = settingsPage.getBool("Bankguthaben").get() && settingsPage.getBool(sections.get("Bild"), "").get()
+				&& !settingsPage.getBool("Astralenergie").get() && !settingsPage.getBool("Karmaenergie").get();
 
 		table.addColumn(new Column(needsSmallTable ? 21 : 62, FontManager.serif, descSize, HAlign.LEFT).setBorder(0, 0, 0, 0));
 		table.addColumn(new Column(40, FontManager.serif, fontSize, HAlign.RIGHT).setBorder(1, 1, 0, 1));
@@ -440,7 +435,7 @@ public class CharacterSheet extends Sheet {
 			table.addCells(new TextCell((hero != null && fillAll ? money.getIntOrDefault(value, 0) + " " : "") + value.charAt(0)).setPadding(0, 2, 2, 0));
 		}
 
-		if (showBankMoney.get()) {
+		if (settingsPage.getBool("Bankguthaben").get()) {
 			table.addCells("Bank ", new TextCell(",      D").setPadding(0, 2, 2, 0).setBorder(1, 1, 1, 1));
 		} else {
 			table.addCells(" ", " ");
@@ -450,7 +445,7 @@ public class CharacterSheet extends Sheet {
 		table.render(document, needsSmallTable ? 277 : 383, 12, page.getMediaBox().getHeight() - 237, 72, 10);
 	}
 
-	private void addProOrConTable(final PDDocument document, final String title) throws IOException {
+	private void addProOrConTable(final PDDocument document, final String title, final TitledPane section) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe()).setNumHeaderRows(2);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -459,17 +454,17 @@ public class CharacterSheet extends Sheet {
 		table.addColumn(new Column(30, FontManager.serif, rowFontSize, HAlign.CENTER));
 		table.addColumn(new Column(0, 336, FontManager.serif, 4, rowFontSize, HAlign.LEFT));
 
-		SheetUtil.addTitle(table, title + 'e');
+		SheetUtil.addTitle(table, title);
 
-		final Cell titleCell = new TextCell(title, FontManager.serifBold, 8.5f, 8.5f);
+		final Cell titleCell = new TextCell(title.substring(0, title.length() - 1), FontManager.serifBold, 8.5f, 8.5f);
 		final Cell valueTitle = new TextCell("Wert", FontManager.serifBold, 8.5f, 8.5f);
 		final Cell costTitle = new TextCell("GP", FontManager.serifBold, 8.5f, 8.5f);
 		final Cell descTitle = new TextCell("Beschreibung", FontManager.serifBold, 8.5f, 8.5f);
 		table.addRow(titleCell, valueTitle, costTitle, descTitle);
 
 		if (hero != null) {
-			final JSONObject prosOrCons = ResourceManager.getResource("data/" + title + 'e');
-			final JSONObject actual = hero.getObj(title + 'e');
+			final JSONObject prosOrCons = ResourceManager.getResource("data/" + title);
+			final JSONObject actual = hero.getObj(title);
 
 			final Map<String, JSONObject> actualProsOrCons = new TreeMap<>(SheetUtil.comparator);
 			for (final String proOrConName : actual.keySet()) {
@@ -523,8 +518,8 @@ public class CharacterSheet extends Sheet {
 				}
 			}
 		}
-		final int additionalRows = "Vorteil".equals(title) ? additionalProRows.get() : additionalConRows.get();
-		for (int i = 0; i < additionalRows; ++i) {
+
+		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS).get(); ++i) {
 			table.addRow("");
 		}
 
@@ -555,14 +550,6 @@ public class CharacterSheet extends Sheet {
 			ErrorLogger.logError(e);
 		}
 
-		if (showImage.get()) {
-			try {
-				addImageTable(document);
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-		}
-
 		try {
 			addMoneyTable(document);
 		} catch (final Exception e) {
@@ -581,25 +568,19 @@ public class CharacterSheet extends Sheet {
 			ErrorLogger.logError(e);
 		}
 
-		if (showPros.get()) {
-			try {
-				addProOrConTable(document, "Vorteil");
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
+		for (final TitledPane section : settingsPage.getSections()) {
+			if (!settingsPage.getBool(section, "").get()) {
+				continue;
 			}
-		}
 
-		if (showCons.get()) {
-			try {
-				addProOrConTable(document, "Nachteil");
-			} catch (final Exception e) {
-				ErrorLogger.logError(e);
-			}
-		}
+			final String name = settingsPage.getString(section, null).get();
 
-		if (showConnections.get()) {
 			try {
-				addConnectionsTable(document);
+				switch (name) {
+					case "Bild" -> addImageTable(document, section);
+					case "Vorteile", "Nachteile" -> addProOrConTable(document, name, section);
+					case "Verbindungen" -> addConnectionsTable(document, section);
+				}
 			} catch (final Exception e) {
 				ErrorLogger.logError(e);
 			}
@@ -610,69 +591,96 @@ public class CharacterSheet extends Sheet {
 
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
-		final JSONObject settings = new JSONObject(parent);
-		settings.put("Als eigenständigen Bogen drucken", separatePage.get());
-		settings.put("Leerseite einfügen", emptyPage.get());
-		settings.put("Zusätzliche Zeilen für Vorteile", additionalProRows.get());
-		settings.put("Zusätzliche Zeilen für Nachteile", additionalConRows.get());
-		settings.put("Zusätzliche Zeilen für Verbindungen", additionalConnectionRows.get());
-		settings.put("Alter", showAge.get());
-		settings.put("Geburtstag", showBirthday.get());
-		settings.put("Bankguthaben", showBankMoney.get());
-		settings.put("Astralenergie", showAsP.get());
-		settings.put("Karmaenergie", showKaP.get());
-		settings.put("Vorteile", showPros.get());
-		settings.put("Nachteile", showCons.get());
-		settings.put("Verbindungen", showConnections.get());
-		settings.put("Bild anzeigen", showImage.get());
-		if (image.get() != null) {
-			settings.put("Bild", image.get().getAbsolutePath());
+		final JSONObject settings = super.getSettings(parent);
+
+		settings.put("Alter", settingsPage.getBool("Alter").get());
+		settings.put("Geburtstag", settingsPage.getBool("Geburtstag").get());
+		settings.put("Bankguthaben", settingsPage.getBool("Bankguthaben").get());
+		settings.put("Astralenergie", settingsPage.getBool("Astralenergie").get());
+		settings.put("Karmaenergie", settingsPage.getBool("Karmaenergie").get());
+
+		final JSONObject tables = new JSONObject(settings);
+		for (final TitledPane section : settingsPage.getSections()) {
+			final String name = settingsPage.getString(section, null).get();
+			if ("Bild".equals(name)) {
+				settings.put("Bild anzeigen", settingsPage.getBool(section, "").get());
+				if (settingsPage.getFile(section, "Bild").get() != null) {
+					settings.put("Bild", settingsPage.getFile(section, "Bild").get().getAbsolutePath());
+				}
+			} else {
+				final JSONObject table = new JSONObject(tables);
+				table.put("Anzeigen", settingsPage.getBool(section, "").get());
+				table.put(ADDITIONAL_ROWS, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+				tables.put(name, table);
+			}
 		}
+		settings.put("Tabellen", tables);
+
 		return settings;
 	}
 
 	@Override
 	public void load() {
 		super.load();
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Vorteile", additionalProRows, 0, 30);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Nachteile", additionalConRows, 0, 30);
-		settingsPage.addIntegerChoice("Zusätzliche Zeilen für Verbindungen", additionalConnectionRows, 0, 30);
-		settingsPage.addBooleanChoice("Alter", showAge);
-		settingsPage.addBooleanChoice("Geburtstag", showBirthday);
-		settingsPage.addBooleanChoice("Bankguthaben", showBankMoney);
-		settingsPage.addBooleanChoice("Astralenergie", showAsP);
-		settingsPage.addBooleanChoice("Karmaenergie", showKaP);
-		settingsPage.addBooleanChoice("Vorteile", showPros);
-		settingsPage.addBooleanChoice("Nachteile", showCons);
-		settingsPage.addBooleanChoice("Verbindungen", showConnections);
-		settingsPage.addBooleanChoice("Bild anzeigen", showImage);
-		final Button imageButton = settingsPage.addFileChoice("Bild", image, "*.jpg, *.png, *.gif", Arrays.asList("*.jpg", "*.png", "*.gif"));
+		settingsPage.addBooleanChoice("Alter");
+		settingsPage.addBooleanChoice("Geburtstag");
+		settingsPage.addBooleanChoice("Bankguthaben");
+		settingsPage.addBooleanChoice("Astralenergie");
+		settingsPage.addBooleanChoice("Karmaenergie");
 
-		showImage.addListener((o, oldV, newV) -> {
+		final TitledPane imageSection = settingsPage.addSection("Bild", true);
+		sections.put("Bild", imageSection);
+		final Button imageButton = settingsPage.addFileChoice("Bild", "*.jpg, *.png, *.gif", List.of("*.jpg", "*.png", "*.gif"));
+
+		settingsPage.getBool(imageSection, "").addListener((o, oldV, newV) -> {
 			imageButton.setDisable(!newV);
 		});
+
+		for (final String name : List.of("Vorteile", "Nachteile", "Verbindungen")) {
+			final TitledPane section = settingsPage.addSection(name, true);
+			sections.put(name, section);
+			settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
+		}
 	}
 
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
-		additionalProRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Vorteile", 5));
-		additionalConRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Nachteile", 5));
-		additionalConnectionRows.set(settings.getIntOrDefault("Zusätzliche Zeilen für Verbindungen", 5));
-		showAge.set(settings.getBoolOrDefault("Alter", false));
-		showBirthday.set(settings.getBoolOrDefault("Geburtstag", false));
-		showBankMoney.set(settings.getBoolOrDefault("Bankguthaben", false));
-		showAsP.set(settings.getBoolOrDefault("Astralenergie", HeroUtil.isMagical(hero)));
-		showKaP.set(settings.getBoolOrDefault("Karmaenergie", HeroUtil.isClerical(hero, false)));
-		showPros.set(settings.getBoolOrDefault("Vorteile", true));
-		showCons.set(settings.getBoolOrDefault("Nachteile", true));
-		showConnections.set(settings.getBoolOrDefault("Verbindungen", false));
-		showImage.set(settings.getBoolOrDefault("Bild anzeigen", false));
+		settingsPage.getBool("Alter").set(settings.getBoolOrDefault("Alter", false));
+		settingsPage.getBool("Geburtstag").set(settings.getBoolOrDefault("Geburtstag", false));
+		settingsPage.getBool("Bankguthaben").set(settings.getBoolOrDefault("Bankguthaben", false));
+		settingsPage.getBool("Astralenergie").set(settings.getBoolOrDefault("Astralenergie", HeroUtil.isMagical(hero)));
+		settingsPage.getBool("Karmaenergie").set(settings.getBoolOrDefault("Karmaenergie", HeroUtil.isClerical(hero, false)));
+
+		final TitledPane imageSection = sections.get("Bild");
+		settingsPage.getBool(imageSection, "").set(settings.getBoolOrDefault("Bild anzeigen", true));
 		final String imagePath = settings.getString("Bild");
 		if (imagePath != null) {
-			image.set(new File(imagePath));
+			settingsPage.getFile(imageSection, "Bild").set(new File(imagePath));
 		} else {
-			image.set(null);
+			settingsPage.getFile(imageSection, "Bild").set(null);
+		}
+
+		orderSections(List.of("Vorteile", "Nachteile", "Verbindungen"));
+		final JSONObject tables = settings.getObjOrDefault("Tabellen", new JSONObject(null));
+		orderSections(tables.keySet());
+
+		for (final String name : Set.of("Vorteile", "Nachteile", "Verbindungen")) {
+			final TitledPane section = sections.get(name);
+			final JSONObject table = tables.getObjOrDefault(name, new JSONObject(null));
+			settingsPage.getBool(section, "").set(table.getBoolOrDefault("Anzeigen", true));
+			settingsPage.getInt(section, ADDITIONAL_ROWS).set(table.getIntOrDefault(ADDITIONAL_ROWS, 5));
+		}
+	}
+
+	@Override
+	protected void orderSections(final Collection<String> order) {
+		int index = 1;
+		for (final String key : order) {
+			if (sections.containsKey(key)) {
+				settingsPage.moveSection(sections.get(key), index);
+				++index;
+			}
 		}
 	}
 

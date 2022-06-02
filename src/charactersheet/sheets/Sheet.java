@@ -16,6 +16,9 @@
 package charactersheet.sheets;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -30,12 +33,15 @@ import charactersheet.util.SheetUtil;
 import charactersheet.util.SheetUtil.BottomObserver;
 import dsa41basis.ui.hero.HeroController;
 import dsatool.settings.SettingsPage;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Node;
+import javafx.scene.control.TitledPane;
 import jsonant.value.JSONObject;
 
 public abstract class Sheet implements HeroController {
+
+	protected static final String AS_SEPARATE_SHEET = "Als eigenständigen Bogen drucken";
+	private static final String ADD_EMPTY_PAGE = "Leerseite einfügen";
+
 	protected static BottomObserver bottom;
 	protected static Consumer<TableEvent> header;
 
@@ -49,17 +55,18 @@ public abstract class Sheet implements HeroController {
 	}
 
 	protected boolean fill;
+
 	protected boolean fillAll;
 	protected boolean showName;
 	protected boolean showDate;
 	protected JSONObject hero;
 	protected final SettingsPage settingsPage = new SettingsPage();
-	protected final BooleanProperty separatePage = new SimpleBooleanProperty(true);
-	protected final BooleanProperty emptyPage = new SimpleBooleanProperty(false);
 	protected PDRectangle pageSize = PDRectangle.A4;
-
 	protected int height;
+
 	private final boolean canBeSeparate;
+
+	protected final Map<String, TitledPane> sections = new HashMap<>();
 
 	protected Sheet(final int height) {
 		this(height, true);
@@ -77,7 +84,7 @@ public abstract class Sheet implements HeroController {
 	public abstract void create(PDDocument document) throws IOException;
 
 	protected void endCreate(final PDDocument document) {
-		if (emptyPage.get()) {
+		if (settingsPage.getBool(ADD_EMPTY_PAGE).get()) {
 			document.addPage(new PDPage(document.getPage(document.getNumberOfPages() - 1).getMediaBox()));
 		}
 	}
@@ -86,19 +93,38 @@ public abstract class Sheet implements HeroController {
 		return settingsPage.getControl();
 	}
 
-	public abstract JSONObject getSettings(JSONObject parent);
+	public JSONObject getSettings(final JSONObject parent) {
+		final JSONObject settings = new JSONObject(parent);
+		if (canBeSeparate) {
+			settings.put(AS_SEPARATE_SHEET, settingsPage.getBool(AS_SEPARATE_SHEET).get());
+		}
+		settings.put(ADD_EMPTY_PAGE, settingsPage.getBool(ADD_EMPTY_PAGE).get());
+		return settings;
+	}
 
 	public void load() {
 		if (canBeSeparate) {
-			settingsPage.addBooleanChoice("Als eigenständigen Bogen drucken", separatePage);
+			settingsPage.addBooleanChoice(AS_SEPARATE_SHEET);
 		}
-		settingsPage.addBooleanChoice("Leerseite einfügen", emptyPage);
+		settingsPage.addBooleanChoice(ADD_EMPTY_PAGE);
 		settingsPage.addSeparator();
-	}
+	};
 
 	public void loadSettings(final JSONObject settings) {
-		separatePage.set(settings.getBoolOrDefault("Als eigenständigen Bogen drucken", true));
-		emptyPage.set(settings.getBoolOrDefault("Leerseite einfügen", false));
+		if (canBeSeparate) {
+			settingsPage.getBool(AS_SEPARATE_SHEET).set(settings.getBoolOrDefault(AS_SEPARATE_SHEET, true));
+		}
+		settingsPage.getBool(ADD_EMPTY_PAGE).set(settings.getBoolOrDefault(ADD_EMPTY_PAGE, false));
+	}
+
+	protected void orderSections(final Collection<String> order) {
+		int index = 0;
+		for (final String key : order) {
+			if (sections.containsKey(key)) {
+				settingsPage.moveSection(sections.get(key), index);
+				++index;
+			}
+		}
 	}
 
 	public void setFill(final boolean fill, final boolean fillAll) {
@@ -121,7 +147,7 @@ public abstract class Sheet implements HeroController {
 	protected void startCreate(final PDDocument document) throws IOException {
 		float oldBottom = bottom.bottom;
 
-		if (separatePage.get() || !SheetUtil.matchesPageSize(document, pageSize)) {
+		if (!canBeSeparate || settingsPage.getBool(AS_SEPARATE_SHEET).get() || !SheetUtil.matchesPageSize(document, pageSize)) {
 			final PDPage page = new PDPage(pageSize);
 			document.addPage(page);
 			oldBottom = height;
