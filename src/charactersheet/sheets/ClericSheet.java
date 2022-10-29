@@ -284,10 +284,7 @@ public class ClericSheet extends Sheet {
 			table.addColumn(new Column(29, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0.5f, 0.5f, 0.5f, 0.5f));
 			table.addColumn(new Column(368, FontManager.serif, 10.5f, HAlign.RIGHT).setBorder(0, 0, 0, 0));
 			table.addColumn(new Column(29, FontManager.serif, 10.5f, HAlign.CENTER).setBorder(0.5f, 0.5f, 0.5f, 0.5f));
-			JSONObject actualAttributes = null;
-			if (hero != null) {
-				actualAttributes = hero.getObj("Eigenschaften");
-			}
+			final JSONObject actualAttributes = hero != null ? hero.getObj("Eigenschaften") : null;
 
 			final JSONObject liturgyKnowledgeGroup = ResourceManager.getResource("data/Talentgruppen").getObj("Liturgiekenntnis");
 			final JSONObject liturgyKnowledge = ResourceManager.getResource("data/Talente").getObj("Liturgiekenntnis").getObj(deity);

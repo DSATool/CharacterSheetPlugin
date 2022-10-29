@@ -65,10 +65,7 @@ public class CharacterSheet extends Sheet {
 		table.addColumn(new Column(45, FontManager.serif, descSize, HAlign.LEFT).setBorder(0, 0, 0, 0));
 		table.addColumn(new Column(50, 50, FontManager.serif, 4, fontSize, HAlign.CENTER).setBorder(1, 1, 1, 0));
 
-		JSONObject biography = null;
-		if (hero != null) {
-			biography = hero.getObj("Biografie");
-		}
+		JSONObject biography = hero != null ? biography = hero.getObj("Biografie") : null;
 
 		table.addRow("Stufe", fillAll && hero != null ? Integer.toString(biography.getIntOrDefault("Abenteuerpunkte", 0) / 1000) : " ");
 		table.addRow("AP", fillAll && hero != null ? biography.getIntOrDefault("Abenteuerpunkte", 0) : " ");
@@ -98,16 +95,12 @@ public class CharacterSheet extends Sheet {
 		final Bordered maxDesc = new TextCell("Max.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		table.addRow(emptyDesc, curDesc, modDesc, startDesc, maxDesc);
 
-		JSONObject actualAttributes = null;
-		if (hero != null) {
-			actualAttributes = hero.getObj("Eigenschaften");
-		}
+		JSONObject actualAttributes = hero != null ? actualAttributes = hero.getObj("Eigenschaften") : null;
 
 		final JSONObject attributes = ResourceManager.getResource("data/Eigenschaften");
 		for (final String attribute : attributes.keySet()) {
-			JSONObject actualAttribute = null;
 			if (hero != null && fill) {
-				actualAttribute = actualAttributes.getObj(attribute);
+				final JSONObject actualAttribute = actualAttributes.getObj(attribute);
 				final String cur = Integer.toString(actualAttribute.getIntOrDefault("Wert", 0));
 				final String mod = Util.getSignedIntegerString(actualAttribute.getIntOrDefault("Modifikator", 0));
 				final int start = actualAttribute.getIntOrDefault("Start", 0);
@@ -137,8 +130,7 @@ public class CharacterSheet extends Sheet {
 		table.addColumn(new Column(135, 135, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
 
 		if (hero != null && fill) {
-			JSONObject bio = null;
-			bio = hero.getObj("Biografie");
+			final JSONObject bio = hero.getObj("Biografie");
 			final Cell name = new TextCell("Name: " + bio.getStringOrDefault("Vorname", "") + " " + bio.getStringOrDefault("Nachname", "")).setColSpan(3);
 			final JSONObject time = ResourceManager.getResource("data/Allgemein").getObj("Zeit");
 			final String age = settingsPage
@@ -426,10 +418,7 @@ public class CharacterSheet extends Sheet {
 
 		table.addCells("Geld");
 
-		JSONObject money = null;
-		if (hero != null) {
-			money = hero.getObj("Besitz").getObj("Geld");
-		}
+		final JSONObject money = hero != null ? hero.getObj("Besitz").getObj("Geld") : null;
 
 		for (final String value : new String[] { "Dukaten", "Silbertaler", "Heller", "Kreuzer" }) {
 			table.addCells(new TextCell((hero != null && fillAll ? money.getIntOrDefault(value, 0) + " " : "") + value.charAt(0)).setPadding(0, 2, 2, 0));

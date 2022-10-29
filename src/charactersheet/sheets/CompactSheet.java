@@ -188,12 +188,7 @@ public class CompactSheet extends Sheet {
 				final String distance = String.join("", item.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings());
 
 				final Integer BF = item.getIntOrDefault("Bruchfaktor", baseWeapon.getIntOrDefault("Bruchfaktor", null));
-				String bf = null;
-				if (BF != null) {
-					bf = BF.toString();
-				} else {
-					bf = "—";
-				}
+				final String bf = BF != null ? BF.toString() : "—";
 
 				table.addRow(name, tp, at, pa, tpkk, wm, ini, distance, bf);
 			}

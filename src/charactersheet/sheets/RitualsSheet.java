@@ -607,10 +607,10 @@ public class RitualsSheet extends Sheet {
 
 		ifHas("Verbreitung", actualGroup, o -> {
 			final Object spread = ritual.getUnsafe("Verbreitung");
-			if (spread instanceof JSONObject) {
+			if (spread instanceof final JSONObject obj) {
 				boolean first = true;
 				final StringBuilder res = new StringBuilder();
-				for (final String rep : ((JSONObject) spread).keySet()) {
+				for (final String rep : obj.keySet()) {
 					if (first) {
 						first = false;
 					} else {
@@ -618,7 +618,7 @@ public class RitualsSheet extends Sheet {
 					}
 					res.append(rep);
 					res.append(' ');
-					res.append(((JSONObject) spread).getInt(rep));
+					res.append(obj.getInt(rep));
 				}
 				table.addCells(res);
 			} else if (spread != null) {
@@ -654,10 +654,10 @@ public class RitualsSheet extends Sheet {
 
 		ifHas("Erschaffungsprobe", actualGroup, o -> {
 			final Object challenge = ritual.getUnsafe("Erschaffungsprobe");
-			if (challenge instanceof JSONObject) {
-				String challengeString = ((JSONObject) challenge).getString("Talent");
-				if (((JSONObject) challenge).containsKey("Erschwernis")) {
-					final String mod = ((JSONObject) challenge).getUnsafe("Erschwernis").toString();
+			if (challenge instanceof final JSONObject obj) {
+				String challengeString = obj.getString("Talent");
+				if (obj.containsKey("Erschwernis")) {
+					final String mod = obj.getUnsafe("Erschwernis").toString();
 					if ('-' != mod.charAt(0)) {
 						challengeString += '+';
 					}

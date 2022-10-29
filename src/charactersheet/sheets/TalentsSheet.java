@@ -742,10 +742,7 @@ public class TalentsSheet extends Sheet {
 					table.addCells(new TextCell(DSAUtil.getBEString(talent)).setPadding(0, 1, 1, 0));
 				}
 
-				JSONObject skills = null;
-				if (hero != null) {
-					skills = hero.getObj("Sonderfertigkeiten");
-				}
+				final JSONObject skills = hero != null ? hero.getObj("Sonderfertigkeiten") : null;
 
 				if (isLanguage || isWriting) {
 					table.addCells(talent.getInt("Komplexität").toString());

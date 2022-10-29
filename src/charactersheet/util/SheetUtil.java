@@ -195,10 +195,7 @@ public class SheetUtil {
 				final Table table = new Table().setBorder(0, 0, 0, 0);
 				final float lineWidth = landscape ? 245 : 571;
 				table.addColumn(new Column(lineWidth, lineWidth, FontManager.serif, 4, 10.5f, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
-				JSONObject bio = null;
-				if (hero != null) {
-					bio = hero.getObj("Biografie");
-				}
+				final JSONObject bio = hero != null ? hero.getObj("Biografie") : null;
 				table.addRow("Name: " + (hero != null && fill ? bio.getStringOrDefault("Vorname", "") + " " + bio.getStringOrDefault("Nachname", "") : ""));
 				try {
 					table.renderRows(event.getDocument(), stream, 0, -1, lineWidth, 12, event.getHeight() - (landscape ? 41 : 36));
@@ -264,6 +261,7 @@ public class SheetUtil {
 				}
 			}
 		};
+
 	}
 
 	public static Cell createTitleCell(final String text, final int colSpan) {

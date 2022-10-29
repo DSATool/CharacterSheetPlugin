@@ -91,12 +91,13 @@ public class SheetConfiguration extends HeroSelector {
 		final FXMLLoader fxmlLoader = new FXMLLoader();
 		fxmlLoader.setController(this);
 
-		BorderPane pane = null;
+		final BorderPane pane;
 
 		try {
 			pane = fxmlLoader.load(getClass().getResource("SheetConfiguration.fxml").openStream());
 		} catch (final Exception e) {
 			ErrorLogger.logError(e);
+			return;
 		}
 
 		setContent(pane);

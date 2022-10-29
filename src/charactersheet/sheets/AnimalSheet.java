@@ -452,13 +452,13 @@ public class AnimalSheet extends Sheet {
 		final JSONObject attacks = animal != null ? animal.getObj("Angriffe") : null;
 		if (attacks != null) {
 			for (final String attackName : attacks.keySet()) {
-				Cell name = null;
-				Cell tp = null;
-				Cell at = null;
-				Cell pa = null;
-				Cell mod = null;
-				Cell dk = null;
-				Cell notes = null;
+				final Cell name;
+				final Cell tp;
+				final Cell at;
+				final Cell pa;
+				final Cell mod;
+				final Cell dk;
+				final Cell notes;
 
 				if (fill) {
 					final JSONObject attack = attacks.getObj(attackName);
@@ -504,10 +504,7 @@ public class AnimalSheet extends Sheet {
 		final Bordered modDesc = new TextCell(isMagical ? "Max." : "Mod.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		table.addRow(emptyDesc, curDesc, modDesc);
 
-		JSONObject actualAttributes = null;
-		if (animal != null) {
-			actualAttributes = animal.getObj("Eigenschaften");
-		}
+		JSONObject actualAttributes = animal != null ? actualAttributes = animal.getObj("Eigenschaften") : null;
 
 		final JSONObject attributes = ResourceManager.getResource("data/Eigenschaften");
 		TextCell current = null;
@@ -542,12 +539,9 @@ public class AnimalSheet extends Sheet {
 		final Bordered modDesc = new TextCell(isMagical ? "Kauf" : "Mod.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		table.addRow(emptyDesc, emptyDesc, curDesc, modDesc, emptyDesc);
 
-		JSONObject actualValues = null;
-		if (animal != null) {
-			actualValues = animal.getObj("Basiswerte");
-		}
-
 		if (animal != null && fill) {
+			final JSONObject actualValues = animal.getObj("Basiswerte");
+
 			JSONObject actualValue = actualValues.getObj("Initiative");
 			Bordered actual = new TextCell(actualValues.getObj("Initiative-Basis").getIntOrDefault("Wert", 0) + "+"
 					+ actualValue.getIntOrDefault("Würfel:Anzahl", 1) + "W" + actualValue.getIntOrDefault("Würfel:Typ", 6));
@@ -784,14 +778,10 @@ public class AnimalSheet extends Sheet {
 		final Bordered modDesc = new TextCell("Mod.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		table.addRow(" ", curDesc, modDesc, " ", " ", curDesc, modDesc);
 
-		JSONObject actualAttributes = null;
-		JSONObject actualValues = null;
-		if (animal != null) {
-			actualAttributes = animal.getObj("Eigenschaften");
-			actualValues = animal.getObj("Basiswerte");
-		}
-
 		if (animal != null && fill) {
+			final JSONObject actualAttributes = animal.getObj("Eigenschaften");
+			final JSONObject actualValues = animal.getObj("Basiswerte");
+
 			JSONObject actualValue = actualAttributes.getObj("KO");
 			String actual = Integer.toString(actualValue.getIntOrDefault("Wert", 0));
 			String mod = Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0));

@@ -206,12 +206,7 @@ public class FightSheet extends Sheet {
 						final String distance = String.join("", item.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings());
 
 						final Integer BF = item.getIntOrDefault("Bruchfaktor", baseWeapon.getIntOrDefault("Bruchfaktor", null));
-						String bf = null;
-						if (BF != null) {
-							bf = BF.toString();
-						} else {
-							bf = "—";
-						}
+						final String bf = BF != null ? BF.toString() : "—";
 
 						final String notes = HeroUtil.getWeaponNotes(item, baseWeapon, type, hero);
 
@@ -633,12 +628,7 @@ public class FightSheet extends Sheet {
 								item.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0)));
 
 						final Integer BF = item.getIntOrDefault("Bruchfaktor", baseWeapon.getIntOrDefault("Bruchfaktor", null));
-						String bf = null;
-						if (BF != null) {
-							bf = BF.toString();
-						} else {
-							bf = "—";
-						}
+						final String bf = BF != null ? BF.toString() : "—";
 
 						final String notes = HeroUtil.getItemNotes(item, baseWeapon);
 
@@ -668,12 +658,7 @@ public class FightSheet extends Sheet {
 								item.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0)));
 
 						final Integer BF = item.getIntOrDefault("Bruchfaktor", baseWeapon.getIntOrDefault("Bruchfaktor", null));
-						String bf = null;
-						if (BF != null) {
-							bf = BF.toString();
-						} else {
-							bf = "—";
-						}
+						final String bf = BF != null ? BF.toString() : "—";
 
 						final String notes = item.getStringOrDefault("Anmerkungen", baseWeapon.getStringOrDefault("Anmerkungen", " "));
 
