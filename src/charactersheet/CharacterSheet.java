@@ -46,9 +46,12 @@ public class CharacterSheet extends Plugin {
 	@Override
 	public void initialize() {
 		Credits.credits.add(new Credits("Heldenbrief-Design inspiriert von Mario Rauschenberg", null, null, "http://www.dsa-hamburg.de", null));
-		Credits.credits.add(new Credits("Trefferzonengrafiken (Achaz, Amazone, Magier) von Alexander Kremel",
+		Credits.credits.add(new Credits("Trefferzonengrafiken Achaz, Amazone, Magier von Alexander Kremel",
 				"mit freundlicher Genehmigung durch Mario Rauschenberg", null, null, null));
-		Credits.credits.add(new Credits("BoxTable\nCopyright (c) 2017 Dominik Helm", "Apache License 2.0", Util.getAppDir() + "/licenses/ALv2.txt",
+		Credits.credits.add(new Credits(
+				"Trefferzonengrafiken Armbrust, Bettler, Bettlerin, Bogen, Elf, Elfe, Kriegerin, Praios-Geweihter, Ritter, Tänzerin, Travia-Geweihte, Zwerg, Zwergin von Jasmin Krause",
+				null, null, null, null));
+		Credits.credits.add(new Credits("BoxTable", "Apache License 2.0", Util.getAppDir() + "/licenses/ALv2.txt",
 				"http://github.com/errt/BoxTable", null));
 		Credits.credits.add(new Credits("PDFBox, FontBox, Apache Commons Logging\nCopyright (c) 2002-2017 The Apache Software Foundation", "Apache License 2.0",
 				Util.getAppDir() + "/licenses/ALv2.txt", "http://pdfbox.apache.org/", null));
