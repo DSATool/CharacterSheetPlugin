@@ -1168,11 +1168,11 @@ public class CompactSheet extends Sheet {
 		settingsPage.getInt(talents, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Talente", 0));
 
 		final TitledPane spells = sections.get("Zauber");
-		settingsPage.getBool(spells, "").set(settings.getBoolOrDefault("Zauber", true));
+		settingsPage.getBool(spells, "").set(settings.getBoolOrDefault("Zauber", hero != null && HeroUtil.isMagical(hero)));
 		settingsPage.getInt(spells, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Zauber", 0));
 
-		settingsPage.getBool(sections.get("Rituale"), "").set(settings.getBoolOrDefault("Sonderfertigkeiten", true));
-		settingsPage.getBool(sections.get("Liturgien"), "").set(settings.getBoolOrDefault("Sonderfertigkeiten", true));
+		settingsPage.getBool(sections.get("Rituale"), "").set(settings.getBoolOrDefault("Rituale", hero != null && HeroUtil.isMagical(hero)));
+		settingsPage.getBool(sections.get("Liturgien"), "").set(settings.getBoolOrDefault("Liturgien", hero != null && HeroUtil.isClerical(hero, true)));
 	}
 
 	@Override
