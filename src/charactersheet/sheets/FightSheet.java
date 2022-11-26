@@ -168,7 +168,8 @@ public class FightSheet extends Sheet {
 						final String name = item.getStringOrDefault("Name", baseWeapon.getStringOrDefault("Name", ""));
 
 						final JSONArray types = item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
-						final String type = item.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : "");
+						final String type = item.getStringOrDefault("Waffentyp:Primär",
+								baseWeapon.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : ""));
 						final JSONObject weaponModifier = item.getObjOrDefault("Waffenmodifikatoren", baseWeapon.getObj("Waffenmodifikatoren"));
 						final String ebe = Integer.toString(closeCombatTalents.getObjOrDefault(type, new JSONObject(null)).getIntOrDefault("BEAdditiv", 0));
 
@@ -279,7 +280,8 @@ public class FightSheet extends Sheet {
 						final String name = item.getStringOrDefault("Name", baseWeapon.getStringOrDefault("Name", ""));
 
 						final JSONArray types = item.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
-						final String type = item.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : "");
+						final String type = item.getStringOrDefault("Waffentyp:Primär",
+								baseWeapon.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : ""));
 						final String ebe = Integer.toString(rangedCombatTalents.getObjOrDefault(type, new JSONObject(null)).getIntOrDefault("BEAdditiv", 0));
 
 						final String tp = HeroUtil.getTPString(hero, item, baseWeapon);
