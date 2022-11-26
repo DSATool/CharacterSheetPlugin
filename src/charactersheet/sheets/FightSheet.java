@@ -30,8 +30,12 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode;
 import org.apache.pdfbox.pdmodel.graphics.image.JPEGFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.controlsfx.control.CheckComboBox;
+import org.controlsfx.control.CheckModel;
+import org.controlsfx.control.IndexedCheckModel;
 
 import boxtable.cell.Cell;
+import boxtable.cell.TableCell;
 import boxtable.cell.TextCell;
 import boxtable.common.HAlign;
 import boxtable.event.EventType;
@@ -43,20 +47,34 @@ import dsa41basis.util.DSAUtil;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.resources.Settings;
+import dsatool.ui.RenameDialog;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
 import dsatool.util.Tuple3;
 import dsatool.util.Util;
 import javafx.beans.property.StringProperty;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TitledPane;
+import javafx.scene.input.MouseButton;
+import javafx.util.StringConverter;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
+import jsonant.value.JSONValue;
 
 public class FightSheet extends Sheet {
 
 	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
 
 	private static final float fontSize = 11f;
+
+	private Button addWeaponSet;
+
+	private JSONArray weaponSets;
 
 	public FightSheet() {
 		super(771);
@@ -123,6 +141,13 @@ public class FightSheet extends Sheet {
 		return false;
 	}
 
+	private void addArmorValues(final Table table, final JSONObject armorSet, final int BE) {
+		table.addCells(BE);
+		for (final String zone : new String[] { "Kopf", "Brust", "Rücken", "Bauch", "Linker Arm", "Rechter Arm", "Linkes Bein", "Rechtes Bein" }) {
+			table.addCells(HeroUtil.getZoneRS(hero, zone, armorSet));
+		}
+	}
+
 	private boolean addCloseCombatTable(final PDDocument document, final TitledPane section) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
@@ -184,15 +209,7 @@ public class FightSheet extends Sheet {
 						final Integer paValue = HeroUtil.getPA(hero, item, type, false, false);
 						final String pa = fillAll ? paValue != null ? Integer.toString(paValue) : "—" : " ";
 
-						final JSONObject TPKKValues = item.getObjOrDefault("Trefferpunkte/Körperkraft",
-								baseWeapon.getObjOrDefault("Trefferpunkte/Körperkraft", null));
-						final int threshold = TPKKValues != null ? TPKKValues.getIntOrDefault("Schwellenwert", Integer.MIN_VALUE) : Integer.MIN_VALUE;
-						final int step = TPKKValues != null ? TPKKValues.getIntOrDefault("Schadensschritte", Integer.MIN_VALUE) : Integer.MIN_VALUE;
-						final String tpkkThreshold = threshold == Integer.MIN_VALUE ? "—" : Integer.toString(threshold
-								+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schwellenwert", 0) : 0));
-						final String tpkkStep = step == Integer.MIN_VALUE ? "—" : Integer.toString(
-								step + (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schadensschritte", 0) : 0));
-						final TextCell tpkk = new TextCell(tpkkThreshold).addText("/").addText(tpkkStep).setEquallySpaced(true);
+						final TextCell tpkk = getTPKKCell(item, baseWeapon, weaponMastery);
 
 						final String atMod = Util.getSignedIntegerString(weaponModifier.getIntOrDefault("Attackemodifikator", 0)
 								+ (weaponMastery != null ? weaponMastery.getObj("Waffenmodifikatoren").getIntOrDefault("Attackemodifikator", 0) : 0));
@@ -352,6 +369,197 @@ public class FightSheet extends Sheet {
 		}
 
 		return false;
+	}
+
+	private void addWeaponSet(final JSONObject weaponSet, final List<String> weaponSetNames, final JSONArray armorSets) {
+		final String setName = weaponSet.getString("Name");
+		final String name = weaponSet.getStringOrDefault("Name", "Unbenannte Waffenkombination");
+
+		final TitledPane section = settingsPage.addSection(name, true);
+		section.setUserData(new Tuple<>(weaponSet, false));
+		sections.put(name, section);
+
+		settingsPage.getBool(section, "").set(weaponSet.getBoolOrDefault("Anzeigen", true));
+
+		section.setOnMouseClicked(e -> {
+			if (e.getButton().equals(MouseButton.PRIMARY) && e.getClickCount() == 2) {
+				renameWeaponSet(weaponSet, section);
+			}
+		});
+
+		final ContextMenu menu = section.getContextMenu();
+
+		final MenuItem editItem = new MenuItem("Bearbeiten");
+		editItem.setOnAction(event -> renameWeaponSet(weaponSet, section));
+		menu.getItems().add(0, editItem);
+
+		final MenuItem removeItem = new MenuItem("Löschen");
+		removeItem.setOnAction(e -> {
+			weaponSets.remove(weaponSet);
+			settingsPage.removeSection(section);
+		});
+		menu.getItems().add(removeItem);
+
+		final CheckComboBox<JSONObject> mainWeapon = new CheckComboBox<>();
+		final List<JSONObject> mainWeapons = new ArrayList<>();
+		final List<JSONObject> selectedMainWeapons = new ArrayList<>();
+
+		final CheckComboBox<Tuple<JSONObject, String>> secondaryWeapon = new CheckComboBox<>();
+		final List<Tuple<JSONObject, String>> secondaryWeapons = new ArrayList<>();
+		final List<Tuple<JSONObject, String>> selectedSecondaryWeapons = new ArrayList<>();
+
+		HeroUtil.foreachInventoryItem(hero, item -> item.containsKey("Kategorien"), (item, extraInventory) -> {
+			if (item.getArr("Kategorien").contains("Nahkampfwaffe")) {
+				for (final String category : item.getArr("Kategorien").getStrings()) {
+					if ("Nahkampfwaffe".equals(category)) {
+						JSONObject actual = item;
+						if (item.containsKey(category)) {
+							actual = item.getObj(category);
+						}
+						mainWeapons.add(actual);
+						final JSONArray sets = actual.getArrOrDefault("Waffenkombinationen:Hauptwaffe", null);
+						if (sets != null && sets.contains(setName)) {
+							selectedMainWeapons.add(actual);
+						}
+					}
+				}
+			}
+			if (item.getArr("Kategorien").contains("Nahkampfwaffe") || item.getArr("Kategorien").contains("Parierwaffe")
+					|| item.getArr("Kategorien").contains("Schild")) {
+				for (final String category : item.getArr("Kategorien").getStrings()) {
+					if (List.of("Nahkampfwaffe", "Parierwaffe", "Schild").contains(category)) {
+						JSONObject actual = item;
+						if (item.containsKey(category)) {
+							actual = item.getObj(category);
+						}
+						String actualCategory = null;
+						for (final String other : List.of("Nahkampfwaffe", "Parierwaffe", "Schild")) {
+							if (!other.equals(category) && item.getArr("Kategorien").contains(other)) {
+								actualCategory = category;
+								break;
+							}
+						}
+						secondaryWeapons.add(new Tuple<>(actual, actualCategory));
+						final JSONArray sets = actual.getArrOrDefault("Waffenkombinationen:Seitenwaffe", null);
+						if (sets != null && sets.contains(setName)) {
+							selectedSecondaryWeapons.add(new Tuple<>(actual, actualCategory));
+						}
+					}
+				}
+			}
+		});
+
+		final CheckComboBox<JSONObject> armor = new CheckComboBox<>();
+		final List<JSONObject> armorSetList = new ArrayList<>();
+		final List<JSONObject> selectedArmor = new ArrayList<>();
+
+		final JSONObject defaultArmor = new JSONObject(null);
+		defaultArmor.put("Name", "Rüstung");
+		armorSetList.add(defaultArmor);
+		for (int j = 0; j < armorSets.size(); ++j) {
+			final JSONObject armorSet = armorSets.getObj(j);
+			armorSetList.add(armorSet);
+			final JSONArray sets = armorSet.getArrOrDefault("Waffenkombinationen", null);
+			if (sets != null && sets.contains(setName)) {
+				selectedArmor.add(armorSet);
+			}
+		}
+
+		if (weaponSetNames == null) {
+			selectedArmor.add(defaultArmor);
+		} else {
+			weaponSetNames.add(name);
+		}
+
+		final ComboBox<String> additionalRows = settingsPage.addStringChoice("Zusatzzeilen", List.of("Hauptwaffe", "Seitenwaffe", "Rüstung"));
+		additionalRows.getStyleClass().add("disabled-opaque");
+		additionalRows.setValue(weaponSet.getStringOrDefault("Typ", "Hauptwaffe"));
+
+		final boolean[] clearing = new boolean[] { false };
+		setupWeaponSelection("Hauptwaffe", mainWeapon, mainWeapons, selectedMainWeapons, secondaryWeapon, armor, clearing, additionalRows);
+		setupWeaponSelection("Seitenwaffe", secondaryWeapon, secondaryWeapons, selectedSecondaryWeapons, mainWeapon, armor, clearing,
+				additionalRows);
+		setupWeaponSelection("Rüstung", armor, armorSetList, selectedArmor, mainWeapon, secondaryWeapon, clearing, additionalRows);
+
+		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
+	}
+
+	private void addWeaponSetRow(final Table table, final String type, final JSONObject item, final JSONObject base, final JSONObject hero,
+			final JSONObject mainWeapon, final JSONObject mainWeaponBase, final JSONObject secondaryWeapon, final JSONObject secondaryWeaponBase,
+			final JSONObject armorSet) {
+
+		table.addCells(item.getStringOrDefault("Name", base != null ? base.getStringOrDefault("Name", "Unbenannt") : "Unbekannt"));
+
+		final TextCell iniCell = new TextCell();
+		table.addCells(iniCell);
+
+		final int BE = HeroUtil.getBE(hero, armorSet);
+
+		int ini = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Initiative-Basis"), hero,
+				hero.getObj("Basiswerte").getObj("Initiative-Basis"), false) - BE;
+
+		ini += addWeaponSetWeaponValues(table, hero, type, false, mainWeapon, mainWeaponBase, secondaryWeapon, armorSet);
+		ini += addWeaponSetWeaponValues(table, hero, type, true, secondaryWeapon, secondaryWeaponBase, mainWeapon, armorSet);
+
+		if ("Rüstung".equals(type)) {
+			addArmorValues(table, armorSet, BE);
+		} else {
+			final JSONArray types = item.getArrOrDefault("Waffentypen", base.getArr("Waffentypen"));
+			final String weaponType = item.getStringOrDefault("Waffentyp:Primär",
+					base.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : ""));
+			table.addCells(HeroUtil.getWeaponNotes(item, base, weaponType, hero));
+		}
+
+		iniCell.addText(Integer.toString(ini));
+	}
+
+	private int addWeaponSetWeaponValues(final Table table, final JSONObject hero, final String type, final boolean secondary, final JSONObject weapon,
+			final JSONObject baseWeapon, final JSONObject otherWeapon, final JSONObject armorSet) {
+		if (weapon == null) {
+			table.addCells("—", "—", "—", "— / —", "—");
+			return 0;
+		}
+
+		final JSONArray types = weapon.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
+		final String weaponType = weapon.getStringOrDefault("Waffentyp:Primär",
+				baseWeapon.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : ""));
+		final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null),
+				type, weapon.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
+
+		switch (getWeaponType(weapon, baseWeapon)) {
+			case "Nahkampfwaffe" -> {
+				table.addCells(HeroUtil.getTPString(hero, weapon, baseWeapon));
+				table.addCells(HeroUtil.getAT(hero, baseWeapon, weaponType, true, secondary, otherWeapon, armorSet, false));
+				table.addCells(HeroUtil.getPA(hero, baseWeapon, weaponType, secondary, otherWeapon, armorSet, false));
+				table.addCells(getTPKKCell(weapon, baseWeapon, weaponMastery));
+				table.addCells(String.join("", weapon.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings()));
+			}
+			case "Schild" -> {
+				final Integer shieldAT = HeroUtil.getShieldAT(hero, baseWeapon, armorSet, false);
+				if (shieldAT != null && shieldAT > 0) {
+					table.addCells(HeroUtil.getShieldTPString(hero, baseWeapon), shieldAT, "S");
+					table.addCells(new TextCell("13").addText("/").addText("3").setEquallySpaced(true));
+					table.addCells("H");
+				} else {
+					table.addCells("—", "—", "S", "—", "—");
+				}
+			}
+			case "Parierwaffe" -> {
+				final Integer defensiveAT = HeroUtil.getDefensiveWeaponAT(hero, baseWeapon, otherWeapon, armorSet, false);
+				if (defensiveAT != null && defensiveAT > 0) {
+					table.addCells(HeroUtil.getTPString(hero, weapon, baseWeapon));
+					table.addCells(defensiveAT, "P");
+					table.addCells(getTPKKCell(weapon, baseWeapon, weaponMastery));
+					table.addCells(String.join("", weapon.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings()));
+				} else {
+					table.addCells("—", "—", "P", "—", "—");
+				}
+			}
+			default -> table.addCells("—", "—", "—", "— / —", "—");
+		}
+
+		return weapon.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0))
+				+ (weaponMastery != null ? weaponMastery.getIntOrDefault("Initiative:Modifikator", 0) : 0);
 	}
 
 	private void addZoneImage(final PDDocument document, final String imageName, final float imageTop, final float armorTableMid) {
@@ -534,23 +742,29 @@ public class FightSheet extends Sheet {
 						}
 					}
 					default -> {
-						final Tuple<Table, Runnable> table = switch (categoryName) {
+						final Tuple3<Table, Runnable, Boolean> table = switch (categoryName) {
 							case "Waffenloser Kampf" -> getInfightTable(document);
 							case "Schilde/Parierwaffen" -> getDefensiveWeaponsTable(document, section);
 							case "Ausweichen" -> getEvasionTable(document);
 							case "Lebensenergie/Ausdauer" -> getEnergiesTable(document);
 							default -> {
-								final Tuple<Table, Runnable> armorTable = getZoneArmorTable(document, section, categoryName,
-										(JSONObject) section.getUserData());
-								final String imageSetting = settingsPage.getString(section, "Bild").get();
-								if (!"Keine".equals(imageSetting)) {
-									if (zoneImage != null) {
-										addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
-										wideBottom = bottom.bottom;
+								@SuppressWarnings("unchecked")
+								final Tuple<JSONObject, Boolean> data = (Tuple<JSONObject, Boolean>) section.getUserData();
+								if (data == null || data._2) {
+									final Tuple3<Table, Runnable, Boolean> armorTable = getZoneArmorTable(document, section, categoryName,
+											data != null ? data._1 : null);
+									final String imageSetting = settingsPage.getString(section, "Bild").get();
+									if (!"Keine".equals(imageSetting)) {
+										if (zoneImage != null) {
+											addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
+											wideBottom = bottom.bottom;
+										}
+										zoneImage = new Tuple3<>(imageSetting, wideBottom, bottom.bottom - armorTable._1.getHeight(397) / 2);
 									}
-									zoneImage = new Tuple3<>(imageSetting, wideBottom, bottom.bottom - armorTable._1.getHeight(397) / 2);
+									yield armorTable;
+								} else {
+									yield getWeaponSetTable(document, section, categoryName);
 								}
-								yield armorTable;
 							}
 						};
 						if (table != null) {
@@ -568,7 +782,7 @@ public class FightSheet extends Sheet {
 									}
 								}
 							}
-							bottom.bottom = table._1.render(document, 397, 12, bottom.bottom, 72, 10) - 5;
+							bottom.bottom = table._1.render(document, table._3 ? 397 : 571, 12, bottom.bottom, 72, 10) - 5;
 							table._2.run();
 							if (bottom.bottom >= wideBottom) {
 								wideBottom = height;
@@ -585,7 +799,7 @@ public class FightSheet extends Sheet {
 		endCreate(document);
 	}
 
-	private Tuple<Table, Runnable> getDefensiveWeaponsTable(final PDDocument document, final TitledPane section) {
+	private Tuple3<Table, Runnable, Boolean> getDefensiveWeaponsTable(final PDDocument document, final TitledPane section) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(96, 96, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -675,12 +889,12 @@ public class FightSheet extends Sheet {
 			table.addRow(" ", " ", " ", "/");
 		}
 
-		if (table.getNumRows() > 1) return new Tuple<>(table, () -> {});
+		if (table.getNumRows() > 1) return new Tuple3<>(table, () -> {}, true);
 
 		return null;
 	}
 
-	private Tuple<Table, Runnable> getEnergiesTable(final PDDocument document) {
+	private Tuple3<Table, Runnable, Boolean> getEnergiesTable(final PDDocument document) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(61, FontManager.serif, 10, HAlign.LEFT));
@@ -762,10 +976,10 @@ public class FightSheet extends Sheet {
 			table.addRow("Ausdauer", " ", " ", " ", " ", effectsAuP);
 		}
 
-		return new Tuple<>(table, () -> {});
+		return new Tuple3<>(table, () -> {}, true);
 	}
 
-	private Tuple<Table, Runnable> getEvasionTable(final PDDocument document) {
+	private Tuple3<Table, Runnable, Boolean> getEvasionTable(final PDDocument document) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(41, FontManager.serif, fontSize, HAlign.CENTER));
@@ -841,7 +1055,7 @@ public class FightSheet extends Sheet {
 			table.addRow(" ");
 		}
 
-		return new Tuple<>(table, () -> {
+		return new Tuple3<>(table, () -> {
 			try (PDPageContentStream stream = new PDPageContentStream(document, document.getPage(document.getNumberOfPages() - 1), AppendMode.APPEND, true)) {
 				if (hero != null && fill) {
 					if (specialSkills[0].containsKey("Ausweichen I")) {
@@ -891,10 +1105,11 @@ public class FightSheet extends Sheet {
 			} catch (final IOException e) {
 				ErrorLogger.logError(e);
 			}
-		});
+		},
+				true);
 	}
 
-	private Tuple<Table, Runnable> getInfightTable(final PDDocument document) {
+	private Tuple3<Table, Runnable, Boolean> getInfightTable(final PDDocument document) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(96, 96, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -934,12 +1149,32 @@ public class FightSheet extends Sheet {
 			table.addRow("Ringen", " ", " ", " ", tpkk, "±0");
 		}
 
-		return new Tuple<>(table, () -> {});
+		return new Tuple3<>(table, () -> {}, true);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
 		final JSONObject settings = super.getSettings(parent);
+
+		final JSONObject fight = hero == null ? null : hero.getObj("Kampf");
+		if (fight != null) {
+			fight.removeKey("Waffenkombinationen");
+			HeroUtil.foreachInventoryItem(hero, item -> true, (item, extraInventory) -> {
+				item.removeKey("Waffenkombinationen:Hauptwaffe");
+				item.removeKey("Waffenkombinationen:Seitenwaffe");
+				for (final String category : List.of("Nahkampfwaffe", "Fernkampfwaffe", "Schild", "Parierwaffe")) {
+					if (item.containsKey(category)) {
+						item.getObj(category).removeKey("Waffenkombinationen:Hauptwaffe");
+						item.getObj(category).removeKey("Waffenkombinationen:Seitenwaffe");
+					}
+				}
+			});
+			for (final JSONObject armorSet : fight.getArr("Rüstungskombinationen").getObjs()) {
+				armorSet.removeKey("Waffenkombinationen");
+			}
+		}
+		final JSONArray weaponSets = fight == null ? null : fight.getArr("Waffenkombinationen");
 
 		final JSONObject categories = new JSONObject(settings);
 		for (final TitledPane section : settingsPage.getSections()) {
@@ -950,8 +1185,24 @@ public class FightSheet extends Sheet {
 				case "Geschosstypen", "Waffenloser Kampf", "Ausweichen", "Lebensenergie/Ausdauer", "Trefferzonen" -> {}
 				default -> category.put(ADDITIONAL_ROWS, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
 			}
-			if ("Rüstung".equals(name)) {
+			if ("Rüstung".equals(name) || section.getUserData() != null && ((Tuple<JSONObject, Boolean>) section.getUserData())._2) {
 				category.put("Bild", settingsPage.getString(section, "Bild").get());
+			}
+			if (section.getUserData() != null && !((Tuple<JSONObject, Boolean>) section.getUserData())._2) {
+				final JSONObject weaponSet = ((Tuple<JSONObject, Boolean>) section.getUserData())._1;
+				weaponSet.put("Name", name);
+				weaponSet.put("Typ", settingsPage.getString(section, "Zusatzzeilen").get());
+				weaponSets.add(weaponSet);
+				for (final JSONObject weapon : ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Hauptwaffe").getValue()).getCheckedItems()) {
+					weapon.getArr("Waffenkombinationen:Hauptwaffe").add(name);
+				}
+				for (final Tuple<JSONObject, String> weapon : ((CheckModel<Tuple<JSONObject, String>>) settingsPage.getProperty(section, "Seitenwaffe")
+						.getValue()).getCheckedItems()) {
+					weapon._1.getArr("Waffenkombinationen:Seitenwaffe").add(name);
+				}
+				for (final JSONObject weapon : ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Rüstung").getValue()).getCheckedItems()) {
+					weapon.getArr("Waffenkombinationen").add(name);
+				}
 			}
 			categories.put(name, category);
 		}
@@ -960,7 +1211,232 @@ public class FightSheet extends Sheet {
 		return settings;
 	}
 
-	private Tuple<Table, Runnable> getZoneArmorTable(final PDDocument document, final TitledPane section, final String title, final JSONObject armorSet) {
+	private TextCell getTPKKCell(final JSONObject weapon, final JSONObject baseWeapon, final JSONObject weaponMastery) {
+		final JSONObject TPKKValues = weapon.getObjOrDefault("Trefferpunkte/Körperkraft",
+				baseWeapon.getObjOrDefault("Trefferpunkte/Körperkraft", null));
+		final int threshold = TPKKValues != null ? TPKKValues.getIntOrDefault("Schwellenwert", Integer.MIN_VALUE) : Integer.MIN_VALUE;
+		final int step = TPKKValues != null ? TPKKValues.getIntOrDefault("Schadensschritte", Integer.MIN_VALUE) : Integer.MIN_VALUE;
+		final String tpkkThreshold = threshold == Integer.MIN_VALUE ? "—" : Integer.toString(threshold
+				+ (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schwellenwert", 0) : 0));
+		final String tpkkStep = step == Integer.MIN_VALUE ? "—" : Integer.toString(
+				step + (weaponMastery != null ? weaponMastery.getObj("Trefferpunkte/Körperkraft").getIntOrDefault("Schadensschritte", 0) : 0));
+		return new TextCell(tpkkThreshold).addText("/").addText(tpkkStep).setEquallySpaced(true);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Tuple3<Table, Runnable, Boolean> getWeaponSetTable(final PDDocument document, final TitledPane section, final String setName) throws IOException {
+		final Table table = new Table().setFiller(SheetUtil.stripe().invert(true));
+		table.addEventHandler(EventType.BEGIN_PAGE, header);
+		table.addColumn(new Column(274, FontManager.serif, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(297, FontManager.serif, fontSize, HAlign.LEFT));
+
+		table.addRow(SheetUtil.createTitleCell(setName, 2));
+
+		final String type = settingsPage.getString(section, "Zusatzzeilen").getValue();
+
+		final List<Table> fixedTables = new ArrayList<>(2);
+
+		JSONObject mainWeapon = null;
+		JSONObject mainBase = null;
+		JSONObject item = null;
+		JSONObject baseItem = null;
+		JSONObject actualArmor = new JSONObject(null);
+
+		final ObservableList<JSONObject> mainWeapons = ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Hauptwaffe").getValue()).getCheckedItems();
+		final ObservableList<Tuple<JSONObject, String>> secondaryWeapons = ((CheckModel<Tuple<JSONObject, String>>) settingsPage
+				.getProperty(section, "Seitenwaffe").getValue()).getCheckedItems();
+
+		for (final String current : List.of("Hauptwaffe", "Seitenwaffe")) {
+			final ObservableList<?> currentItems = "Hauptwaffe".equals(current) ? mainWeapons : secondaryWeapons;
+			if (!current.equals(type) && currentItems.size() > 0) {
+				final Table fixedTable = new Table().setFiller(SheetUtil.stripe()).setBorder(0, 0, 0, 0);
+				fixedTables.add(fixedTable);
+				item = "Hauptwaffe".equals(current) ? (JSONObject) currentItems.get(0) : ((Tuple<JSONObject, String>) currentItems.get(0))._1;
+				baseItem = item;
+				if (item.getParent() instanceof final JSONObject parent) {
+					baseItem = parent;
+				}
+				if ("Hauptwaffe".equals(current)) {
+					mainWeapon = item;
+					mainBase = baseItem;
+				}
+				final float width = fixedTables.size() == 1 ? 121 : 153;
+				fixedTable.addColumn(new Column(width, width, FontManager.serif, 4, fontSize, HAlign.LEFT));
+				final Column lastColumn = new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT);
+				if (fixedTables.size() == 1) {
+					lastColumn.setRightBorder(0);
+				}
+				fixedTable.addColumn(lastColumn);
+
+				final Cell nameTitle = new TextCell(current, FontManager.serifBold, 0, 6f).setBackground(Color.white);
+				final Cell notesTitle = new TextCell("Anmerkungen", FontManager.serifBold, 0, 6f).setBackground(Color.white);
+				fixedTable.addRow(nameTitle, notesTitle);
+
+				final JSONArray types = item.getArrOrDefault("Waffentypen", baseItem.getArr("Waffentypen"));
+				final String weaponType = item.getStringOrDefault("Waffentyp:Primär",
+						baseItem.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : ""));
+				final String name = item.getStringOrDefault("Name", baseItem.getStringOrDefault("Name", "Unbenannt"));
+				final String notes = HeroUtil.getWeaponNotes(item, baseItem, weaponType, hero);
+				fixedTable.addRow(name, notes);
+			}
+		}
+
+		final ObservableList<JSONObject> armor = ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Rüstung").getValue()).getCheckedItems();
+		if (!"Rüstung".equals(type) && armor.size() > 0) {
+			final Table armorTable = new Table().setFiller(SheetUtil.stripe()).setBorder(0, 0, 0, 0);
+			fixedTables.add(armorTable);
+			final float nameWidth = fixedTables.size() == 1 ? 130 : 153;
+			armorTable.addColumn(new Column(nameWidth, nameWidth, FontManager.serif, 4, fontSize, HAlign.LEFT));
+			armorTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+			armorTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+			armorTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+			armorTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+			armorTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+			armorTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+			armorTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+			armorTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+			final Column lastColumn = new Column(16, FontManager.serif, fontSize, HAlign.CENTER);
+			if (fixedTables.size() == 1) {
+				lastColumn.setRightBorder(0);
+			}
+			armorTable.addColumn(lastColumn);
+			for (final String title : List.of("Rüstung", "BE", "K", "Br", "R", "Ba", "LA", "RA", "LB", "RB")) {
+				armorTable.addCells(new TextCell(title, FontManager.serifBold, 0, 6f).setBackground(Color.white));
+			}
+			actualArmor = armor.get(0);
+			final String armorSetName = actualArmor.getStringOrDefault("Name", "Unbenannt");
+			armorTable.addCells(armorSetName);
+			if ("Rüstung".equals(armorSetName)) {
+				actualArmor = null;
+			}
+			addArmorValues(armorTable, actualArmor, HeroUtil.getBE(hero, actualArmor));
+		}
+
+		if (fixedTables.size() == 1) {
+			final Table empty = new Table();
+			empty.addColumn(new Column(0, FontManager.serif, 0, HAlign.LEFT));
+			empty.addRow(new TextCell("").setBackground(Color.white).setMinHeight(fixedTables.get(0).getHeight(275)));
+			fixedTables.add(empty);
+		}
+
+		final Table itemsTable = new Table().setFiller(SheetUtil.stripe().invert(true));
+		itemsTable.addColumn(new Column(101, 101, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(35, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(35, FontManager.serif, fontSize, HAlign.CENTER));
+		itemsTable.addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
+
+		final Cell nameTitle = new TextCell(type, FontManager.serifBold, 0, 6f);
+		final Cell iniTitle = new TextCell("INI", FontManager.serifBold, 0, 6f);
+		final Cell tpTitle = new TextCell("TP", FontManager.serifBold, 0, 6f);
+		final Cell atTitle = new TextCell("AT", FontManager.serifBold, 0, 6f);
+		final Cell paTitle = new TextCell("PA", FontManager.serifBold, 0, 6f);
+		final Cell tpkkTitle = new TextCell("TP/KK", FontManager.serifBold, 0, 6f);
+		final Cell dkTitle = new TextCell("DK", FontManager.serifBold, 0, 6f);
+		final Cell tp2Title = new TextCell("TP 2", FontManager.serifBold, 0, 6f);
+		final Cell at2Title = new TextCell("AT 2", FontManager.serifBold, 0, 6f);
+		final Cell pa2Title = new TextCell("PA 2", FontManager.serifBold, 0, 6f);
+		final Cell tpkk2Title = new TextCell("TP/KK 2", FontManager.serifBold, 0, 6f);
+		final Cell dk2Title = new TextCell("DK 2", FontManager.serifBold, 0, 6f);
+
+		switch (type) {
+			case "Hauptwaffe" -> {
+				itemsTable.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
+
+				final Cell notesTitle = new TextCell("Anmerkungen", FontManager.serifBold, 0, 6f);
+				itemsTable.addRow(nameTitle, iniTitle, tpTitle, atTitle, paTitle, tpkkTitle, dkTitle, tp2Title, at2Title, pa2Title, tpkk2Title, dk2Title,
+						notesTitle);
+
+				for (final JSONObject weapon : mainWeapons) {
+					JSONObject base = weapon;
+					if (weapon.getParent() instanceof final JSONObject parent) {
+						base = parent;
+					}
+					addWeaponSetRow(itemsTable, type, weapon, base, hero, weapon, base, item, baseItem, actualArmor);
+				}
+			}
+			case "Seitenwaffe" -> {
+				itemsTable.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
+
+				final Cell notesTitle = new TextCell("Anmerkungen", FontManager.serifBold, 0, 6f);
+				itemsTable.addRow(nameTitle, iniTitle, tpTitle, atTitle, paTitle, tpkkTitle, dkTitle, tp2Title, at2Title, pa2Title, tpkk2Title, dk2Title,
+						notesTitle);
+
+				for (final Tuple<JSONObject, String> secondary : secondaryWeapons) {
+					final JSONObject weapon = secondary._1;
+					JSONObject base = weapon;
+					if (weapon.getParent() instanceof final JSONObject parent) {
+						base = parent;
+					}
+					addWeaponSetRow(itemsTable, type, weapon, base, hero, mainWeapon, mainBase, weapon, base, actualArmor);
+				}
+			}
+			case "Rüstung" -> {
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+				itemsTable.addColumn(new Column(16, FontManager.serif, fontSize, HAlign.CENTER));
+
+				final Cell beTitle = new TextCell("BE", FontManager.serifBold, 0, 6f);
+				final Cell kTitle = new TextCell("K", FontManager.serifBold, 0, 6f);
+				final Cell brTitle = new TextCell("Br", FontManager.serifBold, 0, 6f);
+				final Cell rTitle = new TextCell("R", FontManager.serifBold, 0, 6f);
+				final Cell baTitle = new TextCell("Ba", FontManager.serifBold, 0, 6f);
+				final Cell laTitle = new TextCell("LA", FontManager.serifBold, 0, 6f);
+				final Cell raTitle = new TextCell("RA", FontManager.serifBold, 0, 6f);
+				final Cell lbTitle = new TextCell("LB", FontManager.serifBold, 0, 6f);
+				final Cell rbTitle = new TextCell("RB", FontManager.serifBold, 0, 6f);
+				itemsTable.addRow(nameTitle, iniTitle, tpTitle, atTitle, paTitle, tpkkTitle, dkTitle, tp2Title, at2Title, pa2Title, tpkk2Title, dk2Title,
+						beTitle, kTitle, brTitle, rTitle, baTitle, laTitle, raTitle, lbTitle, rbTitle);
+
+				for (final JSONObject armorSet : armor) {
+					addWeaponSetRow(itemsTable, "Rüstung", armorSet, armorSet, hero, mainWeapon, mainBase, item, baseItem,
+							"Rüstung".equals(armorSet.getString("Name")) ? null : armorSet);
+				}
+			}
+		}
+
+		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS).get(); ++i) {
+			itemsTable.addRow(" ", " ", " ", " ", " ", "/", " ", " ", " ", " ", "/");
+		}
+
+		if (!fixedTables.isEmpty()) {
+			table.addRow(new TableCell(fixedTables.get(0)), new TableCell(fixedTables.get(1)));
+		} else {
+			table.addRow();
+		}
+		table.addRow(new TableCell(itemsTable).setColSpan(2));
+
+		if (itemsTable.getNumRows() > 1) return new Tuple3<>(table, () -> {}, false);
+
+		return null;
+	}
+
+	private String getWeaponType(final JSONObject weapon, final JSONObject baseWeapon) {
+		final String weaponType = baseWeapon.keyOf(weapon);
+		if (weaponType == null) {
+			final JSONArray categories = weapon.getArr("Kategorien");
+			if (categories.contains("Nahkampfwaffe")) return "Nahkampfwaffe";
+			if (categories.contains("Schild")) return "Schild";
+			if (categories.contains("Parierwaffe")) return "Parierwaffe";
+		}
+		return weaponType;
+	}
+
+	private Tuple3<Table, Runnable, Boolean> getZoneArmorTable(final PDDocument document, final TitledPane section, final String title,
+			final JSONObject armorSet) {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 		table.addColumn(new Column(96, 96, FontManager.serif, 4, fontSize, HAlign.LEFT));
@@ -1069,7 +1545,7 @@ public class FightSheet extends Sheet {
 
 		table.addRow(sum, beSum, rg, "Ergebnis:", beResult);
 
-		if (table.getNumRows() > 2) return new Tuple<>(table, () -> {
+		if (table.getNumRows() > 2) return new Tuple3<>(table, () -> {
 			try (PDPageContentStream stream = new PDPageContentStream(document, document.getPage(document.getNumberOfPages() - 1), AppendMode.APPEND, true)) {
 				SheetUtil.drawChoiceBox(stream, 238, bottom.bottom + 15);
 				SheetUtil.drawChoiceBox(stream, 258, bottom.bottom + 15);
@@ -1090,7 +1566,8 @@ public class FightSheet extends Sheet {
 			} catch (final IOException e) {
 				ErrorLogger.logError(e);
 			}
-		});
+		},
+				true);
 
 		return null;
 	}
@@ -1131,6 +1608,7 @@ public class FightSheet extends Sheet {
 		sections.put("Trefferzonen", settingsPage.addSection("Trefferzonen", true));
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
@@ -1140,28 +1618,46 @@ public class FightSheet extends Sheet {
 		load();
 		super.loadSettings(settings);
 
+		final List<String> weaponSetNames = new ArrayList<>();
 		final List<String> armorSetNames = new ArrayList<>();
 
+		final JSONArray armorSets = hero == null ? null : hero.getObj("Kampf").getArrOrDefault("Rüstungskombinationen", new JSONArray(null));
+
 		if (hero != null) {
-			final JSONArray armorSets = hero.getObj("Kampf").getArrOrDefault("Rüstungskombinationen", new JSONArray(null));
+			final JSONArray actualWeaponSets = hero.getObj("Kampf").getArrOrDefault("Waffenkombinationen", new JSONArray(null));
+			weaponSets = actualWeaponSets.clone(null);
+			for (int i = 0; i < actualWeaponSets.size(); ++i) {
+				addWeaponSet(actualWeaponSets.getObj(i), weaponSetNames, armorSets);
+			}
+
 			for (int i = 0; i < armorSets.size(); ++i) {
 				final JSONObject armorSet = armorSets.getObj(i);
 				final String name = armorSet.getStringOrDefault("Name", "Unbenannte Rüstungskombination");
 				armorSetNames.add(name);
 				final TitledPane section = settingsPage.addSection(name, true);
-				section.setUserData(armorSet);
+				section.setUserData(new Tuple<>(armorSet, true));
 				sections.put(name, section);
 				settingsPage.addStringChoice("Bild", getZoneImages());
 				settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
 			}
+		} else {
+			weaponSets = new JSONArray(null);
 		}
 
 		final List<String> order = new ArrayList<>(List.of("Nahkampfwaffen", "Fernkampfwaffen", "Geschosstypen", "Waffenloser Kampf", "Schilde/Parierwaffen",
 				"Rüstung", "Ausweichen", "Lebensenergie/Ausdauer", "Trefferzonen"));
 		order.addAll(5, armorSetNames);
+		order.addAll(weaponSetNames);
 		orderSections(order);
 		final JSONObject categories = settings.getObjOrDefault("Kategorien", new JSONObject(null));
 		orderSections(categories.keySet());
+
+		settingsPage.endSection();
+		addWeaponSet = new Button("Waffenkombination hinzufügen");
+		addWeaponSet.setOnAction(e -> {
+			renameWeaponSet(null, null);
+		});
+		settingsPage.addNode(addWeaponSet);
 
 		for (final TitledPane section : settingsPage.getSections()) {
 			final String name = settingsPage.getString(section, null).get();
@@ -1177,9 +1673,9 @@ public class FightSheet extends Sheet {
 				default -> {
 					final int additionalRows = List.of("Nahkampfwaffen", "Fernkampfwaffen", "Schilde/Parierwaffen", "Rüstung").contains(name) ? 5 : 0;
 					settingsPage.getInt(section, ADDITIONAL_ROWS).set(category.getIntOrDefault(ADDITIONAL_ROWS, additionalRows));
-					if (!List.of("Nahkampfwaffen", "Fernkampfwaffen", "Schilde/Parierwaffen").contains(name)) {
+					if ("Rüstung".equals(name) || section.getUserData() != null && ((Tuple<JSONObject, Boolean>) section.getUserData())._2) {
 						final List<String> zoneImages = getZoneImages();
-						final String zoneImageDefault = zoneImages.contains("Amazone.jpg") ? "Amazone.jpg"
+						final String zoneImageDefault = zoneImages.contains("Kriegerin.png") ? "Kriegerin.png"
 								: zoneImages.size() > 1 ? zoneImages.get(1) : "Keines";
 						final StringProperty zoneImage = settingsPage.getString(section, "Bild");
 						zoneImage.set(category.getStringOrDefault("Bild", zoneImageDefault));
@@ -1190,6 +1686,84 @@ public class FightSheet extends Sheet {
 				}
 			}
 		}
+	}
+
+	private void renameWeaponSet(final JSONObject weaponSet, final TitledPane section) {
+		new RenameDialog(settingsPage.getControl().getScene().getWindow(), "Waffenkombination", "Waffenkombinationen", weaponSets,
+				weaponSet,
+				(oldName, newName) -> {
+					if (weaponSet == null) {
+						settingsPage.removeNode(addWeaponSet);
+						final JSONArray armorSets = hero == null ? null : hero.getObj("Kampf").getArrOrDefault("Rüstungskombinationen", new JSONArray(null));
+						addWeaponSet(weaponSets.getObj(weaponSets.size() - 1), null, armorSets);
+						settingsPage.endSection();
+						settingsPage.addNode(addWeaponSet);
+					} else {
+						settingsPage.getString(section, null).set(newName);
+					}
+				}, List.of("Rüstung"));
+	}
+
+	@SuppressWarnings("unchecked")
+	private <A, B, C> void setupWeaponSelection(final String type, final CheckComboBox<A> current, final List<A> items,
+			final List<A> selectedItems, final CheckComboBox<B> other1, final CheckComboBox<C> other2, final boolean[] clearing,
+			final ComboBox<String> additionalRows) {
+
+		if ("Seitenwaffe".equals(type)) {
+			current.setConverter((StringConverter<A>) new StringConverter<Tuple<JSONObject, String>>() {
+				@Override
+				public Tuple<JSONObject, String> fromString(final String name) {
+					return null;
+				}
+
+				@Override
+				public String toString(final Tuple<JSONObject, String> item) {
+					final JSONValue parent = item._1.getParent();
+					String name = item._1.getStringOrDefault("Name",
+							parent instanceof final JSONObject p ? p.getStringOrDefault("Name", "Unbenannt") : "Unbenannt");
+					if (item._2 != null) {
+						name += " (" + item._2 + ")";
+					}
+					return name;
+				}
+			});
+		} else {
+			current.setConverter((StringConverter<A>) DSAUtil.itemNameConverter);
+		}
+		current.setPrefWidth(150);
+		settingsPage.createLine(type, current, current.checkModelProperty());
+
+		final IndexedCheckModel<A> currentSelection = current.getCheckModel();
+		final ObservableList<A> selected = currentSelection.getCheckedItems();
+		final ObservableList<B> other1Selected = other1.getCheckModel().getCheckedItems();
+		final ObservableList<C> other2Selected = other2.getCheckModel().getCheckedItems();
+
+		current.getItems().addAll(items);
+		for (final A item : selectedItems) {
+			currentSelection.check(item);
+		}
+
+		currentSelection.getCheckedItems().addListener((ListChangeListener<A>) change -> {
+			if (!clearing[0]) {
+				if (selected.size() > 1 && (other1Selected.size() > 1 || other2Selected.size() > 1)) {
+					clearing[0] = true;
+					current.getItems().clear();
+					current.getItems().addAll(items);
+					currentSelection.clearChecks();
+					currentSelection.check(selectedItems.get(0));
+					clearing[0] = false;
+				} else {
+					selectedItems.clear();
+					selectedItems.addAll(selected);
+				}
+				if (selected.size() > 1) {
+					additionalRows.setValue(type);
+					additionalRows.setDisable(true);
+				} else if (other1Selected.size() < 2 && other2Selected.size() < 2) {
+					additionalRows.setDisable(false);
+				}
+			}
+		});
 	}
 
 	@Override
