@@ -44,17 +44,26 @@ import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.settings.SettingsPage;
 import dsatool.ui.ReactiveSpinner;
+import dsatool.ui.RenameDialog;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
 import dsatool.util.Util;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.StringProperty;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
+import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.TitledPane;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.VBox;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
@@ -71,6 +80,11 @@ public class AnimalSheet extends Sheet {
 
 	private static final List<String> sheetTypes = List.of("Vertrautentier", "Reittier", "Tier");
 
+	@FXML
+	private VBox animalsBox;
+
+	private JSONObject animalSettings;
+
 	private boolean isMagical;
 	private boolean isHorse;
 	private Table baseTable;
@@ -82,12 +96,54 @@ public class AnimalSheet extends Sheet {
 
 	public AnimalSheet() {
 		super(788);
+
+		final FXMLLoader fxmlLoader = new FXMLLoader();
+
+		fxmlLoader.setController(this);
+
+		try {
+			fxmlLoader.load(getClass().getResource("Animals.fxml").openStream());
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+	}
+
+	public void addAnimal(final ActionEvent event) {
+		final String type = switch (((Button) event.getSource()).getText().charAt(0)) {
+			case 'V' -> "Vertrautentier";
+			case 'R' -> "Reittier";
+			default -> "Tier";
+		};
+		renameAnimal(type, null, null);
 	}
 
 	public TitledPane addAnimal(final JSONObject animal, final String name, final String type, final JSONObject settings) {
 		final TitledPane section = settingsPage.addSection(name, true);
 		section.getStyleClass().add("boldTitledPane");
 		sections.put(name, section);
+
+		if (animal.size() == 0) {
+			section.setOnMouseClicked(e -> {
+				if (e.getButton().equals(MouseButton.PRIMARY) && e.getClickCount() == 2) {
+					renameAnimal(type, animalSettings, section);
+				}
+			});
+
+			final ContextMenu menu = section.getContextMenu();
+
+			final MenuItem editItem = new MenuItem("Bearbeiten");
+			editItem.setOnAction(event -> renameAnimal(type, animalSettings, section));
+			menu.getItems().add(0, editItem);
+
+			final MenuItem removeItem = new MenuItem("Löschen");
+			removeItem.setOnAction(e -> {
+				animalSettings.remove(settings);
+				settingsPage.removeSection(section);
+			});
+			menu.getItems().add(removeItem);
+
+			section.setContextMenu(menu);
+		}
 
 		final Map<String, TitledPane> animalSections = new HashMap<>();
 
@@ -223,7 +279,7 @@ public class AnimalSheet extends Sheet {
 		final SettingsPage settings = data._2;
 
 		final String type = settings.getString("Typ").get();
-		SheetUtil.addTitle(baseTable, animal != null ? animal.getObj("Biografie").getStringOrDefault("Name", type) : type);
+		SheetUtil.addTitle(baseTable, settingsPage.getString(animalSection, null).get());
 
 		isMagical = "Vertrautentier".equals(type);
 		isHorse = "Reittier".equals(type);
@@ -641,7 +697,7 @@ public class AnimalSheet extends Sheet {
 		if (animal != null && fill) {
 			final JSONObject bio = animal.getObj("Biografie");
 			final String trainingString = String.join(", ", bio.getArr("Ausbildung").getStrings());
-			table.addRow("Rasse: " + bio.getString("Rasse"), "Ausbildung: " + trainingString, "Farbe: " + bio.getStringOrDefault("Farbe", ""),
+			table.addRow("Rasse: " + bio.getStringOrDefault("Rasse", ""), "Ausbildung: " + trainingString, "Farbe: " + bio.getStringOrDefault("Farbe", ""),
 					"Größe: " + bio.getIntOrDefault("Größe", 0), "Gewicht: " + bio.getIntOrDefault("Gewicht", 0),
 					"Geschlecht: " + ("weiblich".equals(bio.getString("Geschlecht")) ? "♀" : "♂"));
 		} else {
@@ -1031,11 +1087,10 @@ public class AnimalSheet extends Sheet {
 		for (final TitledPane section : settingsPage.getSections()) {
 			@SuppressWarnings("unchecked")
 			final Tuple<JSONObject, SettingsPage> data = (Tuple<JSONObject, SettingsPage>) section.getUserData();
-			final JSONObject animal = data._1;
 			final SettingsPage animalSettings = data._2;
 
 			final JSONObject animalSetting = new JSONObject(namedAnimals);
-			namedAnimals.put(animal.getObj("Biografie").getStringOrDefault("Name", ""), animalSetting);
+			namedAnimals.put(settingsPage.getString(section, null).get(), animalSetting);
 
 			final String type = animalSettings.getString("Typ").get();
 
@@ -1130,23 +1185,54 @@ public class AnimalSheet extends Sheet {
 		load();
 		super.loadSettings(settings);
 
-		if (hero == null) {
-			for (final String type : List.of("Reittier", "Vertrautentier", "Tier")) {
-				addAnimal(null, type, type, new JSONObject(null));
-			}
-		} else {
+		final JSONObject namedAnimals = settings.getObjOrDefault("Tiere", new JSONObject(null));
+		animalSettings = namedAnimals.clone(null);
+		final Map<String, JSONObject> found = new HashMap<>();
+
+		if (hero != null) {
 			final JSONArray animals = hero.getArrOrDefault("Tiere", new JSONArray(null));
-			final JSONObject namedAnimals = settings.getObjOrDefault("Tiere", new JSONObject(null));
 			for (int i = 0; i < animals.size(); ++i) {
 				final JSONObject animal = animals.getObj(i);
 				final String name = animal.getObj("Biografie").getStringOrDefault("Name", "");
-				final JSONObject setting = namedAnimals.getObjOrDefault(name, new JSONObject(null));
-				final String type = setting.getStringOrDefault("Typ", animal.getObj("Biografie").getStringOrDefault("Typ", "Tier"));
-				addAnimal(animal, name, type, setting);
+				found.put(name, animal);
 			}
-			orderSections(namedAnimals.keySet());
 		}
 
+		for (final String name : namedAnimals.keySet()) {
+			final JSONObject setting = namedAnimals.getObj(name);
+			if (found.containsKey(name)) {
+				final JSONObject animal = found.get(name);
+				addAnimal(animal, name, setting.getStringOrDefault("Typ", animal.getObj("Biografie").getStringOrDefault("Typ", "Tier")), setting);
+			} else {
+				addAnimal(new JSONObject(null), name, setting.getStringOrDefault("Typ", "Tier"), setting);
+			}
+		}
+
+		if (hero != null) {
+			for (final String name : found.keySet()) {
+				if (!namedAnimals.keySet().contains(name)) {
+					final JSONObject animal = found.get(name);
+					addAnimal(animal, name, animal.getObj("Biografie").getStringOrDefault("Typ", "Tier"), new JSONObject(null));
+				}
+			}
+		}
+
+		settingsPage.endSection();
+		settingsPage.addNode(animalsBox);
+	}
+
+	private void renameAnimal(final String type, final JSONObject animal, final TitledPane section) {
+		new RenameDialog(animalsBox.getScene().getWindow(), type, "Tiere", animalSettings, animal,
+				(oldName, newName) -> {
+					if (animal == null) {
+						settingsPage.removeNode(animalsBox);
+						addAnimal(new JSONObject(null), newName, type, new JSONObject(null));
+						settingsPage.endSection();
+						settingsPage.addNode(animalsBox);
+					} else {
+						settingsPage.getString(section, null).set(newName);
+					}
+				}, List.of());
 	}
 
 	@Override
