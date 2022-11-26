@@ -18,7 +18,6 @@ package charactersheet.ui;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +59,7 @@ import javafx.stage.FileChooser;
 import jsonant.value.JSONObject;
 
 public class SheetConfiguration extends HeroSelector {
-	public static List<Class<? extends Sheet>> sheetControllers = new ArrayList<>(Arrays.asList(CompactSheet.class, CharacterSheet.class, FightSheet.class,
+	public static List<Class<? extends Sheet>> sheetControllers = new ArrayList<>(List.of(CompactSheet.class, CharacterSheet.class, FightSheet.class,
 			SpecialSkillsSheet.class, TalentsSheet.class, InventorySheet.class, SpellsSheet.class, RitualsSheet.class, ClericSheet.class, AnimalSheet.class));
 
 	@FXML
