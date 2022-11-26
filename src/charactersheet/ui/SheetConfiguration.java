@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline;
@@ -170,6 +172,8 @@ public class SheetConfiguration extends HeroSelector {
 	}
 
 	private void create(final File file) {
+		Logger.getLogger("org.apache.pdfbox.pdmodel.PDDocument").setLevel(Level.SEVERE);
+
 		Sheet.reset();
 		try (final PDDocument document = new PDDocument()) {
 			FontManager.initFonts(document);
