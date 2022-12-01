@@ -796,6 +796,15 @@ public class FightSheet extends Sheet {
 			}
 		}
 
+		try {
+			if (zoneImage != null) {
+				addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
+				zoneImage = null;
+			}
+		} catch (final Exception e) {
+			ErrorLogger.logError(e);
+		}
+
 		endCreate(document);
 	}
 
