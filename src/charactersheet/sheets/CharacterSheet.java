@@ -562,6 +562,8 @@ public class CharacterSheet extends Sheet {
 				continue;
 			}
 
+			separatePage(document, settingsPage, section);
+
 			final String name = settingsPage.getString(section, null).get();
 
 			try {
@@ -599,6 +601,7 @@ public class CharacterSheet extends Sheet {
 			} else {
 				final JSONObject table = new JSONObject(tables);
 				table.put("Anzeigen", settingsPage.getBool(section, "").get());
+				table.put(AS_SEPARATE_SHEET, settingsPage.getBool(section, AS_SEPARATE_SHEET).get());
 				table.put(ADDITIONAL_ROWS, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
 				tables.put(name, table);
 			}
@@ -628,6 +631,7 @@ public class CharacterSheet extends Sheet {
 		for (final String name : List.of("Vorteile", "Nachteile", "Verbindungen")) {
 			final TitledPane section = settingsPage.addSection(name, true);
 			sections.put(name, section);
+			addOwnPageOption(settingsPage, section);
 			settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
 		}
 	}
@@ -658,6 +662,7 @@ public class CharacterSheet extends Sheet {
 			final TitledPane section = sections.get(name);
 			final JSONObject table = tables.getObjOrDefault(name, new JSONObject(null));
 			settingsPage.getBool(section, "").set(table.getBoolOrDefault("Anzeigen", true));
+			settingsPage.getBool(section, AS_SEPARATE_SHEET).set(table.getBoolOrDefault(AS_SEPARATE_SHEET, false));
 			settingsPage.getInt(section, ADDITIONAL_ROWS).set(table.getIntOrDefault(ADDITIONAL_ROWS, 5));
 		}
 	}

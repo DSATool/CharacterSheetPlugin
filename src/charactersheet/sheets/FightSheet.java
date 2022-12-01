@@ -80,7 +80,7 @@ public class FightSheet extends Sheet {
 		super(771);
 	}
 
-	private boolean addAmmunitionTable(final PDDocument document) throws IOException {
+	private boolean addAmmunitionTable(final PDDocument document, final TitledPane section) throws IOException {
 		int numCols = settingsPage.getInt(sections.get("Fernkampfwaffen"), ADDITIONAL_ROWS).get();
 
 		final List<JSONObject> ammunition = new ArrayList<>();
@@ -134,6 +134,7 @@ public class FightSheet extends Sheet {
 		}
 
 		if (table.getNumRows() > 1) {
+			separatePage(document, settingsPage, section);
 			bottom.bottom = table.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
 			return true;
 		}
@@ -240,6 +241,7 @@ public class FightSheet extends Sheet {
 		}
 
 		if (table.getNumRows() > 1) {
+			separatePage(document, settingsPage, section);
 			bottom.bottom = table.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
 			return true;
 		}
@@ -364,6 +366,7 @@ public class FightSheet extends Sheet {
 		}
 
 		if (table.getNumRows() > 1) {
+			separatePage(document, settingsPage, section);
 			bottom.bottom = table.render(document, 571, 12, bottom.bottom, 72, 10) - 5;
 			return true;
 		}
@@ -378,6 +381,7 @@ public class FightSheet extends Sheet {
 		final TitledPane section = settingsPage.addSection(name, true);
 		section.setUserData(new Tuple<>(weaponSet, false));
 		sections.put(name, section);
+		addOwnPageOption(settingsPage, section);
 
 		settingsPage.getBool(section, "").set(weaponSet.getBoolOrDefault("Anzeigen", true));
 
@@ -730,8 +734,9 @@ public class FightSheet extends Sheet {
 						final boolean addedTable = switch (categoryName) {
 							case "Nahkampfwaffen" -> addCloseCombatTable(document, section);
 							case "Fernkampfwaffen" -> addRangedCombatTable(document, section);
-							case "Geschosstypen" -> addAmmunitionTable(document);
+							case "Geschosstypen" -> addAmmunitionTable(document, section);
 							case "Trefferzonen" -> {
+								separatePage(document, settingsPage, section);
 								addZonesTable(document);
 								yield true;
 							}
@@ -769,7 +774,7 @@ public class FightSheet extends Sheet {
 						};
 						if (table != null) {
 							if (zoneImage != null) {
-								if (table._1.getHeight(397) > bottom.bottom - 10) {
+								if (table._1.getHeight(397) > bottom.bottom - 10 || settingsPage.getBool(section, AS_SEPARATE_SHEET).get()) {
 									if (List.of("Waffenloser Kampf", "Schilde/Parierwaffen", "Ausweichen", "Lebensenergie/Ausdauer").contains(categoryName)) {
 										bottom.bottom = 10;
 										addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
@@ -782,6 +787,7 @@ public class FightSheet extends Sheet {
 									}
 								}
 							}
+							separatePage(document, settingsPage, section);
 							bottom.bottom = table._1.render(document, table._3 ? 397 : 571, 12, bottom.bottom, 72, 10) - 5;
 							table._2.run();
 							if (bottom.bottom >= wideBottom) {
@@ -1190,6 +1196,7 @@ public class FightSheet extends Sheet {
 			final String name = settingsPage.getString(section, null).get();
 			final JSONObject category = new JSONObject(categories);
 			category.put("Anzeigen", settingsPage.getBool(section, "").get());
+			category.put(AS_SEPARATE_SHEET, settingsPage.getBool(section, AS_SEPARATE_SHEET).get());
 			switch (name) {
 				case "Geschosstypen", "Waffenloser Kampf", "Ausweichen", "Lebensenergie/Ausdauer", "Trefferzonen" -> {}
 				default -> category.put(ADDITIONAL_ROWS, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
@@ -1601,20 +1608,46 @@ public class FightSheet extends Sheet {
 	public void load() {
 		super.load();
 
-		sections.put("Nahkampfwaffen", settingsPage.addSection("Nahkampfwaffen", true));
+		final TitledPane closeCombatSection = settingsPage.addSection("Nahkampfwaffen", true);
+		sections.put("Nahkampfwaffen", closeCombatSection);
+		addOwnPageOption(settingsPage, closeCombatSection);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
-		sections.put("Fernkampfwaffen", settingsPage.addSection("Fernkampfwaffen", true));
+
+		final TitledPane rangedCombatSection = settingsPage.addSection("Fernkampfwaffen", true);
+		sections.put("Fernkampfwaffen", rangedCombatSection);
+		addOwnPageOption(settingsPage, rangedCombatSection);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
-		sections.put("Geschosstypen", settingsPage.addSection("Geschosstypen", true));
-		sections.put("Waffenloser Kampf", settingsPage.addSection("Waffenloser Kampf", true));
-		sections.put("Schilde/Parierwaffen", settingsPage.addSection("Schilde/Parierwaffen", true));
+
+		final TitledPane ammunitionSection = settingsPage.addSection("Geschosstypen", true);
+		sections.put("Geschosstypen", ammunitionSection);
+		addOwnPageOption(settingsPage, ammunitionSection);
+
+		final TitledPane infightSection = settingsPage.addSection("Waffenloser Kampf", true);
+		sections.put("Waffenloser Kampf", infightSection);
+		addOwnPageOption(settingsPage, infightSection);
+
+		final TitledPane defensiveWeaponsSection = settingsPage.addSection("Schilde/Parierwaffen", true);
+		sections.put("Schilde/Parierwaffen", defensiveWeaponsSection);
+		addOwnPageOption(settingsPage, defensiveWeaponsSection);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
-		sections.put("Rüstung", settingsPage.addSection("Rüstung", true));
+
+		final TitledPane armorSection = settingsPage.addSection("Rüstung", true);
+		sections.put("Rüstung", armorSection);
+		addOwnPageOption(settingsPage, armorSection);
 		settingsPage.addStringChoice("Bild", getZoneImages());
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
-		sections.put("Ausweichen", settingsPage.addSection("Ausweichen", true));
-		sections.put("Lebensenergie/Ausdauer", settingsPage.addSection("Lebensenergie/Ausdauer", true));
-		sections.put("Trefferzonen", settingsPage.addSection("Trefferzonen", true));
+
+		final TitledPane evasionSection = settingsPage.addSection("Ausweichen", true);
+		sections.put("Ausweichen", evasionSection);
+		addOwnPageOption(settingsPage, evasionSection);
+
+		final TitledPane energiesSection = settingsPage.addSection("Lebensenergie/Ausdauer", true);
+		sections.put("Lebensenergie/Ausdauer", energiesSection);
+		addOwnPageOption(settingsPage, energiesSection);
+
+		final TitledPane zonesSection = settingsPage.addSection("Trefferzonen", true);
+		sections.put("Trefferzonen", zonesSection);
+		addOwnPageOption(settingsPage, zonesSection);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1646,6 +1679,7 @@ public class FightSheet extends Sheet {
 				final TitledPane section = settingsPage.addSection(name, true);
 				section.setUserData(new Tuple<>(armorSet, true));
 				sections.put(name, section);
+				addOwnPageOption(settingsPage, section);
 				settingsPage.addStringChoice("Bild", getZoneImages());
 				settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
 			}
@@ -1677,6 +1711,7 @@ public class FightSheet extends Sheet {
 				default -> true;
 			};
 			settingsPage.getBool(section, "").set(category.getBoolOrDefault("Anzeigen", show));
+			settingsPage.getBool(section, AS_SEPARATE_SHEET).set(category.getBoolOrDefault(AS_SEPARATE_SHEET, false));
 			switch (name) {
 				case "Geschosstypen", "Waffenloser Kampf", "Ausweichen", "Lebensenergie/Ausdauer", "Trefferzonen" -> {}
 				default -> {

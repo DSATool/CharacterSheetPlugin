@@ -45,6 +45,7 @@ import dsatool.resources.ResourceManager;
 import dsatool.ui.ReactiveSpinner;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
+import dsatool.util.Tuple3;
 import javafx.beans.property.BooleanProperty;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TitledPane;
@@ -66,11 +67,13 @@ public class RitualsSheet extends Sheet {
 		super(536);
 	}
 
-	private void addSection(final String name, final Tuple<String, JSONObject> data, final boolean selected) {
+	private void addSection(final String name, final Tuple<String, JSONObject> data, final boolean selected, final JSONObject settings) {
 		final TitledPane section = settingsPage.addSection(name, true);
 		sections.put(name, section);
+		addOwnPageOption(settingsPage, section);
 		section.setUserData(data);
 		settingsPage.getBool(section, "").set(selected);
+		settingsPage.getBool(section, AS_SEPARATE_SHEET).set(settings.getBoolOrDefault(AS_SEPARATE_SHEET, false));
 		final BooleanProperty own = settingsPage.addBooleanChoice(OWN_RITUALS_ONLY).selectedProperty();
 		final ReactiveSpinner<Integer> additionalRows = settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 20);
 		additionalRows.setDisable(true);
@@ -82,10 +85,10 @@ public class RitualsSheet extends Sheet {
 		});
 	}
 
-	private void addUnspecificSection(final String name, final JSONObject groups) {
+	private void addUnspecificSection(final String name, final JSONObject settings) {
 		boolean show = false;
-		if (groups.containsKey(name)) {
-			show = groups.getBoolOrDefault(name, false);
+		if (settings.containsKey("Anzeigen")) {
+			show = settings.getBool("Anzeigen");
 		} else if (hero != null) {
 			show = switch (name) {
 				case "Stabzauber" -> false;
@@ -112,7 +115,7 @@ public class RitualsSheet extends Sheet {
 				}
 			};
 		}
-		addSection(name, null, show);
+		addSection(name, null, show, settings);
 	}
 
 	@Override
@@ -141,7 +144,7 @@ public class RitualsSheet extends Sheet {
 
 		final JSONObject apport = rituals.getObj("Allgemeine Rituale").getObj("Apport");
 
-		final List<Tuple<Table, Boolean>> tables = new ArrayList<>(settingsPage.getSections().size());
+		final List<Tuple3<Table, Boolean, TitledPane>> tables = new ArrayList<>(settingsPage.getSections().size());
 
 		for (final TitledPane section : settingsPage.getSections()) {
 			if (!settingsPage.getBool(section, "").get()) {
@@ -164,7 +167,8 @@ public class RitualsSheet extends Sheet {
 			try {
 				final String name = settingsPage.getString(section, null).get();
 				final JSONObject ritual = rituals.getObj(ritualGroupName);
-				final Tuple<Table, Boolean> table = createTable(document, name, ritualGroupName, ritual, ritualGroup, item, baseItem, apport);
+				final Tuple3<Table, Boolean, TitledPane> table = createTable(document, section, name, ritualGroupName, ritual, ritualGroup, item, baseItem,
+						apport);
 				if (table._1.getNumRows() > 2) {
 					tables.add(table);
 				}
@@ -176,6 +180,7 @@ public class RitualsSheet extends Sheet {
 		for (int i = 0; i < tables.size(); ++i) {
 			final Table table = tables.get(i)._1;
 			Boolean portrait = tables.get(i)._2;
+			final TitledPane section = tables.get(i)._3;
 
 			if (portrait == null) {
 				if (settingsPage.getBool(AS_SEPARATE_SHEET).get()) {
@@ -214,6 +219,7 @@ public class RitualsSheet extends Sheet {
 							new TableEvent(document, stream, 0, PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight()));
 					stream.close();
 				}
+				separatePage(document, settingsPage, section);
 				bottom.bottom = table.render(document, 571, 12, bottom.bottom, 77 + ritualKnowledgeTable[0].getHeight(571), 10) - 5;
 			} else {
 				if (!SheetUtil.matchesPageSize(document, SheetUtil.landscape)) {
@@ -227,6 +233,7 @@ public class RitualsSheet extends Sheet {
 							new TableEvent(document, stream, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
 					stream.close();
 				}
+				separatePage(document, settingsPage, section);
 				bottom.bottom = table.render(document, 818, 12, bottom.bottom, 64 + ritualKnowledgeTable[0].getHeight(818), 10) - 5;
 			}
 		}
@@ -234,9 +241,9 @@ public class RitualsSheet extends Sheet {
 		endCreate(document);
 	}
 
-	private Tuple<Table, Boolean> createTable(final PDDocument document, final String name, final String groupName, final JSONObject actualGroup,
-			final JSONObject group,
-			final JSONObject item, final JSONObject baseItem, final JSONObject apport) throws IOException {
+	private Tuple3<Table, Boolean, TitledPane> createTable(final PDDocument document, final TitledPane section, final String name, final String groupName,
+			final JSONObject actualGroup, final JSONObject group, final JSONObject item, final JSONObject baseItem, final JSONObject apport)
+			throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 
 		final Cell nameTitle = new TextCell("Ritual", FontManager.serifBold, 8.5f, 8.5f);
@@ -544,7 +551,7 @@ public class RitualsSheet extends Sheet {
 			}
 		}
 
-		return new Tuple<>(table, "Allgemeine Rituale".equals(groupName) ? null : width[0] < 400);
+		return new Tuple3<>(table, "Allgemeine Rituale".equals(groupName) ? null : width[0] < 400, section);
 	}
 
 	private void fillRitual(final Table table, final JSONObject actualGroup, final boolean isObjectRitual, final String ritualName, final JSONObject ritual,
@@ -944,15 +951,15 @@ public class RitualsSheet extends Sheet {
 					final JSONArray categories = item.getArr("Kategorien");
 					if (categories.contains(ritualObjectName)) {
 						final String name = item.containsKey("Name") ? ritualGroupName + ": " + item.getString("Name") : ritualGroupName;
-						addSection(name, new Tuple<>(ritualGroupName, item), true);
+						addSection(name, new Tuple<>(ritualGroupName, item), true, groups.getObj(name));
 						found = true;
 					}
 				}
 				if (!found) {
-					addUnspecificSection(ritualGroupName, groups);
+					addUnspecificSection(ritualGroupName, groups.getObj(ritualGroupName));
 				}
 			} else {
-				addUnspecificSection(ritualGroupName, groups);
+				addUnspecificSection(ritualGroupName, groups.getObj(ritualGroupName));
 			}
 		}
 

@@ -121,6 +121,7 @@ public class AnimalSheet extends Sheet {
 		final TitledPane section = settingsPage.addSection(name, true);
 		section.getStyleClass().add("boldTitledPane");
 		sections.put(name, section);
+		addOwnPageOption(settingsPage, section);
 
 		if (animal.size() == 0) {
 			section.setOnMouseClicked(e -> {
@@ -141,8 +142,6 @@ public class AnimalSheet extends Sheet {
 				settingsPage.removeSection(section);
 			});
 			menu.getItems().add(removeItem);
-
-			section.setContextMenu(menu);
 		}
 
 		final Map<String, TitledPane> animalSections = new HashMap<>();
@@ -157,6 +156,7 @@ public class AnimalSheet extends Sheet {
 		settingsPage.addNode(pane);
 
 		settingsPage.getBool(section, "").set(settings.getBoolOrDefault("Anzeigen", true));
+		settingsPage.getBool(section, AS_SEPARATE_SHEET).set(settings.getBoolOrDefault(AS_SEPARATE_SHEET, false));
 
 		animalSettings.addStringChoice("Typ", sheetTypes);
 		final StringProperty typeProperty = animalSettings.getString("Typ");
@@ -277,6 +277,8 @@ public class AnimalSheet extends Sheet {
 		final Tuple<JSONObject, SettingsPage> data = (Tuple<JSONObject, SettingsPage>) animalSection.getUserData();
 		final JSONObject animal = data._1;
 		final SettingsPage settings = data._2;
+
+		separatePage(document, settingsPage, animalSection);
 
 		final String type = settings.getString("Typ").get();
 		SheetUtil.addTitle(baseTable, settingsPage.getString(animalSection, null).get());
@@ -1095,6 +1097,7 @@ public class AnimalSheet extends Sheet {
 			final String type = animalSettings.getString("Typ").get();
 
 			animalSetting.put("Anzeigen", settingsPage.getBool(section, "").get());
+			animalSetting.put(AS_SEPARATE_SHEET, settingsPage.getBool(AS_SEPARATE_SHEET).get());
 			animalSetting.put("Typ", type);
 
 			for (final TitledPane subsection : animalSettings.getSections()) {

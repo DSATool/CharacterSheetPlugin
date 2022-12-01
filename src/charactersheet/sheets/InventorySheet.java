@@ -434,6 +434,8 @@ public class InventorySheet extends Sheet {
 				continue;
 			}
 
+			separatePage(document, settingsPage, section);
+
 			final String categoryName = settingsPage.getString(section, null).get();
 
 			try {
@@ -468,6 +470,7 @@ public class InventorySheet extends Sheet {
 			final String name = settingsPage.getString(section, null).get();
 			final JSONObject category = new JSONObject(categories);
 			category.put("Anzeigen", settingsPage.getBool(section, "").get());
+			category.put(AS_SEPARATE_SHEET, settingsPage.getBool(section, AS_SEPARATE_SHEET).get());
 			category.put(ADDITIONAL_ROWS, settingsPage.getInt(section, ADDITIONAL_ROWS).get());
 			categories.put(name, category);
 		}
@@ -481,19 +484,29 @@ public class InventorySheet extends Sheet {
 		super.load();
 		settingsPage.addBooleanChoice(SHOW_ATTRIBUTES);
 
-		sections.put("Kleidung", settingsPage.addSection("Kleidung", true));
+		final TitledPane clothingSection = settingsPage.addSection("Kleidung", true);
+		sections.put("Kleidung", clothingSection);
+		addOwnPageOption(settingsPage, clothingSection);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
 
-		sections.put("Wertgegenstände", settingsPage.addSection("Wertgegenstände", true));
+		final TitledPane valuablesSection = settingsPage.addSection("Wertgegenstände", true);
+		sections.put("Wertgegenstände", valuablesSection);
+		addOwnPageOption(settingsPage, valuablesSection);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
 
-		sections.put("Alchemika", settingsPage.addSection("Alchemika", true));
+		final TitledPane potionsSection = settingsPage.addSection("Alchemika", true);
+		sections.put("Alchemika", potionsSection);
+		addOwnPageOption(settingsPage, potionsSection);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
 
-		sections.put("Artefakte", settingsPage.addSection("Artefakte", true));
+		final TitledPane artifactsSection = settingsPage.addSection("Artefakte", true);
+		sections.put("Artefakte", artifactsSection);
+		addOwnPageOption(settingsPage, artifactsSection);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
 
-		sections.put("Inventar", settingsPage.addSection("Inventar", true));
+		final TitledPane inventorySection = settingsPage.addSection("Inventar", true);
+		sections.put("Inventar", inventorySection);
+		addOwnPageOption(settingsPage, inventorySection);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
 	}
 
@@ -514,6 +527,7 @@ public class InventorySheet extends Sheet {
 				final String name = inventory.getStringOrDefault("Name", "");
 				final TitledPane section = settingsPage.addSection(name, true);
 				sections.put(name, section);
+				addOwnPageOption(settingsPage, section);
 				settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
 				section.setUserData(inventory);
 			}
@@ -527,6 +541,7 @@ public class InventorySheet extends Sheet {
 			final String name = settingsPage.getString(section, null).get();
 			final JSONObject category = categories.getObjOrDefault(name, new JSONObject(null));
 			settingsPage.getBool(section, "").set(category.getBoolOrDefault("Anzeigen", true));
+			settingsPage.getBool(section, AS_SEPARATE_SHEET).set(category.getBoolOrDefault(AS_SEPARATE_SHEET, false));
 			final int defaultRows = switch (name) {
 				case "Kleidung" -> 20;
 				case "Wertgegenstände", "Alchemika", "Artefakte" -> 5;

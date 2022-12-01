@@ -34,6 +34,7 @@ import charactersheet.util.SheetUtil.BottomObserver;
 import dsa41basis.ui.hero.HeroController;
 import dsatool.settings.SettingsPage;
 import javafx.scene.Node;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.TitledPane;
 import jsonant.value.JSONObject;
 
@@ -77,6 +78,12 @@ public abstract class Sheet implements HeroController {
 		this.canBeSeparate = canBeSeparate;
 	}
 
+	protected void addOwnPageOption(final SettingsPage settings, final TitledPane section) {
+		final CheckMenuItem ownPageItem = new CheckMenuItem("Auf neuer Seite beginnen");
+		section.getContextMenu().getItems().add(ownPageItem);
+		settings.addProperty(section, AS_SEPARATE_SHEET, ownPageItem.selectedProperty());
+	}
+
 	public boolean check() {
 		return true;
 	}
@@ -108,7 +115,7 @@ public abstract class Sheet implements HeroController {
 		}
 		settingsPage.addBooleanChoice(ADD_EMPTY_PAGE);
 		settingsPage.addSeparator();
-	};
+	}
 
 	public void loadSettings(final JSONObject settings) {
 		if (canBeSeparate) {
@@ -124,6 +131,19 @@ public abstract class Sheet implements HeroController {
 				settingsPage.moveSection(sections.get(key), index);
 				++index;
 			}
+		}
+	}
+
+	protected void separatePage(final PDDocument document, final SettingsPage settings, final TitledPane section) throws IOException {
+		if (settings.getBool(section, AS_SEPARATE_SHEET).get() && bottom.bottom != bottom.top) {
+			final PDPage page = new PDPage(pageSize);
+			document.addPage(page);
+			if (header != null) {
+				final PDPageContentStream stream = new PDPageContentStream(document, page, AppendMode.APPEND, true);
+				header.accept(new TableEvent(document, stream, 0, pageSize.getHeight(), pageSize.getWidth(), pageSize.getHeight()));
+				stream.close();
+			}
+			bottom = new BottomObserver(height);
 		}
 	}
 

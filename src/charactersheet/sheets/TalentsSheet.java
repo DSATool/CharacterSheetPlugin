@@ -363,6 +363,8 @@ public class TalentsSheet extends Sheet {
 				continue;
 			}
 
+			separatePage(document, settingsPage, section);
+
 			final String name = settingsPage.getString(section, null).get();
 			try {
 				switch (name) {
@@ -941,6 +943,7 @@ public class TalentsSheet extends Sheet {
 	private void createSection(final String name, final boolean[] lock, final ReactiveSpinner<Integer> additionalRows, final CheckBox ownTalentsOnly) {
 		final TitledPane section = settingsPage.addSection(name, true);
 		sections.put(name, section);
+		addOwnPageOption(settingsPage, section);
 
 		BooleanProperty own = null;
 		if (!specialGroups.contains(name)) {
@@ -985,6 +988,7 @@ public class TalentsSheet extends Sheet {
 			final String name = settingsPage.getString(section, null).get();
 			final JSONObject group = new JSONObject(groups);
 			group.put("Anzeigen", settingsPage.getBool(section, "").get());
+			group.put(AS_SEPARATE_SHEET, settingsPage.getBool(section, AS_SEPARATE_SHEET).get());
 			if (!specialGroups.contains(name)) {
 				group.put(OWN_TALENTS_ONLY, settingsPage.getBool(section, OWN_TALENTS_ONLY).get());
 			}
@@ -1066,6 +1070,7 @@ public class TalentsSheet extends Sheet {
 			final String name = settingsPage.getString(section, null).get();
 			final JSONObject group = groups.getObjOrDefault(name, new JSONObject(null));
 			settingsPage.getBool(section, "").set(group.getBoolOrDefault("Anzeigen", true));
+			settingsPage.getBool(section, AS_SEPARATE_SHEET).set(group.getBoolOrDefault(AS_SEPARATE_SHEET, false));
 			if (!specialGroups.contains(name)) {
 				settingsPage.getBool(section, OWN_TALENTS_ONLY).set(group.getBoolOrDefault(OWN_TALENTS_ONLY, false));
 			}
