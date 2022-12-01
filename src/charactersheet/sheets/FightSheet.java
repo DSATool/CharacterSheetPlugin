@@ -754,7 +754,7 @@ public class FightSheet extends Sheet {
 									final Tuple3<Table, Runnable, Boolean> armorTable = getZoneArmorTable(document, section, categoryName,
 											data != null ? data._1 : null);
 									final String imageSetting = settingsPage.getString(section, "Bild").get();
-									if (!"Keine".equals(imageSetting)) {
+									if (armorTable != null && !"Keine".equals(imageSetting)) {
 										if (zoneImage != null) {
 											addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
 											wideBottom = bottom.bottom;
