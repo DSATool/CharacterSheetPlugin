@@ -1039,7 +1039,7 @@ public class CompactSheet extends Sheet {
 							}
 
 							final float smallBottom = bottom.bottom;
-							smallTop = smallTop > smallBottom ? smallTop : height - 5;
+							smallTop = smallTop >= smallBottom ? smallTop : height - 5;
 							bottom.bottom = smallTop;
 
 							try {
