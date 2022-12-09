@@ -284,9 +284,15 @@ public class InventorySheet extends Sheet {
 				if (hero != null && fill && !equipment.isEmpty()) {
 					final JSONObject item = equipment.poll();
 					final String name = item.getStringOrDefault("Name", "Unbenannt");
-
 					final String notes = HeroUtil.getItemNotes(item, item);
-					tables[i].addRow(name, notes);
+
+					final double weight = item.getDoubleOrDefault("Gewicht", 0.0);
+					final String weightString = weight != 0 ? Double.toString(weight) : "";
+
+					final double value = item.getDoubleOrDefault("Wert", 0.0);
+					final String valueString = value != 0 ? Double.toString(value) : "";
+
+					tables[i].addRow(name, notes, weightString, valueString);
 				} else {
 					tables[i].addRow("");
 				}
