@@ -759,7 +759,7 @@ public class FightSheet extends Sheet {
 									final Tuple3<Table, Runnable, Boolean> armorTable = getZoneArmorTable(document, section, categoryName,
 											data != null ? data._1 : null);
 									final String imageSetting = settingsPage.getString(section, "Bild").get();
-									if (armorTable != null && !"Keine".equals(imageSetting)) {
+									if (armorTable != null && !"Keines".equals(imageSetting)) {
 										if (zoneImage != null) {
 											addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
 											wideBottom = bottom.bottom;
@@ -781,7 +781,7 @@ public class FightSheet extends Sheet {
 										zoneImage = null;
 									} else {
 										final String imageSetting = settingsPage.getString(section, "Bild").get();
-										if (!"Keine".equals(imageSetting)) {
+										if (!"Keines".equals(imageSetting)) {
 											zoneImage = new Tuple3<>(imageSetting, (float) height, height - table._1.getHeight(397) / 2);
 										}
 									}
