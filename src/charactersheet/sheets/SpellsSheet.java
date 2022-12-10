@@ -17,8 +17,10 @@ package charactersheet.sheets;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -38,6 +40,8 @@ import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
+import dsatool.util.Tuple3;
+import dsatool.util.Tuple4;
 import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
@@ -46,31 +50,15 @@ public class SpellsSheet extends Sheet {
 
 	private static final String ADDITIONAL_SPELL_ROWS = "Zusätzliche Zeilen";
 
+	private static final String OWN_MODS_ONLY = "Nur nötige";
+
+	private static final List<String> additionalTables = List.of("Merkmale", "Zielobjekte", "Spontane Modifikationen");
+
 	private final float fontSize = 8f;
 
 	public SpellsSheet() {
 		super(536);
 		pageSize = SheetUtil.landscape;
-	}
-
-	private void addSpoMo(final Table table, final String name, final JSONObject variant, final JSONObject base) {
-		table.addCells(name, base.getStringOrDefault("Abkürzung", ""));
-
-		final JSONObject zfp = variant.getObjOrDefault("Erschwernis", base.getObjOrDefault("Erschwernis", null));
-		final String zfpString = DSAUtil.getModificationString(zfp, Units.NONE, true);
-		table.addCells(zfpString);
-
-		final JSONObject duration = variant.getObjOrDefault("Zauberdauer", base.getObjOrDefault("Zauberdauer", null));
-		String durationString = "";
-		if (duration.containsKey("Multiplikativ")) {
-			durationString = SheetUtil.threeDecimalPlacesSigned.format((duration.getDouble("Multiplikativ") - 1) * 100) + "%";
-		} else {
-			durationString = DSAUtil.getModificationString(duration, Units.TIME, true);
-			if (durationString.charAt(0) != '+') {
-				durationString = "+" + durationString;
-			}
-		}
-		table.addCells(durationString);
 	}
 
 	@Override
@@ -84,10 +72,14 @@ public class SpellsSheet extends Sheet {
 
 		startCreate(document);
 
+		Tuple3<Set<String>, Set<String>, Set<String>> ownMods = null;
+
 		try {
-			createTable(document);
+			ownMods = createTable(document);
 		} catch (final Exception e) {
 			ErrorLogger.logError(e);
+			endCreate(document);
+			return;
 		}
 
 		float left = 12;
@@ -98,11 +90,12 @@ public class SpellsSheet extends Sheet {
 		for (final TitledPane section : settingsPage.getSections()) {
 			if (settingsPage.getBool(section, "").get()) {
 				bottom.bottom = bottom.bottom > currentBottom ? height : currentBottom;
+				final boolean ownOnly = settingsPage.getBool(section, OWN_MODS_ONLY).get();
 				try {
 					left = switch (settingsPage.getString(section, null).get()) {
-						case "Spontane Modifikationen" -> createSpoMoTable(document, left);
-						case "Merkmale" -> createTraitTable(document, left);
-						case "Zielobjekte" -> createTargetTable(document, left);
+						case "Merkmale" -> createTraitTable(document, left, ownOnly, ownMods._1);
+						case "Zielobjekte" -> createTargetTable(document, left, ownOnly, ownMods._2);
+						case "Spontane Modifikationen" -> createSpoMoTable(document, left, ownOnly, ownMods._3);
 						default -> left;
 					};
 				} catch (final Exception e) {
@@ -117,42 +110,60 @@ public class SpellsSheet extends Sheet {
 		endCreate(document);
 	}
 
-	private float createSpoMoTable(final PDDocument document, final float left) throws IOException {
+	private float createSpoMoTable(final PDDocument document, final float left, final boolean ownOnly, final Set<String> ownSpoMos) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		table.addColumn(new Column(115, 115, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(114, 114, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(20, 20, FontManager.serif, 4, fontSize, HAlign.CENTER));
-		table.addColumn(new Column(55, 55, FontManager.serif, 4, fontSize, HAlign.CENTER));
+		table.addColumn(new Column(40, 40, FontManager.serif, 4, fontSize, HAlign.CENTER));
+		table.addColumn(new Column(40, 40, FontManager.serif, 4, fontSize, HAlign.CENTER));
+		table.addColumn(new Column(114, 114, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(20, 20, FontManager.serif, 4, fontSize, HAlign.CENTER));
+		table.addColumn(new Column(40, 40, FontManager.serif, 4, fontSize, HAlign.CENTER));
 		table.addColumn(new Column(40, 40, FontManager.serif, 4, fontSize, HAlign.CENTER));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Spontane Modifikation", 1);
 		final Cell abbrevTitle = ((TextCell) SheetUtil.createTitleCell("Abk.", 1)).setPadding(0, 0, 0, 0);
-		final Cell zfpTitle = SheetUtil.createTitleCell("ZfP-Kosten", 1);
+		final Cell zfpTitle = SheetUtil.createTitleCell("Probe", 1);
 		final Cell durationTitle = SheetUtil.createTitleCell("Zauberd.", 1);
 
-		table.addRow(nameTitle, abbrevTitle, zfpTitle, durationTitle);
+		table.addRow(nameTitle, abbrevTitle, zfpTitle, durationTitle, nameTitle, abbrevTitle, zfpTitle, durationTitle);
 
 		final JSONObject spoMos = ResourceManager.getResource("data/Spontane_Modifikationen");
 
+		final List<Tuple4<String, String, String, String>> rows = new ArrayList<>();
+
 		for (final String spoMoName : spoMos.keySet()) {
 			final JSONObject spoMo = spoMos.getObj(spoMoName);
-			if (spoMo.containsKey("Varianten")) {
-				final JSONObject variants = spoMo.getObj("Varianten");
-				for (final String variantName : variants.keySet()) {
-					addSpoMo(table, variantName, variants.getObj(variantName), spoMo);
+			if (!ownOnly || ownSpoMos.contains(spoMoName)) {
+				if (spoMo.containsKey("Varianten")) {
+					final JSONObject variants = spoMo.getObj("Varianten");
+					for (final String variantName : variants.keySet()) {
+						rows.add(getSpoMo(table, variantName, variants.getObj(variantName), spoMo));
+					}
+				} else {
+					rows.add(getSpoMo(table, spoMoName, spoMo, spoMo));
 				}
-			} else {
-				addSpoMo(table, spoMoName, spoMo, spoMo);
 			}
 		}
+		for (int i = 0; i < rows.size() % 2; ++i) {
+			rows.add(new Tuple4<>("", "", "", ""));
+		}
 
-		bottom.bottom = table.render(document, 230, left, bottom.bottom, 59, 10) - 5;
+		final int height = rows.size() / 2;
+		for (int i = 0; i < height; ++i) {
+			final Tuple4<String, String, String, String> leftSpoMo = rows.get(i);
+			final Tuple4<String, String, String, String> rightSpoMo = rows.get(i + height);
+			table.addRow(leftSpoMo._1, leftSpoMo._2, leftSpoMo._3, leftSpoMo._4, rightSpoMo._1, rightSpoMo._2, rightSpoMo._3, rightSpoMo._4);
+		}
 
-		return left + 235;
+		bottom.bottom = table.render(document, 428, left, bottom.bottom, 59, 10) - 5;
+
+		return left + 433;
 	}
 
-	private void createTable(final PDDocument document) throws IOException {
+	private Tuple3<Set<String>, Set<String>, Set<String>> createTable(final PDDocument document) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -193,6 +204,10 @@ public class SpellsSheet extends Sheet {
 		table.addRow(nameTitle, valueTitle, seTitle, complexityTitle, repTitle, challengeTitle, traitTitle, revTitle, specialisationTitle, modTitle, rangeTitle,
 				targetTitle, costTitle, castTimeTitle, durationTitle, descTitle);
 
+		final Set<String> ownTraits = new HashSet<>();
+		final Set<String> ownTargets = new HashSet<>();
+		final Set<String> ownSpoMos = new HashSet<>();
+
 		final JSONObject talents = ResourceManager.getResource("data/Zauber");
 		final JSONObject actualSpells = hero == null ? null : hero.getObjOrDefault("Zauber", null);
 
@@ -218,7 +233,11 @@ public class SpellsSheet extends Sheet {
 					for (final String representation : orderedRepresentations.keySet()) {
 						final JSONArray choiceSpell = orderedRepresentations.get(representation);
 						for (int i = 0; i < choiceSpell.size(); ++i) {
-							fillSpell(table, spellName, spell, representation, choiceSpell.getObj(i));
+							final Tuple3<Set<String>, Set<String>, Set<String>> mods = fillSpell(table, spellName, spell, representation,
+									choiceSpell.getObj(i));
+							ownTraits.addAll(mods._1);
+							ownTargets.addAll(mods._2);
+							ownSpoMos.addAll(mods._3);
 						}
 					}
 				}
@@ -256,7 +275,11 @@ public class SpellsSheet extends Sheet {
 					}
 				}
 				for (final String representation : orderedRepresentations.keySet()) {
-					fillSpell(table, spellName, spell, representation, orderedRepresentations.get(representation));
+					final Tuple3<Set<String>, Set<String>, Set<String>> mods = fillSpell(table, spellName, spell, representation,
+							orderedRepresentations.get(representation));
+					ownTraits.addAll(mods._1);
+					ownTargets.addAll(mods._2);
+					ownSpoMos.addAll(mods._3);
 				}
 			}
 		}
@@ -266,9 +289,11 @@ public class SpellsSheet extends Sheet {
 		}
 
 		bottom.bottom = table.render(document, 818, 12, bottom.bottom, 59, 10) - 5;
+
+		return new Tuple3<>(ownTraits, ownTargets, ownSpoMos);
 	}
 
-	private float createTargetTable(final PDDocument document, final float left) throws IOException {
+	private float createTargetTable(final PDDocument document, final float left, final boolean ownOnly, final Set<String> ownTargets) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
@@ -283,7 +308,9 @@ public class SpellsSheet extends Sheet {
 		final JSONObject targets = ResourceManager.getResource("data/Zielobjekte");
 
 		for (final String targetName : targets.keySet()) {
-			table.addRow(targetName, targets.getObj(targetName).getStringOrDefault("Abkürzung", ""));
+			if (!ownOnly || ownTargets.contains(targetName)) {
+				table.addRow(targetName, targets.getObj(targetName).getStringOrDefault("Abkürzung", ""));
+			}
 		}
 
 		bottom.bottom = table.render(document, 110, left, bottom.bottom, 59, 10) - 5;
@@ -291,15 +318,15 @@ public class SpellsSheet extends Sheet {
 		return left + 115;
 	}
 
-	private float createTraitTable(final PDDocument document, final float left) throws IOException {
+	private float createTraitTable(final PDDocument document, final float left, final boolean ownOnly, final Set<String> ownTraits) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		table.addColumn(new Column(90, 90, FontManager.serif, 4, fontSize, HAlign.LEFT));
+		table.addColumn(new Column(70, 70, FontManager.serif, 4, fontSize, HAlign.LEFT));
 		table.addColumn(new Column(20, 20, FontManager.serif, 4, fontSize, HAlign.CENTER).setBorder(0.25f, 0.25f, 0.5f, 0.25f));
-		table.addColumn(new Column(90, 90, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0.25f, 0.5f, 0.25f, 0.25f));
+		table.addColumn(new Column(70, 70, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0.25f, 0.5f, 0.25f, 0.25f));
 		table.addColumn(new Column(20, 20, FontManager.serif, 4, fontSize, HAlign.CENTER).setBorder(0.25f, 0.25f, 0.5f, 0.25f));
-		table.addColumn(new Column(90, 90, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0.25f, 0.5f, 0.25f, 0.25f));
+		table.addColumn(new Column(70, 70, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0.25f, 0.5f, 0.25f, 0.25f));
 		table.addColumn(new Column(20, 20, FontManager.serif, 4, fontSize, HAlign.CENTER));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Merkmal", 1);
@@ -312,7 +339,10 @@ public class SpellsSheet extends Sheet {
 		final List<Tuple<String, String>> rows = new ArrayList<>();
 
 		for (final String traitName : traits.keySet()) {
-			rows.add(new Tuple<>(traitName, traits.getObj(traitName).getStringOrDefault("Abkürzung", "")));
+			if (!ownOnly || ownTraits.contains(traitName)) {
+				final String nameString = traitName.replace("Dämonisch", "Däm.");
+				rows.add(new Tuple<>(nameString, traits.getObj(traitName).getStringOrDefault("Abkürzung", "")));
+			}
 		}
 		for (int i = 0; i < rows.size() % 3; ++i) {
 			rows.add(new Tuple<>("", ""));
@@ -326,13 +356,18 @@ public class SpellsSheet extends Sheet {
 			table.addRow(leftTrait._1, leftTrait._2, midTrait._1, midTrait._2, rightTrait._1, rightTrait._2);
 		}
 
-		bottom.bottom = table.render(document, 330, left, bottom.bottom, 59, 10) - 5;
+		bottom.bottom = table.render(document, 270, left, bottom.bottom, 59, 10) - 5;
 
-		return left + 335;
+		return left + 275;
 	}
 
-	private void fillSpell(final Table table, String name, final JSONObject baseSpell, final String actualRepresentation, final JSONObject actualSpell) {
+	private Tuple3<Set<String>, Set<String>, Set<String>> fillSpell(final Table table, String name, final JSONObject baseSpell,
+			final String actualRepresentation, final JSONObject actualSpell) {
 		final JSONObject spell = baseSpell.getObj("Repräsentationen").getObjOrDefault(actualRepresentation, baseSpell);
+
+		final Set<String> ownTraits = new HashSet<>();
+		final Set<String> ownTargets = new HashSet<>();
+		final Set<String> ownSpoMos = new HashSet<>();
 
 		String value = " ";
 		String se = " ";
@@ -368,6 +403,7 @@ public class SpellsSheet extends Sheet {
 			for (final String traitName : traits.keySet()) {
 				for (int i = 0; i < actualTraits.size(); ++i) {
 					if (traitName.equals(actualTraits.getString(i))) {
+						ownTraits.add(traitName);
 						final Text current = new Text(traits.getObj(traitName).getStringOrDefault("Abkürzung", "X"));
 						traitString.addText(current);
 						if (knownTraits != null) {
@@ -435,6 +471,7 @@ public class SpellsSheet extends Sheet {
 			for (final String spoMoName : spoMos.keySet()) {
 				for (int j = 0; j < actualSpoMos.size(); ++j) {
 					if (spoMoName.equals(actualSpoMos.getString(j))) {
+						ownSpoMos.add(spoMoName);
 						final Text current = new Text(spoMos.getObj(spoMoName).getStringOrDefault("Abkürzung", ""));
 						spoMoString.addText(current);
 						if (spoMoSpecs.contains(spoMoName)) {
@@ -447,7 +484,9 @@ public class SpellsSheet extends Sheet {
 
 		final String range = DSAUtil.getModificationString(spell.getObjOrDefault("Reichweite", baseSpell.getObjOrDefault("Reichweite", null)), Units.RANGE,
 				false);
-		final String target = SheetUtil.getTargetObjectsString(spell.getArrOrDefault("Zielobjekt", baseSpell.getArrOrDefault("Zielobjekt", null)));
+		final JSONArray targets = spell.getArrOrDefault("Zielobjekt", baseSpell.getArrOrDefault("Zielobjekt", null));
+		final String target = SheetUtil.getTargetObjectsString(targets);
+		ownTargets.addAll(targets.getStrings());
 		final String cost = DSAUtil.getModificationString(spell.getObjOrDefault("Kosten", baseSpell.getObjOrDefault("Kosten", null)), Units.NONE, false);
 		final String castTime = DSAUtil.getModificationString(spell.getObjOrDefault("Zauberdauer", baseSpell.getObjOrDefault("Zauberdauer", null)), Units.TIME,
 				false);
@@ -463,6 +502,8 @@ public class SpellsSheet extends Sheet {
 
 		table.addRow(name, value, se, complexity, actualRepresentation, challenge, traitString, revString, specString, spoMoString, range, target, cost,
 				castTime, effectTime, description);
+
+		return new Tuple3<>(ownTraits, ownTargets, ownSpoMos);
 	}
 
 	@Override
@@ -480,9 +521,30 @@ public class SpellsSheet extends Sheet {
 
 		for (final TitledPane section : settingsPage.getSections()) {
 			settings.put(settingsPage.getString(section, null).get(), settingsPage.getBool(section, "").get());
+			settings.put(settingsPage.getString(section, null).get() + ":Eigene", settingsPage.getBool(section, OWN_MODS_ONLY).get());
 		}
 
 		return settings;
+	}
+
+	private Tuple4<String, String, String, String> getSpoMo(final Table table, final String name, final JSONObject variant, final JSONObject base) {
+		final String abbreviation = base.getStringOrDefault("Abkürzung", "");
+
+		final JSONObject zfp = variant.getObjOrDefault("Erschwernis", base.getObjOrDefault("Erschwernis", null));
+		final String zfpString = DSAUtil.getModificationString(zfp, Units.NONE, true);
+
+		final JSONObject duration = variant.getObjOrDefault("Zauberdauer", base.getObjOrDefault("Zauberdauer", null));
+		String durationString = "";
+		if (duration.containsKey("Multiplikativ")) {
+			durationString = SheetUtil.threeDecimalPlacesSigned.format((duration.getDouble("Multiplikativ") - 1) * 100) + "%";
+		} else {
+			durationString = DSAUtil.getModificationString(duration, Units.TIME, true);
+			if (durationString.charAt(0) != '+') {
+				durationString = "+" + durationString;
+			}
+		}
+
+		return new Tuple4<>(name, abbreviation, zfpString, durationString);
 	}
 
 	@Override
@@ -494,9 +556,10 @@ public class SpellsSheet extends Sheet {
 		}
 		settingsPage.addIntegerChoice(ADDITIONAL_SPELL_ROWS, 0, 60);
 
-		sections.put("Spontane Modifikationen", settingsPage.addSection("Spontane Modifikationen", true));
-		sections.put("Merkmale", settingsPage.addSection("Merkmale", true));
-		sections.put("Zielobjekte", settingsPage.addSection("Zielobjekte", true));
+		for (final String sectionName : additionalTables) {
+			sections.put(sectionName, settingsPage.addSection(sectionName, true));
+			settingsPage.addBooleanChoice(OWN_MODS_ONLY);
+		}
 	}
 
 	@Override
@@ -510,12 +573,14 @@ public class SpellsSheet extends Sheet {
 		}
 		settingsPage.getInt(ADDITIONAL_SPELL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_SPELL_ROWS, 5));
 
-		orderSections(List.of("Spontane Modifikationen", "Merkmale", "Zielobjekte"));
+		orderSections(additionalTables);
 		orderSections(settings.keySet());
 
-		settingsPage.getBool(sections.get("Spontane Modifikationen"), "").set(settings.getBoolOrDefault("Spontane Modifikationen", true));
-		settingsPage.getBool(sections.get("Merkmale"), "").set(settings.getBoolOrDefault("Merkmale", true));
-		settingsPage.getBool(sections.get("Zielobjekte"), "").set(settings.getBoolOrDefault("Zielobjekte", true));
+		for (final String sectionName : additionalTables) {
+			final TitledPane section = sections.get(sectionName);
+			settingsPage.getBool(section, "").set(settings.getBoolOrDefault(sectionName, true));
+			settingsPage.getBool(section, OWN_MODS_ONLY).set(settings.getBoolOrDefault(sectionName + ":Eigene", false));
+		}
 	}
 
 	@Override
