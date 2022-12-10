@@ -374,7 +374,7 @@ public class FightSheet extends Sheet {
 		return false;
 	}
 
-	private void addWeaponSet(final JSONObject weaponSet, final List<String> weaponSetNames, final JSONArray armorSets) {
+	private void addWeaponSet(final JSONObject weaponSet, final JSONObject settings, final List<String> weaponSetNames, final JSONArray armorSets) {
 		final String setName = weaponSet.getString("Name");
 		final String name = weaponSet.getStringOrDefault("Name", "Unbenannte Waffenkombination");
 
@@ -411,6 +411,25 @@ public class FightSheet extends Sheet {
 		final CheckComboBox<Tuple<JSONObject, String>> secondaryWeapon = new CheckComboBox<>();
 		final List<Tuple<JSONObject, String>> secondaryWeapons = new ArrayList<>();
 		final List<Tuple<JSONObject, String>> selectedSecondaryWeapons = new ArrayList<>();
+
+		mainWeapons.add(HeroUtil.brawling);
+		mainWeapons.add(HeroUtil.wrestling);
+
+		if (settings.getBoolOrDefault("Raufen", false)) {
+			selectedMainWeapons.add(HeroUtil.brawling);
+		}
+		if (settings.getBoolOrDefault("Ringen", false)) {
+			selectedMainWeapons.add(HeroUtil.wrestling);
+		}
+
+		final JSONObject noSelection = new JSONObject(null);
+		noSelection.put("Name", "");
+		final Tuple<JSONObject, String> noSecondarySelection = new Tuple<>(noSelection, null);
+		secondaryWeapons.add(noSecondarySelection);
+
+		if (settings.getBoolOrDefault("Keine Seitenwaffe", false)) {
+			selectedSecondaryWeapons.add(noSecondarySelection);
+		}
 
 		HeroUtil.foreachInventoryItem(hero, item -> item.containsKey("Kategorien"), (item, extraInventory) -> {
 			if (item.getArr("Kategorien").contains("Nahkampfwaffe")) {
@@ -457,9 +476,8 @@ public class FightSheet extends Sheet {
 		final List<JSONObject> armorSetList = new ArrayList<>();
 		final List<JSONObject> selectedArmor = new ArrayList<>();
 
-		final JSONObject defaultArmor = new JSONObject(null);
-		defaultArmor.put("Name", "Rüstung");
-		armorSetList.add(defaultArmor);
+		armorSetList.add(noSelection);
+		armorSetList.add(null);
 		for (int j = 0; j < armorSets.size(); ++j) {
 			final JSONObject armorSet = armorSets.getObj(j);
 			armorSetList.add(armorSet);
@@ -470,9 +488,16 @@ public class FightSheet extends Sheet {
 		}
 
 		if (weaponSetNames == null) {
-			selectedArmor.add(defaultArmor);
+			selectedArmor.add(null);
 		} else {
 			weaponSetNames.add(name);
+
+			if (settings.getBoolOrDefault("Keine Rüstung", false)) {
+				selectedArmor.add(noSelection);
+			}
+			if (settings.getBoolOrDefault("Rüstung", false)) {
+				selectedArmor.add(null);
+			}
 		}
 
 		final ComboBox<String> additionalRows = settingsPage.addStringChoice("Zusatzzeilen", List.of("Hauptwaffe", "Seitenwaffe", "Rüstung"));
@@ -492,7 +517,11 @@ public class FightSheet extends Sheet {
 			final JSONObject mainWeapon, final JSONObject mainWeaponBase, final JSONObject secondaryWeapon, final JSONObject secondaryWeaponBase,
 			final JSONObject armorSet) {
 
-		table.addCells(item.getStringOrDefault("Name", base != null ? base.getStringOrDefault("Name", "Unbenannt") : "Unbekannt"));
+		String name = item.getStringOrDefault("Name", base != null ? base.getStringOrDefault("Name", "Unbenannt") : "Unbekannt");
+		if ("".equals(name)) {
+			name = "Keine";
+		}
+		table.addCells(name);
 
 		final TextCell iniCell = new TextCell();
 		table.addCells(iniCell);
@@ -530,36 +559,41 @@ public class FightSheet extends Sheet {
 		final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null),
 				type, weapon.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 
-		switch (getWeaponType(weapon, baseWeapon)) {
-			case "Nahkampfwaffe" -> {
-				table.addCells(HeroUtil.getTPString(hero, weapon, baseWeapon));
-				table.addCells(HeroUtil.getAT(hero, baseWeapon, weaponType, true, secondary, otherWeapon, armorSet, false));
-				table.addCells(HeroUtil.getPA(hero, baseWeapon, weaponType, secondary, otherWeapon, armorSet, false));
-				table.addCells(getTPKKCell(weapon, baseWeapon, weaponMastery));
-				table.addCells(String.join("", weapon.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings()));
-			}
-			case "Schild" -> {
-				final Integer shieldAT = HeroUtil.getShieldAT(hero, baseWeapon, armorSet, false);
-				if (shieldAT != null && shieldAT > 0) {
-					table.addCells(HeroUtil.getShieldTPString(hero, baseWeapon), shieldAT, "S");
-					table.addCells(new TextCell("13").addText("/").addText("3").setEquallySpaced(true));
-					table.addCells("H");
-				} else {
-					table.addCells("—", "—", "S", "—", "—");
-				}
-			}
-			case "Parierwaffe" -> {
-				final Integer defensiveAT = HeroUtil.getDefensiveWeaponAT(hero, baseWeapon, otherWeapon, armorSet, false);
-				if (defensiveAT != null && defensiveAT > 0) {
+		final String defensiveWeaponType = getWeaponType(weapon, baseWeapon);
+		if (defensiveWeaponType == null) {
+			table.addCells("—", "—", "—", "— / —", "—");
+		} else {
+			switch (defensiveWeaponType) {
+				case "Nahkampfwaffe" -> {
 					table.addCells(HeroUtil.getTPString(hero, weapon, baseWeapon));
-					table.addCells(defensiveAT, "P");
+					table.addCells(HeroUtil.getAT(hero, baseWeapon, weaponType, true, secondary, otherWeapon, armorSet, false));
+					table.addCells(HeroUtil.getPA(hero, baseWeapon, weaponType, secondary, otherWeapon, armorSet, false));
 					table.addCells(getTPKKCell(weapon, baseWeapon, weaponMastery));
 					table.addCells(String.join("", weapon.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings()));
-				} else {
-					table.addCells("—", "—", "P", "—", "—");
 				}
+				case "Schild" -> {
+					final Integer shieldAT = HeroUtil.getShieldAT(hero, baseWeapon, armorSet, false);
+					if (shieldAT != null && shieldAT > 0) {
+						table.addCells(HeroUtil.getShieldTPString(hero, baseWeapon), shieldAT, "S");
+						table.addCells(new TextCell("13").addText("/").addText("3").setEquallySpaced(true));
+						table.addCells("H");
+					} else {
+						table.addCells("—", "—", "S", "—", "—");
+					}
+				}
+				case "Parierwaffe" -> {
+					final Integer defensiveAT = HeroUtil.getDefensiveWeaponAT(hero, baseWeapon, otherWeapon, armorSet, false);
+					if (defensiveAT != null && defensiveAT > 0) {
+						table.addCells(HeroUtil.getTPString(hero, weapon, baseWeapon));
+						table.addCells(defensiveAT, "P");
+						table.addCells(getTPKKCell(weapon, baseWeapon, weaponMastery));
+						table.addCells(String.join("", weapon.getArrOrDefault("Distanzklassen", baseWeapon.getArr("Distanzklassen")).getStrings()));
+					} else {
+						table.addCells("—", "—", "P", "—", "—");
+					}
+				}
+				default -> table.addCells("—", "—", "—", "— / —", "—");
 			}
-			default -> table.addCells("—", "—", "—", "— / —", "—");
 		}
 
 		return weapon.getIntOrDefault("Initiative:Modifikator", baseWeapon.getIntOrDefault("Initiative:Modifikator", 0))
@@ -1210,14 +1244,30 @@ public class FightSheet extends Sheet {
 				weaponSet.put("Typ", settingsPage.getString(section, "Zusatzzeilen").get());
 				weaponSets.add(weaponSet);
 				for (final JSONObject weapon : ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Hauptwaffe").getValue()).getCheckedItems()) {
-					weapon.getArr("Waffenkombinationen:Hauptwaffe").add(name);
+					if (weapon == HeroUtil.brawling) {
+						category.put("Raufen", true);
+					} else if (weapon == HeroUtil.wrestling) {
+						category.put("Ringen", true);
+					} else {
+						weapon.getArr("Waffenkombinationen:Hauptwaffe").add(name);
+					}
 				}
 				for (final Tuple<JSONObject, String> weapon : ((CheckModel<Tuple<JSONObject, String>>) settingsPage.getProperty(section, "Seitenwaffe")
 						.getValue()).getCheckedItems()) {
-					weapon._1.getArr("Waffenkombinationen:Seitenwaffe").add(name);
+					if (weapon._1.getParent() == null) {
+						category.put("Keine Seitenwaffe", true);
+					} else {
+						weapon._1.getArr("Waffenkombinationen:Seitenwaffe").add(name);
+					}
 				}
-				for (final JSONObject weapon : ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Rüstung").getValue()).getCheckedItems()) {
-					weapon.getArr("Waffenkombinationen").add(name);
+				for (final JSONObject armor : ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Rüstung").getValue()).getCheckedItems()) {
+					if (armor == null) {
+						category.put("Rüstung", true);
+					} else if (armor.getParent() == null) {
+						category.put("Keine Rüstung", true);
+					} else {
+						armor.getArr("Waffenkombinationen").add(name);
+					}
 				}
 			}
 			categories.put(name, category);
@@ -1320,11 +1370,8 @@ public class FightSheet extends Sheet {
 				armorTable.addCells(new TextCell(title, FontManager.serifBold, 0, 6f).setBackground(Color.white));
 			}
 			actualArmor = armor.get(0);
-			final String armorSetName = actualArmor.getStringOrDefault("Name", "Unbenannt");
+			final String armorSetName = actualArmor == null ? "Rüstung" : actualArmor.getStringOrDefault("Name", "Unbenannt");
 			armorTable.addCells(armorSetName);
-			if ("Rüstung".equals(armorSetName)) {
-				actualArmor = null;
-			}
 			addArmorValues(armorTable, actualArmor, HeroUtil.getBE(hero, actualArmor));
 		}
 
@@ -1418,8 +1465,12 @@ public class FightSheet extends Sheet {
 						beTitle, kTitle, brTitle, rTitle, baTitle, laTitle, raTitle, lbTitle, rbTitle);
 
 				for (final JSONObject armorSet : armor) {
-					addWeaponSetRow(itemsTable, "Rüstung", armorSet, armorSet, hero, mainWeapon, mainBase, item, baseItem,
-							"Rüstung".equals(armorSet.getString("Name")) ? null : armorSet);
+					JSONObject actualArmorSet = armorSet;
+					if (armorSet == null) {
+						actualArmorSet = new JSONObject(null);
+						actualArmorSet.put("Name", "Rüstung");
+					}
+					addWeaponSetRow(itemsTable, "Rüstung", actualArmorSet, actualArmorSet, hero, mainWeapon, mainBase, item, baseItem, armorSet);
 				}
 			}
 		}
@@ -1447,6 +1498,8 @@ public class FightSheet extends Sheet {
 			if (categories.contains("Nahkampfwaffe")) return "Nahkampfwaffe";
 			if (categories.contains("Schild")) return "Schild";
 			if (categories.contains("Parierwaffe")) return "Parierwaffe";
+			final String name = weapon.getString("Name");
+			if ("Raufen".equals(name) || "Ringen".equals(name)) return "Nahkampfwaffe";
 		}
 		return weaponType;
 	}
@@ -1664,12 +1717,14 @@ public class FightSheet extends Sheet {
 		final List<String> armorSetNames = new ArrayList<>();
 
 		final JSONArray armorSets = hero == null ? null : hero.getObj("Kampf").getArrOrDefault("Rüstungskombinationen", new JSONArray(null));
+		final JSONObject categories = settings.getObjOrDefault("Kategorien", new JSONObject(null));
 
 		if (hero != null) {
 			final JSONArray actualWeaponSets = hero.getObj("Kampf").getArrOrDefault("Waffenkombinationen", new JSONArray(null));
 			weaponSets = actualWeaponSets.clone(null);
 			for (int i = 0; i < actualWeaponSets.size(); ++i) {
-				addWeaponSet(actualWeaponSets.getObj(i), weaponSetNames, armorSets);
+				final JSONObject actualWeaponSet = actualWeaponSets.getObj(i);
+				addWeaponSet(actualWeaponSet, categories.getObj(actualWeaponSet.getString("Name")), weaponSetNames, armorSets);
 			}
 
 			for (int i = 0; i < armorSets.size(); ++i) {
@@ -1692,7 +1747,6 @@ public class FightSheet extends Sheet {
 		order.addAll(5, armorSetNames);
 		order.addAll(weaponSetNames);
 		orderSections(order);
-		final JSONObject categories = settings.getObjOrDefault("Kategorien", new JSONObject(null));
 		orderSections(categories.keySet());
 
 		settingsPage.endSection();
@@ -1739,7 +1793,7 @@ public class FightSheet extends Sheet {
 					if (weaponSet == null) {
 						settingsPage.removeNode(addWeaponSet);
 						final JSONArray armorSets = hero == null ? null : hero.getObj("Kampf").getArrOrDefault("Rüstungskombinationen", new JSONArray(null));
-						addWeaponSet(weaponSets.getObj(weaponSets.size() - 1), null, armorSets);
+						addWeaponSet(weaponSets.getObj(weaponSets.size() - 1), new JSONObject(null), null, armorSets);
 						settingsPage.endSection();
 						settingsPage.addNode(addWeaponSet);
 					} else {
@@ -1767,6 +1821,30 @@ public class FightSheet extends Sheet {
 							parent instanceof final JSONObject p ? p.getStringOrDefault("Name", "Unbenannt") : "Unbenannt");
 					if (item._2 != null) {
 						name += " (" + item._2 + ")";
+					} else if ("".equals(name)) {
+						name = "Keine";
+					}
+					return name;
+				}
+			});
+		} else if ("Rüstung".equals(type)) {
+			current.setConverter((StringConverter<A>) new StringConverter<JSONObject>() {
+				@Override
+				public JSONObject fromString(final String name) {
+					return null;
+				}
+
+				@Override
+				public String toString(final JSONObject item) {
+					if (item == null) return "Rüstung";
+					String name = item.getString("Name");
+					if (name == null && item.getParent() != null) {
+						final JSONValue parent = item.getParent();
+						if (parent instanceof final JSONObject obj) {
+							name = obj.getStringOrDefault("Name", "Unbenannt");
+						}
+					} else if ("".equals(name)) {
+						name = "Keine";
 					}
 					return name;
 				}
