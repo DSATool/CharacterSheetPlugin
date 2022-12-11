@@ -562,15 +562,19 @@ public class CharacterSheet extends Sheet {
 				continue;
 			}
 
-			separatePage(document, settingsPage, section);
-
 			final String name = settingsPage.getString(section, null).get();
 
 			try {
 				switch (name) {
 					case "Bild" -> addImageTable(document, section);
-					case "Vorteile", "Nachteile" -> addProOrConTable(document, name, section);
-					case "Verbindungen" -> addConnectionsTable(document, section);
+					case "Vorteile", "Nachteile" -> {
+						separatePage(document, settingsPage, section);
+						addProOrConTable(document, name, section);
+					}
+					case "Verbindungen" -> {
+						separatePage(document, settingsPage, section);
+						addConnectionsTable(document, section);
+					}
 				}
 			} catch (final Exception e) {
 				ErrorLogger.logError(e);
