@@ -808,21 +808,37 @@ public class FightSheet extends Sheet {
 						};
 						if (table != null) {
 							if (zoneImage != null) {
-								if (table._1.getHeight(397) > bottom.bottom - 10 || settingsPage.getBool(section, AS_SEPARATE_SHEET).get()) {
+								if (table._1.getHeight(table._3 ? 397 : 571) > bottom.bottom - 10 || settingsPage.getBool(section, AS_SEPARATE_SHEET).get()) {
 									if (List.of("Waffenloser Kampf", "Schilde/Parierwaffen", "Ausweichen", "Lebensenergie/Ausdauer").contains(categoryName)) {
 										bottom.bottom = 10;
 										addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
 										zoneImage = null;
 									} else {
-										final String imageSetting = settingsPage.getString(section, "Bild").get();
-										if (!"Keines".equals(imageSetting)) {
-											zoneImage = new Tuple3<>(imageSetting, (float) height, height - table._1.getHeight(397) / 2);
+										@SuppressWarnings("unchecked")
+										final Tuple<JSONObject, Boolean> data = (Tuple<JSONObject, Boolean>) section.getUserData();
+										if (data == null || data._2) {
+											bottom.bottom = 10;
+											addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
+											zoneImage = null;
+											final String imageSetting = settingsPage.getString(section, "Bild").get();
+											if (!"Keines".equals(imageSetting)) {
+												zoneImage = new Tuple3<>(imageSetting, (float) height, height - table._1.getHeight(397) / 2);
+											}
+										} else {
+											addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
+											zoneImage = null;
 										}
 									}
+								} else if (!table._3) {
+									addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
+									zoneImage = null;
 								}
 							}
 							separatePage(document, settingsPage, section);
 							bottom.bottom = table._1.render(document, table._3 ? 397 : 571, 12, bottom.bottom, 72, 10) - 5;
+							if (!table._3) {
+								wideBottom = bottom.bottom;
+							}
 							table._2.run();
 							if (bottom.bottom >= wideBottom) {
 								wideBottom = height;
