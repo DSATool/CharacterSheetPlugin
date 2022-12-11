@@ -1880,6 +1880,9 @@ public class FightSheet extends Sheet {
 		for (final A item : selectedItems) {
 			currentSelection.check(item);
 		}
+		if (selectedItems.size() > 1) {
+			additionalRows.setDisable(true);
+		}
 
 		currentSelection.getCheckedItems().addListener((ListChangeListener<A>) change -> {
 			if (!clearing[0]) {
