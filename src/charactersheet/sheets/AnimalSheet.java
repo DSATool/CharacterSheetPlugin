@@ -206,9 +206,7 @@ public class AnimalSheet extends Sheet {
 
 		TitledPane inventorySection = animalSettings.addSection("Inventar", true);
 		animalSections.put("Inventar", inventorySection);
-		animalSettings.getBool(inventorySection, "").set(settings.getBoolOrDefault("Inventar", true));
 		animalSettings.addIntegerChoice(ADDITIONAL_ROWS, 0, 200);
-		animalSettings.getInt(inventorySection, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Inventar", 40));
 
 		final JSONArray inventories = animal != null ? animal.getArrOrDefault("Inventare", null) : null;
 		if (inventories != null) {
@@ -230,10 +228,9 @@ public class AnimalSheet extends Sheet {
 			}
 		}
 
-		final JSONObject categories = settings.getObjOrDefault(name, new JSONObject(null));
 		for (final TitledPane subsection : animalSettings.getSections()) {
 			final String sectionName = animalSettings.getString(subsection, null).get();
-			final JSONObject category = categories.getObjOrDefault(sectionName, new JSONObject(null));
+			final JSONObject category = settings.getObjOrDefault(sectionName, new JSONObject(null));
 			switch (sectionName) {
 				case ATTRIBUTES, APRKW -> animalSettings.getBool(subsection, "").set(category.getBoolOrDefault("Anzeigen", true));
 				case "Rituale" -> {
