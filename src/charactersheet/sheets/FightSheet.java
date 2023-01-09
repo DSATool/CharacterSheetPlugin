@@ -528,8 +528,10 @@ public class FightSheet extends Sheet {
 
 		final int BE = HeroUtil.getBE(hero, armorSet);
 
+		final JSONObject skills = hero.getObj("Sonderfertigkeiten");
+
 		int ini = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Initiative-Basis"), hero,
-				hero.getObj("Basiswerte").getObj("Initiative-Basis"), false) - BE;
+				hero.getObj("Basiswerte").getObj("Initiative-Basis"), false) - (skills.containsKey("Rüstungsgewöhnung III") ? (BE + 1) / 2 : BE);
 
 		ini += addWeaponSetWeaponValues(table, hero, type, false, mainWeapon, mainWeaponBase, secondaryWeapon, armorSet);
 		ini += addWeaponSetWeaponValues(table, hero, type, true, secondaryWeapon, secondaryWeaponBase, mainWeapon, armorSet);
