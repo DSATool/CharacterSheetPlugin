@@ -819,11 +819,12 @@ public class FightSheet extends Sheet {
 										@SuppressWarnings("unchecked")
 										final Tuple<JSONObject, Boolean> data = (Tuple<JSONObject, Boolean>) section.getUserData();
 										if (data == null || data._2) {
-											bottom.bottom = 10;
-											addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
-											zoneImage = null;
 											final String imageSetting = settingsPage.getString(section, "Bild").get();
-											if (!"Keines".equals(imageSetting)) {
+											if ("Keines".equals(imageSetting)) {
+												bottom.bottom = 10;
+												addZoneImage(document, zoneImage._1, zoneImage._2, zoneImage._3);
+												zoneImage = null;
+											} else {
 												zoneImage = new Tuple3<>(imageSetting, (float) height, height - table._1.getHeight(397) / 2);
 											}
 										} else {
