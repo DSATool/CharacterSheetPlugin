@@ -134,8 +134,17 @@ public class InventorySheet extends Sheet {
 							"");
 					default -> "—";
 				};
+
 				final JSONObject energy = item.getObjOrDefault("Astralenergie", baseItem.getObj("Astralenergie"));
-				final String asp = energy.getIntOrDefault("Additiv", 0) == 0 ? "—" : DSAUtil.getModificationString(energy, Units.NONE, false);
+				final JSONObject permanentEnergy = energy.getObj("Permanent");
+				String asp = "";
+				if (energy.getIntOrDefault("Additiv", 0) != 0) {
+					asp = DSAUtil.getModificationString(energy, Units.NONE, false);
+				} else if (permanentEnergy.getIntOrDefault("Additiv", 0) != 0) {
+					asp = DSAUtil.getModificationString(permanentEnergy, Units.NONE, false) + "p";
+				} else {
+					asp = "—";
+				}
 
 				final JSONObject trigger = item.getObjOrDefault("Auslöser", baseItem.getObj("Auslöser"));
 				final StringBuilder triggerString = new StringBuilder();
@@ -348,7 +357,7 @@ public class InventorySheet extends Sheet {
 				final String notes = HeroUtil.getItemNotes(item, baseItem);
 				final String effect = item.getStringOrDefault("Wirkung", baseItem.getStringOrDefault("Wirkung", ""));
 				final String quality = item.getStringOrDefault("Qualität", baseItem.getStringOrDefault("Qualität", ""));
-				final String count = Integer.toString(item.getIntOrDefault("Anzahl", baseItem.getIntOrDefault("Anzahl", 1)));
+				final String count = fillAll ? Integer.toString(item.getIntOrDefault("Anzahl", baseItem.getIntOrDefault("Anzahl", 1))) : "";
 				table.addRow(name, notes, effect, quality, count);
 			} else {
 				table.addRow("");
