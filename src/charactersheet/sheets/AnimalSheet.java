@@ -234,12 +234,13 @@ public class AnimalSheet extends Sheet {
 			switch (sectionName) {
 				case ATTRIBUTES, APRKW -> animalSettings.getBool(subsection, "").set(category.getBoolOrDefault("Anzeigen", true));
 				case "Rituale" -> {
+					animalSettings.getBool(subsection, "").set(category.getBoolOrDefault("Anzeigen", true));
 					final boolean ownRitualsOnly = settings.getBoolOrDefault(OWN_RITUALS_ONLY, false);
 					animalSettings.getBool(subsection, OWN_RITUALS_ONLY).set(ownRitualsOnly);
 					animalSettings.getInt(subsection, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS, ownRitualsOnly ? 2 : 0));
 				}
 				case "Fertigkeiten" -> {
-					final String skillsSetting = settings.getStringOrDefault(sectionName, "Erlernbare");
+					final String skillsSetting = category.getStringOrDefault("Anzeigen", "Erlernbare");
 					animalSettings.getBool(subsection, "").set(!"Keine".equals(skillsSetting));
 					animalSettings.getString(subsection, "Anzeigen").set("Keine".equals(skillsSetting) ? "Erlernbare" : skillsSetting);
 					animalSettings.getInt(subsection, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS, "Erlernte".equals(skillsSetting) ? 2 : 0));
