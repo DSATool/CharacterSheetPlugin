@@ -1095,7 +1095,7 @@ public class AnimalSheet extends Sheet {
 			final String type = animalSettings.getString("Typ").get();
 
 			animalSetting.put("Anzeigen", settingsPage.getBool(section, "").get());
-			animalSetting.put(AS_SEPARATE_SHEET, settingsPage.getBool(AS_SEPARATE_SHEET).get());
+			animalSetting.put(AS_SEPARATE_SHEET, settingsPage.getBool(section, AS_SEPARATE_SHEET).get());
 			animalSetting.put("Typ", type);
 
 			for (final TitledPane subsection : animalSettings.getSections()) {
