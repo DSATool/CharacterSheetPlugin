@@ -1116,7 +1116,11 @@ public class FightSheet extends Sheet {
 				result -= 1;
 			}
 
-			final String results = Integer.toString(result);
+			String results = Integer.toString(result);
+
+			if (cons[0].containsKey("Zwergenwuchs")) {
+				results += "(-1)";
+			}
 
 			table.addRow(pa, be, evading, acrobatics, speed, results);
 		} else {
