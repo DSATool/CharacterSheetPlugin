@@ -559,7 +559,7 @@ public class FightSheet extends Sheet {
 		final String weaponType = weapon.getStringOrDefault("Waffentyp:Primär",
 				baseWeapon.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : ""));
 		final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null),
-				type, weapon.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
+				weaponType, weapon.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 
 		final String defensiveWeaponType = getWeaponType(weapon, baseWeapon);
 		if (defensiveWeaponType == null) {
