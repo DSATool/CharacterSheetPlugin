@@ -1065,60 +1065,24 @@ public class FightSheet extends Sheet {
 		final Cell resultsTitle = SheetUtil.createTitleCell("=", 1);
 		table.addRow(paTitle, beTitle, evadingTitle, acrobaticsTitle, agileTitle, resultsTitle);
 
-		final JSONObject[] specialSkills = new JSONObject[] { null };
-		final int[] acrobaticsValue = new int[] { 0 };
-		final JSONObject[] pros = new JSONObject[] { null };
-		final JSONObject[] cons = new JSONObject[] { null };
-
 		if (hero != null && fill) {
-			int result = 0;
-
 			final int PABase = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Parade-Basis"), hero,
 					hero.getObj("Basiswerte").getObj("Parade-Basis"), true);
-			result = PABase;
 			final String pa = Integer.toString(PABase);
 
 			final int BE = HeroUtil.getBE(hero);
-			result -= BE;
 			final String be = Integer.toString(-BE);
 
 			final TextCell evading = new TextCell("     +3").addText("/").addText("     +3").addText("/").addText("     +3").setEquallySpaced(true);
 			final TextCell acrobatics = new TextCell("     +1").addText("/").addText("     +1").addText("/").addText("     +1").addText("/").addText("     +1")
 					.addText("/").addText("     +1").setEquallySpaced(true);
-			final TextCell speed = new TextCell("     +1").addText("/").addText("     -1").setEquallySpaced(true);
 
-			specialSkills[0] = hero.getObj("Sonderfertigkeiten");
-			if (specialSkills[0].containsKey("Ausweichen I")) {
-				result += 3;
-			}
-			if (specialSkills[0].containsKey("Ausweichen II")) {
-				result += 3;
-			}
-			if (specialSkills[0].containsKey("Ausweichen III")) {
-				result += 3;
-			}
+			final int speedBonus = hero.getObj("Vorteile").containsKey("Flink") ? hero.getObj("Vorteile").getObj("Flink").getIntOrDefault("Stufe", 1) : 1;
+			final TextCell speed = new TextCell("     +" + speedBonus).addText("/").addText("     -1").setEquallySpaced(true);
 
-			final JSONObject acrobaticsTalent = hero.getObj("Talente").getObj("Körperliche Talente").getObjOrDefault("Akrobatik", null);
-			if (acrobaticsTalent != null) {
-				acrobaticsValue[0] = acrobaticsTalent.getIntOrDefault("TaW", 0);
-			}
-			if (acrobaticsValue[0] > 11) {
-				result += (acrobaticsValue[0] - 9) / 3;
-			}
+			String results = Integer.toString(HeroUtil.getEvasion(hero));
 
-			pros[0] = hero.getObj("Vorteile");
-			if (pros[0].containsKey("Flink")) {
-				result += 1;
-			}
-
-			cons[0] = hero.getObj("Nachteile");
-			if (cons[0].containsKey("Behäbig")) {
-				result -= 1;
-			}
-
-			String results = Integer.toString(result);
-
-			if (cons[0].containsKey("Zwergenwuchs")) {
+			if (hero.getObj("Nachteile").containsKey("Zwergenwuchs")) {
 				results += "(-1)";
 			}
 
@@ -1130,36 +1094,41 @@ public class FightSheet extends Sheet {
 		return new Tuple3<>(table, () -> {
 			try (PDPageContentStream stream = new PDPageContentStream(document, document.getPage(document.getNumberOfPages() - 1), AppendMode.APPEND, true)) {
 				if (hero != null && fill) {
-					if (specialSkills[0].containsKey("Ausweichen I")) {
+					final JSONObject specialSkills = hero.getObj("Sonderfertigkeiten");
+					if (specialSkills.containsKey("Ausweichen I")) {
 						SheetUtil.checkChoiceBox(stream, 80, bottom.bottom + 15);
 					}
-					if (specialSkills[0].containsKey("Ausweichen II")) {
+					if (specialSkills.containsKey("Ausweichen II")) {
 						SheetUtil.checkChoiceBox(stream, 110, bottom.bottom + 15);
 					}
-					if (specialSkills[0].containsKey("Ausweichen III")) {
+					if (specialSkills.containsKey("Ausweichen III")) {
 						SheetUtil.checkChoiceBox(stream, 141, bottom.bottom + 15);
 					}
 
-					if (acrobaticsValue[0] > 11) {
-						SheetUtil.checkChoiceBox(stream, 171, bottom.bottom + 15);
-						if (acrobaticsValue[0] >= 15) {
-							SheetUtil.checkChoiceBox(stream, 200, bottom.bottom + 15);
-						}
-						if (acrobaticsValue[0] >= 18) {
-							SheetUtil.checkChoiceBox(stream, 229, bottom.bottom + 15);
-						}
-						if (acrobaticsValue[0] >= 21) {
-							SheetUtil.checkChoiceBox(stream, 258, bottom.bottom + 15);
-						}
-						if (acrobaticsValue[0] >= 24) {
-							SheetUtil.checkChoiceBox(stream, 287, bottom.bottom + 15);
+					final JSONObject acrobaticsTalent = hero.getObj("Talente").getObj("Körperliche Talente").getObjOrDefault("Akrobatik", null);
+					if (acrobaticsTalent != null) {
+						final int acrobaticsValue = acrobaticsTalent.getIntOrDefault("TaW", 0);
+						if (acrobaticsValue > 11) {
+							SheetUtil.checkChoiceBox(stream, 171, bottom.bottom + 15);
+							if (acrobaticsValue >= 15) {
+								SheetUtil.checkChoiceBox(stream, 200, bottom.bottom + 15);
+							}
+							if (acrobaticsValue >= 18) {
+								SheetUtil.checkChoiceBox(stream, 229, bottom.bottom + 15);
+							}
+							if (acrobaticsValue >= 21) {
+								SheetUtil.checkChoiceBox(stream, 258, bottom.bottom + 15);
+							}
+							if (acrobaticsValue >= 24) {
+								SheetUtil.checkChoiceBox(stream, 287, bottom.bottom + 15);
+							}
 						}
 					}
 
-					if (pros[0].containsKey("Flink")) {
+					if (hero.getObj("Vorteile").containsKey("Flink")) {
 						SheetUtil.checkChoiceBox(stream, 318, bottom.bottom + 15);
 					}
-					if (cons[0].containsKey("Behäbig")) {
+					if (hero.getObj("Nachteile").containsKey("Behäbig")) {
 						SheetUtil.checkChoiceBox(stream, 353, bottom.bottom + 15);
 					}
 				}
