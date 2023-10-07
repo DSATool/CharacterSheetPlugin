@@ -18,7 +18,7 @@
 			<metainf file="LICENSE"/>
 			<metainf file="NOTICE"/>
 			<manifest>
-				<attribute name="Class-Path" value="../dependencies/BoxTable-0.1.0.jar ../dependencies/commons-logging-1.2.jar ../dependencies/fontbox-3.0.0-alpha3.jar ../dependencies/pdfbox-3.0.0-alpha3.jar"/>
+				<attribute name="Class-Path" value="../dependencies/BoxTable-0.1.0.jar ../dependencies/commons-logging-1.2.jar ../dependencies/fontbox-3.0.0.jar ../dependencies/pdfbox-3.0.0.jar"/>
 			</manifest>
 			<service type="dsatool.plugins.Plugin" provider="charactersheet.CharacterSheet"/>
 		</jar>
