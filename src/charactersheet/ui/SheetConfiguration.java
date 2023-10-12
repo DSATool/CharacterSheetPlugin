@@ -172,7 +172,7 @@ public class SheetConfiguration extends HeroSelector {
 	}
 
 	private void create(final File file) {
-		Logger.getLogger("org.apache.pdfbox.pdmodel.PDDocument").setLevel(Level.SEVERE);
+		Logger.getLogger("org.apache").setLevel(Level.SEVERE);
 
 		Sheet.reset();
 		try (final PDDocument document = new PDDocument()) {
