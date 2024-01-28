@@ -235,7 +235,7 @@ public class SheetConfiguration extends HeroSelector {
 		if (hero != null && hero.containsKey("Heldenbogen") && hero.getObj("Heldenbogen").containsKey("Datei")) {
 			final File file = new File(hero.getObj("Heldenbogen").getString("Datei"));
 			final File directory = file.getParentFile();
-			if (directory.isDirectory()) {
+			if (directory != null && directory.isDirectory()) {
 				dialog.setInitialDirectory(directory);
 			}
 			name = file.getName();
