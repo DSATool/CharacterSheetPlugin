@@ -49,6 +49,7 @@ import jsonant.value.JSONObject;
 public class SpellsSheet extends Sheet {
 
 	private static final String ADDITIONAL_SPELL_ROWS = "Zusätzliche Zeilen";
+	private static final String VALUES_FOR_ATTRIBUTES = "Eigenschaftswerte statt Eigenschaften anzeigen";
 
 	private static final String OWN_MODS_ONLY = "Nur nötige";
 
@@ -392,7 +393,9 @@ public class SpellsSheet extends Sheet {
 				? DSAUtil.getEnhancementGroupString(HeroUtil.getSpellComplexity(hero, name, actualRepresentation, Integer.MAX_VALUE)) : " ").setPadding(0, 1, 1,
 						0);
 
-		final String challenge = DSAUtil.getChallengeString(spell.getArrOrDefault("Probe", baseSpell.getArr("Probe")));
+		final JSONArray challenge = spell.getArrOrDefault("Probe", baseSpell.getArr("Probe"));
+		final String challengeString = settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get() ? HeroUtil.getChallengeValuesString(hero, challenge, fill)
+				: DSAUtil.getChallengeString(challenge);
 
 		final TextCell traitString = new TextCell();
 		final JSONObject traits = ResourceManager.getResource("data/Merkmale");
@@ -500,7 +503,7 @@ public class SpellsSheet extends Sheet {
 			name = name + ": " + actualSpell.getStringOrDefault("Freitext", "");
 		}
 
-		table.addRow(name, value, se, complexity, actualRepresentation, challenge, traitString, revString, specString, spoMoString, range, target, cost,
+		table.addRow(name, value, se, complexity, actualRepresentation, challengeString, traitString, revString, specString, spoMoString, range, target, cost,
 				castTime, effectTime, description);
 
 		return new Tuple3<>(ownTraits, ownTargets, ownSpoMos);
@@ -518,6 +521,7 @@ public class SpellsSheet extends Sheet {
 		}
 		settings.put("Repräsentationen", reps);
 		settings.put(ADDITIONAL_SPELL_ROWS, settingsPage.getInt(ADDITIONAL_SPELL_ROWS).get());
+		settings.put(VALUES_FOR_ATTRIBUTES, settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get());
 
 		for (final TitledPane section : settingsPage.getSections()) {
 			settings.put(settingsPage.getString(section, null).get(), settingsPage.getBool(section, "").get());
@@ -555,6 +559,7 @@ public class SpellsSheet extends Sheet {
 			settingsPage.addBooleanChoice("Repräsentation " + representationNames.getObj(representationName).getStringOrDefault("Name", representationName));
 		}
 		settingsPage.addIntegerChoice(ADDITIONAL_SPELL_ROWS, 0, 60);
+		settingsPage.addBooleanChoice(VALUES_FOR_ATTRIBUTES);
 
 		for (final String sectionName : additionalTables) {
 			sections.put(sectionName, settingsPage.addSection(sectionName, true));
@@ -572,6 +577,7 @@ public class SpellsSheet extends Sheet {
 					.set(reps.contains(representationName));
 		}
 		settingsPage.getInt(ADDITIONAL_SPELL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_SPELL_ROWS, 5));
+		settingsPage.getBool(VALUES_FOR_ATTRIBUTES).set(settings.getBoolOrDefault(VALUES_FOR_ATTRIBUTES, false));
 
 		orderSections(additionalTables);
 		orderSections(settings.keySet());

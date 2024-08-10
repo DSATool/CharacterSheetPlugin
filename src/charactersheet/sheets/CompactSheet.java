@@ -55,6 +55,7 @@ public class CompactSheet extends Sheet {
 	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
 	private static final String GROUP_BASIC_TALENTS = "Basistalente gruppieren";
 	private static final String MARK_BASIC_TALENTS = "Basistalente markieren";
+	private static final String VALUES_FOR_ATTRIBUTES = "Eigenschaftswerte statt Eigenschaften anzeigen";
 
 	private static final float fontSize = 10f;
 
@@ -437,6 +438,10 @@ public class CompactSheet extends Sheet {
 
 				final Integer atValue = HeroUtil.getAT(hero, item, type, false, false, null, false);
 				final String at = atValue != null ? Integer.toString(atValue) : "";
+				final TextCell atCell = new TextCell(at);
+				if (hero.getObj("Vorteile").containsKey("Entfernungssinn")) {
+					atCell.addText(new Text("-2").setFontSize(7));
+				}
 
 				final String load = Integer.toString(HeroUtil.getLoadTime(hero, item, type));
 
@@ -476,9 +481,8 @@ public class CompactSheet extends Sheet {
 					}
 				}
 
-				table.addRow(name, tp, at, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0], tpdistance[1],
-						tpdistance[2],
-						tpdistance[3], tpdistance[4], num);
+				table.addRow(name, tp, atCell, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0], tpdistance[1],
+						tpdistance[2], tpdistance[3], tpdistance[4], num);
 			}
 		}
 
@@ -602,7 +606,9 @@ public class CompactSheet extends Sheet {
 					name = name + ": " + actualTalent.getStringOrDefault("Freitext", "");
 				}
 
-				final String challenge = DSAUtil.getChallengeString(rep.getArrOrDefault("Probe", spell.getArr("Probe")));
+				final JSONArray challenge = rep.getArrOrDefault("Probe", spell.getArr("Probe"));
+				final String challengeString = settingsPage.getBool(section, VALUES_FOR_ATTRIBUTES).get()
+						? HeroUtil.getChallengeValuesString(hero, challenge, fill) : DSAUtil.getChallengeString(challenge);
 
 				final TextCell traitString = new TextCell();
 				final JSONObject traits = ResourceManager.getResource("data/Merkmale");
@@ -623,7 +629,7 @@ public class CompactSheet extends Sheet {
 					zfw = actualTalent.getIntOrDefault("ZfW", 0).toString();
 				}
 
-				rows.add(new Object[] { name, spellNameRep._2, challenge, traitString, zfw });
+				rows.add(new Object[] { name, spellNameRep._2, challengeString, traitString, zfw });
 			}
 		}
 
@@ -756,8 +762,19 @@ public class CompactSheet extends Sheet {
 						default -> {
 							if (talent.containsKey("Probe")) {
 								final JSONArray challenge = talent.getArr("Probe");
-								yield new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
-										.addText(challenge.getString(2))
+								final String[] attributeStrings = new String[3];
+								if (settingsPage.getBool(section, VALUES_FOR_ATTRIBUTES).get()) {
+									final JSONObject attributes = hero.getObj("Eigenschaften");
+									attributeStrings[0] = Integer.toString(HeroUtil.getCurrentValue(attributes.getObj(challenge.getString(0)), false));
+									attributeStrings[1] = Integer.toString(HeroUtil.getCurrentValue(attributes.getObj(challenge.getString(1)), false));
+									attributeStrings[2] = Integer.toString(HeroUtil.getCurrentValue(attributes.getObj(challenge.getString(2)), false));
+								} else {
+									attributeStrings[0] = challenge.getString(0);
+									attributeStrings[1] = challenge.getString(1);
+									attributeStrings[2] = challenge.getString(2);
+								}
+
+								yield new TextCell(attributeStrings[0]).addText("/").addText(attributeStrings[1]).addText("/").addText(attributeStrings[2])
 										.setEquallySpaced(true).setPadding(0, 1, 1, 0);
 							} else {
 								yield new TextCell("—");
@@ -1104,8 +1121,12 @@ public class CompactSheet extends Sheet {
 					settings.put("Basistalente gruppieren", settingsPage.getBool(section, GROUP_BASIC_TALENTS).get());
 					settings.put("Basistalente markieren", settingsPage.getBool(section, MARK_BASIC_TALENTS).get());
 					settings.put(ADDITIONAL_ROWS + " für Talente", settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+					settings.put(VALUES_FOR_ATTRIBUTES + " für Talente", settingsPage.getBool(section, VALUES_FOR_ATTRIBUTES).get());
 				}
-				case "Zauber" -> settings.put(ADDITIONAL_ROWS + " für Zauber", settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+				case "Zauber" -> {
+					settings.put(ADDITIONAL_ROWS + " für Zauber", settingsPage.getInt(section, ADDITIONAL_ROWS).get());
+					settings.put(VALUES_FOR_ATTRIBUTES + " für Zauber", settingsPage.getBool(section, VALUES_FOR_ATTRIBUTES).get());
+				}
 			}
 		}
 		return settings;
@@ -1131,9 +1152,11 @@ public class CompactSheet extends Sheet {
 		settingsPage.addBooleanChoice(GROUP_BASIC_TALENTS);
 		settingsPage.addBooleanChoice(MARK_BASIC_TALENTS);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 60);
+		settingsPage.addBooleanChoice(VALUES_FOR_ATTRIBUTES);
 
 		sections.put("Zauber", settingsPage.addSection("Zauber", true));
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 60);
+		settingsPage.addBooleanChoice(VALUES_FOR_ATTRIBUTES);
 
 		sections.put("Rituale", settingsPage.addSection("Rituale", true));
 		sections.put("Liturgien", settingsPage.addSection("Liturgien", true));
@@ -1167,10 +1190,12 @@ public class CompactSheet extends Sheet {
 		settingsPage.getBool(talents, GROUP_BASIC_TALENTS).set(settings.getBoolOrDefault("Basistalente gruppieren", true));
 		settingsPage.getBool(talents, MARK_BASIC_TALENTS).set(settings.getBoolOrDefault("Basistalente markieren", false));
 		settingsPage.getInt(talents, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Talente", 0));
+		settingsPage.getBool(talents, VALUES_FOR_ATTRIBUTES).set(settings.getBoolOrDefault(VALUES_FOR_ATTRIBUTES + " für Talente", false));
 
 		final TitledPane spells = sections.get("Zauber");
 		settingsPage.getBool(spells, "").set(settings.getBoolOrDefault("Zauber", hero != null && HeroUtil.isMagical(hero)));
 		settingsPage.getInt(spells, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Zauber", 0));
+		settingsPage.getBool(spells, VALUES_FOR_ATTRIBUTES).set(settings.getBoolOrDefault(VALUES_FOR_ATTRIBUTES + "für Zauber", false));
 
 		settingsPage.getBool(sections.get("Rituale"), "").set(settings.getBoolOrDefault("Rituale", hero != null && HeroUtil.isMagical(hero)));
 		settingsPage.getBool(sections.get("Liturgien"), "").set(settings.getBoolOrDefault("Liturgien", hero != null && HeroUtil.isClerical(hero, true)));

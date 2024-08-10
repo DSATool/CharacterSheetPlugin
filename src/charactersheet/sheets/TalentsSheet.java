@@ -58,28 +58,11 @@ public class TalentsSheet extends Sheet {
 	private static final String MARK_BASIC_TALENTS = "Basistalente markieren";
 	private static final String OWN_TALENTS_ONLY = "Nur erlernte Talente anzeigen";
 	private static final String SHOW_PRIMARY = "Leittalente anzeigen";
+	private static final String VALUES_FOR_ATTRIBUTES = "Eigenschaftswerte statt Eigenschaften anzeigen";
 
 	private static final List<String> specialGroups = List.of("Gaben", "Ritualkenntnis", "Liturgiekenntnis");
 
 	private static float fontSize = 8.4f;
-
-	private static String getGroupTableHeader(final String name, final JSONObject talentGroup, final boolean addEnhancement, final boolean addChallenge) {
-		final StringBuilder title = new StringBuilder(name);
-
-		if (addEnhancement && talentGroup.containsKey("Steigerung")) {
-			title.append(" (");
-			title.append(DSAUtil.getEnhancementGroupString(talentGroup.getInt("Steigerung")));
-			title.append(')');
-		}
-
-		if (addChallenge && talentGroup.containsKey("Probe")) {
-			title.append(" (");
-			title.append(DSAUtil.getChallengeString(talentGroup.getArr("Probe")));
-			title.append(')');
-		}
-
-		return title.toString();
-	}
 
 	public TalentsSheet() {
 		super(771);
@@ -224,6 +207,7 @@ public class TalentsSheet extends Sheet {
 	private boolean addSpecialTable(final PDDocument document, final TitledPane section, final String groupName, final float top, final float left)
 			throws IOException {
 		if (hero == null) return false;
+
 		final JSONObject actualGroup = hero.getObj("Talente").getObjOrDefault(groupName, null);
 		if (actualGroup == null) return false;
 
@@ -733,10 +717,30 @@ public class TalentsSheet extends Sheet {
 					table.addCells(fk);
 				} else if (!isLanguage && !isWriting) {
 					final JSONArray challenge = talent.getArrOrDefault("Probe", null);
-					final Cell challengeCell = challenge != null
-							? new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
-									.addText(challenge.getString(2)).setEquallySpaced(true).setPadding(0, 1, 1, 0)
-							: new TextCell("—");
+					Cell challengeCell;
+					if (challenge == null) {
+						challengeCell = new TextCell("—");
+					} else {
+						final String[] attributeStrings = new String[3];
+						if (settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get()) {
+							if (hero != null && fill) {
+								final JSONObject attributes = hero.getObj("Eigenschaften");
+								attributeStrings[0] = Integer.toString(HeroUtil.getCurrentValue(attributes.getObj(challenge.getString(0)), false));
+								attributeStrings[1] = Integer.toString(HeroUtil.getCurrentValue(attributes.getObj(challenge.getString(1)), false));
+								attributeStrings[2] = Integer.toString(HeroUtil.getCurrentValue(attributes.getObj(challenge.getString(2)), false));
+							} else {
+								attributeStrings[0] = "";
+								attributeStrings[1] = "";
+								attributeStrings[2] = "";
+							}
+						} else {
+							attributeStrings[0] = challenge.getString(0);
+							attributeStrings[1] = challenge.getString(1);
+							attributeStrings[2] = challenge.getString(2);
+						}
+						challengeCell = new TextCell(attributeStrings[0]).addText("/").addText(attributeStrings[1]).addText("/").addText(attributeStrings[2])
+								.setEquallySpaced(true).setPadding(0, 1, 1, 0);
+					}
 					table.addCells(challengeCell);
 				}
 
@@ -975,6 +979,29 @@ public class TalentsSheet extends Sheet {
 		}
 	}
 
+	private String getGroupTableHeader(final String name, final JSONObject talentGroup, final boolean addEnhancement, final boolean addChallenge) {
+		final StringBuilder title = new StringBuilder(name);
+
+		if (addEnhancement && talentGroup.containsKey("Steigerung")) {
+			title.append(" (");
+			title.append(DSAUtil.getEnhancementGroupString(talentGroup.getInt("Steigerung")));
+			title.append(')');
+		}
+
+		if (addChallenge && talentGroup.containsKey("Probe")) {
+			title.append(" (");
+			final JSONArray challenge = talentGroup.getArr("Probe");
+			if (settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get()) {
+				title.append(HeroUtil.getChallengeValuesString(hero, challenge, fill));
+			} else {
+				title.append(DSAUtil.getChallengeString(challenge));
+			}
+			title.append(')');
+		}
+
+		return title.toString();
+	}
+
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
 		final JSONObject settings = super.getSettings(parent);
@@ -982,6 +1009,7 @@ public class TalentsSheet extends Sheet {
 		settings.put(GROUP_BASIC_TALENTS, settingsPage.getBool(GROUP_BASIC_TALENTS).get());
 		settings.put(MARK_BASIC_TALENTS, settingsPage.getBool(MARK_BASIC_TALENTS).get());
 		settings.put(SHOW_PRIMARY, settingsPage.getBool(SHOW_PRIMARY).get());
+		settings.put(VALUES_FOR_ATTRIBUTES, settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get());
 
 		final JSONObject groups = new JSONObject(settings);
 		for (final TitledPane section : settingsPage.getSections()) {
@@ -1013,6 +1041,7 @@ public class TalentsSheet extends Sheet {
 		settingsPage.addBooleanChoice(GROUP_BASIC_TALENTS);
 		settingsPage.addBooleanChoice(MARK_BASIC_TALENTS);
 		settingsPage.addBooleanChoice(SHOW_PRIMARY);
+		settingsPage.addBooleanChoice(VALUES_FOR_ATTRIBUTES);
 
 		final CheckBox ownTalentsOnly = settingsPage.addBooleanChoice(OWN_TALENTS_ONLY);
 
@@ -1061,6 +1090,7 @@ public class TalentsSheet extends Sheet {
 		settingsPage.getBool(MARK_BASIC_TALENTS).set(settings.getBoolOrDefault(MARK_BASIC_TALENTS, false));
 		settingsPage.getBool(SHOW_PRIMARY)
 				.set(settings.getBoolOrDefault(SHOW_PRIMARY, hero != null && hero.getObj("Nachteile").containsKey("Elfische Weltsicht")));
+		settingsPage.getBool(VALUES_FOR_ATTRIBUTES).set(settings.getBoolOrDefault(VALUES_FOR_ATTRIBUTES, false));
 
 		orderSections(ResourceManager.getResource("data/Talente").keySet());
 		final JSONObject groups = settings.getObjOrDefault("Gruppen", new JSONObject(null));

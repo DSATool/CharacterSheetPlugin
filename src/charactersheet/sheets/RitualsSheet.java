@@ -56,6 +56,7 @@ public class RitualsSheet extends Sheet {
 
 	private static final String OWN_RITUALS_ONLY = "Nur erlernte/verbilligte Rituale";
 	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
+	private static final String VALUES_FOR_ATTRIBUTES = "Eigenschaftswerte statt Eigenschaften anzeigen";
 
 	private static final float fontSize = 7f;
 
@@ -646,7 +647,11 @@ public class RitualsSheet extends Sheet {
 		}
 
 		ifHas("Ritualprobe", actualGroup, o -> {
-			table.addCells(DSAUtil.getChallengeString(ritual.getArrOrDefault("Ritualprobe", null)));
+			if (settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get()) {
+				table.addCells(HeroUtil.getChallengeValuesString(hero, ritual.getArrOrDefault("Ritualprobe", null), fill));
+			} else {
+				table.addCells(DSAUtil.getChallengeString(ritual.getArrOrDefault("Ritualprobe", null)));
+			}
 		});
 		ifHas("Ritualdauer", actualGroup, o -> {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Ritualdauer", null), Units.TIME, false));
@@ -672,7 +677,11 @@ public class RitualsSheet extends Sheet {
 				}
 				table.addCells(challengeString);
 			} else {
-				table.addCells(DSAUtil.getChallengeString((JSONArray) challenge));
+				if (settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get()) {
+					table.addCells(HeroUtil.getChallengeValuesString(hero, (JSONArray) challenge, fill));
+				} else {
+					table.addCells(DSAUtil.getChallengeString((JSONArray) challenge));
+				}
 			}
 		});
 		ifHas("Erschaffungskosten", actualGroup, o -> {
@@ -692,7 +701,11 @@ public class RitualsSheet extends Sheet {
 			}
 		});
 		ifHas("Aktivierungsprobe", actualGroup, o -> {
-			table.addCells(DSAUtil.getChallengeString(ritual.getArrOrDefault("Aktivierungsprobe", null)));
+			if (settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get()) {
+				table.addCells(HeroUtil.getChallengeValuesString(hero, ritual.getArrOrDefault("Aktivierungsprobe", null), fill));
+			} else {
+				table.addCells(DSAUtil.getChallengeString(ritual.getArrOrDefault("Aktivierungsprobe", null)));
+			}
 		});
 		ifHas("Aktivierungskosten", actualGroup, o -> {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Aktivierungskosten", null), Units.NONE, false));
@@ -890,6 +903,8 @@ public class RitualsSheet extends Sheet {
 	public JSONObject getSettings(final JSONObject parent) {
 		final JSONObject settings = super.getSettings(parent);
 
+		settings.put(VALUES_FOR_ATTRIBUTES, settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get());
+
 		final JSONObject groups = new JSONObject(settings);
 		for (final TitledPane section : settingsPage.getSections()) {
 			final String name = settingsPage.getString(section, null).get();
@@ -918,6 +933,8 @@ public class RitualsSheet extends Sheet {
 	public void load() {
 		super.load();
 
+		settingsPage.addBooleanChoice(VALUES_FOR_ATTRIBUTES);
+
 		ownRitualsOnly = settingsPage.addBooleanChoice(OWN_RITUALS_ONLY);
 		ownRitualsOnly.setIndeterminate(true);
 		ownRitualsOnly.selectedProperty().addListener((o, oldV, newV) -> {
@@ -931,11 +948,12 @@ public class RitualsSheet extends Sheet {
 
 	@Override
 	public void loadSettings(final JSONObject settings) {
-
 		settingsPage.clear();
 		sections.clear();
 		load();
 		super.loadSettings(settings);
+
+		settingsPage.getBool(VALUES_FOR_ATTRIBUTES).set(settings.getBoolOrDefault(VALUES_FOR_ATTRIBUTES, false));
 
 		final JSONObject ritualGroupData = ResourceManager.getResource("data/Ritualgruppen");
 		final JSONArray items = hero != null ? hero.getObj("Besitz").getArrOrDefault("Ausrüstung", null) : null;
