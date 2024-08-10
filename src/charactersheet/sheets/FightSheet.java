@@ -38,6 +38,7 @@ import boxtable.cell.Cell;
 import boxtable.cell.TableCell;
 import boxtable.cell.TextCell;
 import boxtable.common.HAlign;
+import boxtable.common.Text;
 import boxtable.event.EventType;
 import boxtable.table.Column;
 import boxtable.table.Table;
@@ -307,6 +308,10 @@ public class FightSheet extends Sheet {
 
 						final Integer atValue = HeroUtil.getAT(hero, item, type, false, false, null, false);
 						final String at = fillAll && atValue != null ? Integer.toString(atValue) : " ";
+						final TextCell atCell = new TextCell(at);
+						if (hero.getObj("Vorteile").containsKey("Entfernungssinn")) {
+							atCell.addText(new Text("-2").setFontSize(7));
+						}
 
 						final String load = Integer.toString(HeroUtil.getLoadTime(hero, item, type));
 
@@ -353,7 +358,7 @@ public class FightSheet extends Sheet {
 
 						final String notes = HeroUtil.getWeaponNotes(item, baseWeapon, type, hero);
 
-						table.addRow(name, type, ebe, tp, at, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0],
+						table.addRow(name, type, ebe, tp, atCell, load, distances[0], distances[1], distances[2], distances[3], distances[4], tpdistance[0],
 								tpdistance[1], tpdistance[2], tpdistance[3], tpdistance[4], num, notes);
 					} else {
 						table.addRow("");
