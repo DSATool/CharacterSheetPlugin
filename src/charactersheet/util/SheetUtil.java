@@ -40,6 +40,7 @@ import boxtable.table.Table;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
+import dsatool.util.Util;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
 
@@ -57,7 +58,7 @@ public class SheetUtil {
 
 	public static final Collator comparator = Collator.getInstance(Locale.GERMANY);
 
-	public static DecimalFormat threeDecimalPlacesSigned = new DecimalFormat("+#.###;-#.###");
+	public static DecimalFormat threeDecimalPlacesSigned = new DecimalFormat("+#.###;-#.###", Util.decimalFormatSymbols);
 
 	public static PDRectangle landscape = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
 
