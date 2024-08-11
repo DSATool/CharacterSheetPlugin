@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.imageio.ImageIO;
 
@@ -53,6 +54,7 @@ import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
 import dsatool.util.Tuple3;
 import dsatool.util.Util;
+import javafx.beans.property.Property;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -74,6 +76,7 @@ public class FightSheet extends Sheet {
 	private static final float fontSize = 11f;
 
 	private Button addWeaponSet;
+	private Button addRangedWeaponSet;
 
 	private JSONArray weaponSets;
 
@@ -250,6 +253,17 @@ public class FightSheet extends Sheet {
 		return false;
 	}
 
+	private void addNewWeaponSet(final boolean ranged, final JSONArray armorSets) {
+		renameWeaponSet(null, (newName) -> {
+			settingsPage.removeNode(addWeaponSet);
+			settingsPage.removeNode(addRangedWeaponSet);
+			addWeaponSet(weaponSets.getObj(weaponSets.size() - 1), new JSONObject(null), null, armorSets, ranged);
+			settingsPage.endSection();
+			settingsPage.addNode(addWeaponSet);
+			settingsPage.addNode(addRangedWeaponSet);
+		});
+	}
+
 	private boolean addRangedCombatTable(final PDDocument document, final TitledPane section) throws IOException {
 		final Table table = new Table().setFiller(SheetUtil.stripe());
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
@@ -379,7 +393,8 @@ public class FightSheet extends Sheet {
 		return false;
 	}
 
-	private void addWeaponSet(final JSONObject weaponSet, final JSONObject settings, final List<String> weaponSetNames, final JSONArray armorSets) {
+	private void addWeaponSet(final JSONObject weaponSet, final JSONObject settings, final List<String> weaponSetNames, final JSONArray armorSets,
+			final boolean ranged) {
 		final String setName = weaponSet.getString("Name");
 		final String name = weaponSet.getStringOrDefault("Name", "Unbenannte Waffenkombination");
 
@@ -392,14 +407,14 @@ public class FightSheet extends Sheet {
 
 		section.setOnMouseClicked(e -> {
 			if (e.getButton().equals(MouseButton.PRIMARY) && e.getClickCount() == 2) {
-				renameWeaponSet(weaponSet, section);
+				renameWeaponSet(weaponSet, (newName) -> settingsPage.getString(section, null).set(newName));
 			}
 		});
 
 		final ContextMenu menu = section.getContextMenu();
 
 		final MenuItem editItem = new MenuItem("Bearbeiten");
-		editItem.setOnAction(event -> renameWeaponSet(weaponSet, section));
+		editItem.setOnAction(event -> renameWeaponSet(weaponSet, (newName) -> settingsPage.getString(section, null).set(newName)));
 		menu.getItems().add(0, editItem);
 
 		final MenuItem removeItem = new MenuItem("Löschen");
@@ -417,14 +432,16 @@ public class FightSheet extends Sheet {
 		final List<Tuple<JSONObject, String>> secondaryWeapons = new ArrayList<>();
 		final List<Tuple<JSONObject, String>> selectedSecondaryWeapons = new ArrayList<>();
 
-		mainWeapons.add(HeroUtil.brawling);
-		mainWeapons.add(HeroUtil.wrestling);
+		if (!ranged) {
+			mainWeapons.add(HeroUtil.brawling);
+			mainWeapons.add(HeroUtil.wrestling);
 
-		if (settings.getBoolOrDefault("Raufen", false)) {
-			selectedMainWeapons.add(HeroUtil.brawling);
-		}
-		if (settings.getBoolOrDefault("Ringen", false)) {
-			selectedMainWeapons.add(HeroUtil.wrestling);
+			if (settings.getBoolOrDefault("Raufen", false)) {
+				selectedMainWeapons.add(HeroUtil.brawling);
+			}
+			if (settings.getBoolOrDefault("Ringen", false)) {
+				selectedMainWeapons.add(HeroUtil.wrestling);
+			}
 		}
 
 		final JSONObject noSelection = new JSONObject(null);
@@ -436,10 +453,12 @@ public class FightSheet extends Sheet {
 			selectedSecondaryWeapons.add(noSecondarySelection);
 		}
 
+		final String mainWeaponCategory = ranged ? "Fernkampfwaffe" : "Nahkampfwaffe";
+
 		HeroUtil.foreachInventoryItem(hero, item -> item.containsKey("Kategorien"), (item, extraInventory) -> {
-			if (item.getArr("Kategorien").contains("Nahkampfwaffe")) {
+			if (item.getArr("Kategorien").contains(mainWeaponCategory)) {
 				for (final String category : item.getArr("Kategorien").getStrings()) {
-					if ("Nahkampfwaffe".equals(category)) {
+					if (mainWeaponCategory.equals(category)) {
 						JSONObject actual = item;
 						if (item.containsKey(category)) {
 							actual = item.getObj(category);
@@ -452,8 +471,8 @@ public class FightSheet extends Sheet {
 					}
 				}
 			}
-			if (item.getArr("Kategorien").contains("Nahkampfwaffe") || item.getArr("Kategorien").contains("Parierwaffe")
-					|| item.getArr("Kategorien").contains("Schild")) {
+			if (!ranged && (item.getArr("Kategorien").contains("Nahkampfwaffe") || item.getArr("Kategorien").contains("Parierwaffe")
+					|| item.getArr("Kategorien").contains("Schild"))) {
 				for (final String category : item.getArr("Kategorien").getStrings()) {
 					if (List.of("Nahkampfwaffe", "Parierwaffe", "Schild").contains(category)) {
 						JSONObject actual = item;
@@ -511,16 +530,51 @@ public class FightSheet extends Sheet {
 
 		final boolean[] clearing = new boolean[] { false };
 		setupWeaponSelection("Hauptwaffe", mainWeapon, mainWeapons, selectedMainWeapons, secondaryWeapon, armor, clearing, additionalRows);
-		setupWeaponSelection("Seitenwaffe", secondaryWeapon, secondaryWeapons, selectedSecondaryWeapons, mainWeapon, armor, clearing,
-				additionalRows);
+		if (!ranged) {
+			setupWeaponSelection("Seitenwaffe", secondaryWeapon, secondaryWeapons, selectedSecondaryWeapons, mainWeapon, armor, clearing, additionalRows);
+		}
 		setupWeaponSelection("Rüstung", armor, armorSetList, selectedArmor, mainWeapon, secondaryWeapon, clearing, additionalRows);
 
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
 	}
 
+	private int addWeaponSetRangedValues(final Table table, final JSONObject hero, final String type, final JSONObject weapon, final JSONObject baseWeapon,
+			final JSONObject armorSet) {
+
+		final String weaponType = getPrimaryWeaponType(weapon, baseWeapon);
+		final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null), weaponType,
+				weapon.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
+
+		table.addCells(HeroUtil.getTPString(hero, weapon, baseWeapon));
+
+		final Integer atValue = HeroUtil.getAT(hero, baseWeapon, weaponType, false, false, null, armorSet, false);
+
+		final String at = fillAll && atValue != null ? Integer.toString(atValue) : " ";
+		final TextCell atCell = new TextCell(at);
+		if (hero.getObj("Vorteile").containsKey("Entfernungssinn")) {
+			atCell.addText(new Text("-2").setFontSize(7));
+		}
+		table.addCells(atCell);
+
+		table.addCells(Integer.toString(HeroUtil.getLoadTime(hero, baseWeapon, type)));
+
+		for (final String distance : new String[] { "Sehr Nah", "Nah", "Mittel", "Weit", "Extrem Weit" }) {
+			final int dist = HeroUtil.getDistance(hero, baseWeapon, type, distance);
+			table.addCells(new TextCell(dist != Integer.MIN_VALUE ? Integer.toString(dist) : "—"));
+		}
+
+		final JSONObject distanceTPs = weapon.getObjOrDefault("Trefferpunkte/Entfernung", baseWeapon.getObj("Trefferpunkte/Entfernung"));
+		for (final String distance : new String[] { "Sehr Nah", "Nah", "Mittel", "Weit", "Extrem Weit" }) {
+			final int dist = distanceTPs.getIntOrDefault(distance, Integer.MIN_VALUE);
+			table.addCells(new TextCell(dist != Integer.MIN_VALUE ? Util.getSignedIntegerString(distanceTPs.getInt(distance)) : "—"));
+		}
+
+		return weaponMastery != null ? weaponMastery.getIntOrDefault("Initiative:Modifikator", 0) : 0;
+	}
+
 	private void addWeaponSetRow(final Table table, final String type, final JSONObject item, final JSONObject base, final JSONObject hero,
 			final JSONObject mainWeapon, final JSONObject mainWeaponBase, final JSONObject secondaryWeapon, final JSONObject secondaryWeaponBase,
-			final JSONObject armorSet) {
+			final JSONObject armorSet, final boolean ranged) {
 
 		String name = item.getStringOrDefault("Name", base != null ? base.getStringOrDefault("Name", "Unbenannt") : "Unbekannt");
 		if ("".equals(name)) {
@@ -538,8 +592,12 @@ public class FightSheet extends Sheet {
 		int ini = HeroUtil.deriveValue(ResourceManager.getResource("data/Basiswerte").getObj("Initiative-Basis"), hero,
 				hero.getObj("Basiswerte").getObj("Initiative-Basis"), false) - (skills.containsKey("Rüstungsgewöhnung III") ? (BE + 1) / 2 : BE);
 
-		ini += addWeaponSetWeaponValues(table, hero, type, false, mainWeapon, mainWeaponBase, secondaryWeapon, armorSet);
-		ini += addWeaponSetWeaponValues(table, hero, type, true, secondaryWeapon, secondaryWeaponBase, mainWeapon, armorSet);
+		if (ranged) {
+			ini += addWeaponSetRangedValues(table, hero, type, mainWeapon, mainWeaponBase, armorSet);
+		} else {
+			ini += addWeaponSetWeaponValues(table, hero, type, false, mainWeapon, mainWeaponBase, secondaryWeapon, armorSet);
+			ini += addWeaponSetWeaponValues(table, hero, type, true, secondaryWeapon, secondaryWeaponBase, mainWeapon, armorSet);
+		}
 
 		if ("Rüstung".equals(type)) {
 			addArmorValues(table, armorSet, BE);
@@ -560,11 +618,9 @@ public class FightSheet extends Sheet {
 			return 0;
 		}
 
-		final JSONArray types = weapon.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
-		final String weaponType = weapon.getStringOrDefault("Waffentyp:Primär",
-				baseWeapon.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : ""));
-		final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null),
-				weaponType, weapon.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
+		final String weaponType = getPrimaryWeaponType(weapon, baseWeapon);
+		final JSONObject weaponMastery = HeroUtil.getSpecialisation(hero.getObj("Sonderfertigkeiten").getArrOrDefault("Waffenmeister", null), weaponType,
+				weapon.getStringOrDefault("Typ", baseWeapon.getString("Typ")));
 
 		final String defensiveWeaponType = getWeaponType(weapon, baseWeapon);
 		if (defensiveWeaponType == null) {
@@ -1198,6 +1254,11 @@ public class FightSheet extends Sheet {
 		return new Tuple3<>(table, () -> {}, true);
 	}
 
+	private String getPrimaryWeaponType(final JSONObject weapon, final JSONObject baseWeapon) {
+		final JSONArray types = weapon.getArrOrDefault("Waffentypen", baseWeapon.getArr("Waffentypen"));
+		return weapon.getStringOrDefault("Waffentyp:Primär", baseWeapon.getStringOrDefault("Waffentyp:Primär", types.size() != 0 ? types.getString(0) : ""));
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
@@ -1249,12 +1310,16 @@ public class FightSheet extends Sheet {
 						weapon.getArr("Waffenkombinationen:Hauptwaffe").add(name);
 					}
 				}
-				for (final Tuple<JSONObject, String> weapon : ((CheckModel<Tuple<JSONObject, String>>) settingsPage.getProperty(section, "Seitenwaffe")
-						.getValue()).getCheckedItems()) {
-					if (weapon._1.getParent() == null) {
-						category.put("Keine Seitenwaffe", true);
-					} else {
-						weapon._1.getArr("Waffenkombinationen:Seitenwaffe").add(name);
+				final Property<Object> sideWeapon = settingsPage.getProperty(section, "Seitenwaffe");
+				if (sideWeapon == null) {
+					weaponSet.put("Fernkampf", true);
+				} else {
+					for (final Tuple<JSONObject, String> weapon : ((CheckModel<Tuple<JSONObject, String>>) sideWeapon.getValue()).getCheckedItems()) {
+						if (weapon._1.getParent() == null) {
+							category.put("Keine Seitenwaffe", true);
+						} else {
+							weapon._1.getArr("Waffenkombinationen:Seitenwaffe").add(name);
+						}
 					}
 				}
 				for (final JSONObject armor : ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Rüstung").getValue()).getCheckedItems()) {
@@ -1306,10 +1371,15 @@ public class FightSheet extends Sheet {
 		JSONObject actualArmor = new JSONObject(null);
 
 		final ObservableList<JSONObject> mainWeapons = ((CheckModel<JSONObject>) settingsPage.getProperty(section, "Hauptwaffe").getValue()).getCheckedItems();
-		final ObservableList<Tuple<JSONObject, String>> secondaryWeapons = ((CheckModel<Tuple<JSONObject, String>>) settingsPage
-				.getProperty(section, "Seitenwaffe").getValue()).getCheckedItems();
+		final Property<Object> secondaryProperty = settingsPage.getProperty(section, "Seitenwaffe");
+		final boolean ranged = secondaryProperty == null;
+		final ObservableList<Tuple<JSONObject, String>> secondaryWeapons = ranged ? null
+				: ((CheckModel<Tuple<JSONObject, String>>) secondaryProperty.getValue()).getCheckedItems();
 
 		for (final String current : List.of("Hauptwaffe", "Seitenwaffe")) {
+			if (ranged && "Seitenwaffe".equals(current)) {
+				break;
+			}
 			final ObservableList<?> currentItems = "Hauptwaffe".equals(current) ? mainWeapons : secondaryWeapons;
 			if (!current.equals(type) && currentItems.size() > 0) {
 				final Table fixedTable = new Table().setFiller(SheetUtil.stripe()).setBorder(0, 0, 0, 0);
@@ -1323,7 +1393,7 @@ public class FightSheet extends Sheet {
 					mainWeapon = item;
 					mainBase = baseItem;
 				}
-				final float width = fixedTables.size() == 1 ? 121 : 153;
+				final float width = fixedTables.size() == 1 ? ranged ? 130 : 121 : 153;
 				fixedTable.addColumn(new Column(width, width, FontManager.serif, 4, fontSize, HAlign.LEFT));
 				final Column lastColumn = new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT);
 				if (fixedTables.size() == 1) {
@@ -1380,54 +1450,82 @@ public class FightSheet extends Sheet {
 		}
 
 		final Table itemsTable = new Table().setFiller(SheetUtil.stripe().invert(true));
-		itemsTable.addColumn(new Column(101, 101, FontManager.serif, 4, fontSize, HAlign.LEFT));
-		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(35, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(35, FontManager.serif, fontSize, HAlign.CENTER));
-		itemsTable.addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
 
 		final Cell nameTitle = new TextCell(type, FontManager.serifBold, 0, 6f);
 		final Cell iniTitle = new TextCell("INI", FontManager.serifBold, 0, 6f);
 		final Cell tpTitle = new TextCell("TP", FontManager.serifBold, 0, 6f);
 		final Cell atTitle = new TextCell("AT", FontManager.serifBold, 0, 6f);
-		final Cell paTitle = new TextCell("PA", FontManager.serifBold, 0, 6f);
-		final Cell tpkkTitle = new TextCell("TP/KK", FontManager.serifBold, 0, 6f);
-		final Cell dkTitle = new TextCell("DK", FontManager.serifBold, 0, 6f);
-		final Cell tp2Title = new TextCell("TP 2", FontManager.serifBold, 0, 6f);
-		final Cell at2Title = new TextCell("AT 2", FontManager.serifBold, 0, 6f);
-		final Cell pa2Title = new TextCell("PA 2", FontManager.serifBold, 0, 6f);
-		final Cell tpkk2Title = new TextCell("TP/KK 2", FontManager.serifBold, 0, 6f);
-		final Cell dk2Title = new TextCell("DK 2", FontManager.serifBold, 0, 6f);
+
+		if (ranged) {
+			itemsTable.addColumn(new Column(130, 130, FontManager.serif, 4, fontSize, HAlign.LEFT));
+			itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(72, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(24, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(16.8f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(16.8f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(16.8f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(16.8f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(16.8f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(15.4f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(15.4f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(15.4f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(15.4f, FontManager.serif, 8, HAlign.CENTER));
+			itemsTable.addColumn(new Column(15.4f, FontManager.serif, 8, HAlign.CENTER));
+
+			final Cell loadTitle = new TextCell("Lad.", FontManager.serifBold, 0, 6f);
+			final Cell distanceTitle = new TextCell("Entfernung", FontManager.serifBold, 0, 6f).setColSpan(5);
+			final Cell tpdistanceTitle = new TextCell("TP+", FontManager.serifBold, 0, 6f).setColSpan(5);
+
+			itemsTable.addCells(nameTitle, iniTitle, tpTitle, atTitle, loadTitle, distanceTitle, tpdistanceTitle);
+		} else {
+			itemsTable.addColumn(new Column(101, 101, FontManager.serif, 4, fontSize, HAlign.LEFT));
+			itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(35, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(53, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(20, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(35, FontManager.serif, fontSize, HAlign.CENTER));
+			itemsTable.addColumn(new Column(25, FontManager.serif, fontSize, HAlign.CENTER));
+
+			final Cell paTitle = new TextCell("PA", FontManager.serifBold, 0, 6f);
+			final Cell tpkkTitle = new TextCell("TP/KK", FontManager.serifBold, 0, 6f);
+			final Cell dkTitle = new TextCell("DK", FontManager.serifBold, 0, 6f);
+			final Cell tp2Title = new TextCell("TP 2", FontManager.serifBold, 0, 6f);
+			final Cell at2Title = new TextCell("AT 2", FontManager.serifBold, 0, 6f);
+			final Cell pa2Title = new TextCell("PA 2", FontManager.serifBold, 0, 6f);
+			final Cell tpkk2Title = new TextCell("TP/KK 2", FontManager.serifBold, 0, 6f);
+			final Cell dk2Title = new TextCell("DK 2", FontManager.serifBold, 0, 6f);
+
+			itemsTable.addCells(nameTitle, iniTitle, tpTitle, atTitle, paTitle, tpkkTitle, dkTitle, tp2Title, at2Title, pa2Title, tpkk2Title, dk2Title);
+		}
 
 		switch (type) {
 			case "Hauptwaffe" -> {
 				itemsTable.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
 
 				final Cell notesTitle = new TextCell("Anmerkungen", FontManager.serifBold, 0, 6f);
-				itemsTable.addRow(nameTitle, iniTitle, tpTitle, atTitle, paTitle, tpkkTitle, dkTitle, tp2Title, at2Title, pa2Title, tpkk2Title, dk2Title,
-						notesTitle);
+				itemsTable.addCells(notesTitle);
+				itemsTable.completeRow();
 
 				for (final JSONObject weapon : mainWeapons) {
 					JSONObject base = weapon;
 					if (weapon.getParent() instanceof final JSONObject parent) {
 						base = parent;
 					}
-					addWeaponSetRow(itemsTable, type, weapon, base, hero, weapon, base, item, baseItem, actualArmor);
+					addWeaponSetRow(itemsTable, type, weapon, base, hero, weapon, base, item, baseItem, actualArmor, ranged);
 				}
 			}
 			case "Seitenwaffe" -> {
 				itemsTable.addColumn(new Column(0, 0, FontManager.serif, 4, fontSize, HAlign.LEFT));
 
 				final Cell notesTitle = new TextCell("Anmerkungen", FontManager.serifBold, 0, 6f);
-				itemsTable.addRow(nameTitle, iniTitle, tpTitle, atTitle, paTitle, tpkkTitle, dkTitle, tp2Title, at2Title, pa2Title, tpkk2Title, dk2Title,
-						notesTitle);
+				itemsTable.addCells(notesTitle);
+				itemsTable.completeRow();
 
 				for (final Tuple<JSONObject, String> secondary : secondaryWeapons) {
 					final JSONObject weapon = secondary._1;
@@ -1435,7 +1533,7 @@ public class FightSheet extends Sheet {
 					if (weapon.getParent() instanceof final JSONObject parent) {
 						base = parent;
 					}
-					addWeaponSetRow(itemsTable, type, weapon, base, hero, mainWeapon, mainBase, weapon, base, actualArmor);
+					addWeaponSetRow(itemsTable, type, weapon, base, hero, mainWeapon, mainBase, weapon, base, actualArmor, false);
 				}
 			}
 			case "Rüstung" -> {
@@ -1458,8 +1556,8 @@ public class FightSheet extends Sheet {
 				final Cell raTitle = new TextCell("RA", FontManager.serifBold, 0, 6f);
 				final Cell lbTitle = new TextCell("LB", FontManager.serifBold, 0, 6f);
 				final Cell rbTitle = new TextCell("RB", FontManager.serifBold, 0, 6f);
-				itemsTable.addRow(nameTitle, iniTitle, tpTitle, atTitle, paTitle, tpkkTitle, dkTitle, tp2Title, at2Title, pa2Title, tpkk2Title, dk2Title,
-						beTitle, kTitle, brTitle, rTitle, baTitle, laTitle, raTitle, lbTitle, rbTitle);
+				itemsTable.addCells(beTitle, kTitle, brTitle, rTitle, baTitle, laTitle, raTitle, lbTitle, rbTitle);
+				itemsTable.completeRow();
 
 				for (final JSONObject armorSet : armor) {
 					JSONObject actualArmorSet = armorSet;
@@ -1467,13 +1565,17 @@ public class FightSheet extends Sheet {
 						actualArmorSet = new JSONObject(null);
 						actualArmorSet.put("Name", "Rüstung");
 					}
-					addWeaponSetRow(itemsTable, "Rüstung", actualArmorSet, actualArmorSet, hero, mainWeapon, mainBase, item, baseItem, armorSet);
+					addWeaponSetRow(itemsTable, "Rüstung", actualArmorSet, actualArmorSet, hero, mainWeapon, mainBase, item, baseItem, armorSet, ranged);
 				}
 			}
 		}
 
 		for (int i = 0; i < settingsPage.getInt(section, ADDITIONAL_ROWS).get(); ++i) {
-			itemsTable.addRow(" ", " ", " ", " ", " ", "/", " ", " ", " ", " ", "/");
+			if (ranged) {
+				itemsTable.addRow(" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ");
+			} else {
+				itemsTable.addRow(" ", " ", " ", " ", " ", "/", " ", " ", " ", " ", "/");
+			}
 		}
 
 		if (!fixedTables.isEmpty()) {
@@ -1721,7 +1823,8 @@ public class FightSheet extends Sheet {
 			weaponSets = actualWeaponSets.clone(null);
 			for (int i = 0; i < actualWeaponSets.size(); ++i) {
 				final JSONObject actualWeaponSet = actualWeaponSets.getObj(i);
-				addWeaponSet(actualWeaponSet, categories.getObj(actualWeaponSet.getString("Name")), weaponSetNames, armorSets);
+				final boolean ranged = actualWeaponSet.getBoolOrDefault("Fernkampf", false);
+				addWeaponSet(actualWeaponSet, categories.getObj(actualWeaponSet.getString("Name")), weaponSetNames, armorSets, ranged);
 			}
 
 			for (int i = 0; i < armorSets.size(); ++i) {
@@ -1747,11 +1850,14 @@ public class FightSheet extends Sheet {
 		orderSections(categories.keySet());
 
 		settingsPage.endSection();
+
 		addWeaponSet = new Button("Waffenkombination hinzufügen");
-		addWeaponSet.setOnAction(e -> {
-			renameWeaponSet(null, null);
-		});
+		addWeaponSet.setOnAction(e -> addNewWeaponSet(false, armorSets));
 		settingsPage.addNode(addWeaponSet);
+
+		addRangedWeaponSet = new Button("Fernkampfkombination hinzufügen");
+		addRangedWeaponSet.setOnAction(e -> addNewWeaponSet(true, armorSets));
+		settingsPage.addNode(addRangedWeaponSet);
 
 		for (final TitledPane section : settingsPage.getSections()) {
 			final String name = settingsPage.getString(section, null).get();
@@ -1783,20 +1889,9 @@ public class FightSheet extends Sheet {
 		}
 	}
 
-	private void renameWeaponSet(final JSONObject weaponSet, final TitledPane section) {
-		new RenameDialog(settingsPage.getControl().getScene().getWindow(), "Waffenkombination", "Waffenkombinationen", weaponSets,
-				weaponSet,
-				(oldName, newName) -> {
-					if (weaponSet == null) {
-						settingsPage.removeNode(addWeaponSet);
-						final JSONArray armorSets = hero == null ? null : hero.getObj("Kampf").getArrOrDefault("Rüstungskombinationen", new JSONArray(null));
-						addWeaponSet(weaponSets.getObj(weaponSets.size() - 1), new JSONObject(null), null, armorSets);
-						settingsPage.endSection();
-						settingsPage.addNode(addWeaponSet);
-					} else {
-						settingsPage.getString(section, null).set(newName);
-					}
-				}, List.of("Rüstung"));
+	private void renameWeaponSet(final JSONObject weaponSet, final Consumer<String> afterRename) {
+		new RenameDialog(settingsPage.getControl().getScene().getWindow(), "Waffenkombination", "Waffenkombinationen", weaponSets, weaponSet,
+				(oldName, newName) -> afterRename.accept(newName), List.of("Rüstung"));
 	}
 
 	@SuppressWarnings("unchecked")
