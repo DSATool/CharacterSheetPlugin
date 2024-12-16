@@ -37,6 +37,7 @@ import dsa41basis.util.DSAUtil.Units;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
+import dsatool.util.StringUtil;
 import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
@@ -157,22 +158,8 @@ public class InventorySheet extends Sheet {
 				triggerString.append(trigger.getStringOrDefault("Beschreibung", trigger.getString("Typ")));
 
 				final JSONArray spells = item.getArrOrDefault("Wirkende Sprüche", baseItem.getArr("Wirkende Sprüche"));
-				boolean first = true;
-				final StringBuilder spellsString = new StringBuilder();
-				for (int j = 0; j < spells.size(); ++j) {
-					final JSONObject spell = spells.getObj(j);
-					if (first) {
-						first = false;
-					} else {
-						spellsString.append(", ");
-					}
-					spellsString.append(spell.getStringOrDefault("Spruch", ""));
-					if (spell.containsKey("Variante")) {
-						spellsString.append(" (");
-						spellsString.append(spell.getString("Variante"));
-						spellsString.append(')');
-					}
-				}
+				final String spellsString = StringUtil.mkStringObj(spells, ", ",
+						spell -> spell.getStringOrDefault("Spruch", "") + (spell.containsKey("Variante") ? " (" + spell.getString("Variante") + ')' : ""));
 
 				final String notes = HeroUtil.getItemNotes(item, baseItem);
 				table.addRow(name, type, loads, asp, triggerString, spellsString, notes);

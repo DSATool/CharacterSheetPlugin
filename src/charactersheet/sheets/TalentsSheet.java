@@ -42,6 +42,7 @@ import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.ui.ReactiveSpinner;
 import dsatool.util.ErrorLogger;
+import dsatool.util.StringUtil;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.scene.control.CheckBox;
@@ -770,28 +771,19 @@ public class TalentsSheet extends Sheet {
 				} else {
 					String specialisationString;
 					if (hero != null && fill) {
-						boolean first = true;
 						JSONArray specialisations = null;
 						if (isFightGroup && skills.containsKey("Waffenspezialisierung")) {
 							specialisations = skills.getArr("Waffenspezialisierung");
 						} else if (skills.containsKey("Talentspezialisierung")) {
 							specialisations = skills.getArr("Talentspezialisierung");
 						}
-						final StringBuilder specString = new StringBuilder();
 						if (specialisations != null) {
-							for (int i = 0; i < specialisations.size(); ++i) {
-								final JSONObject specialisation = specialisations.getObj(i);
-								if (talentName.equals(specialisation.getString("Auswahl"))) {
-									if (first) {
-										first = false;
-									} else {
-										specString.append(", ");
-									}
-									specString.append(specialisation.getStringOrDefault("Freitext", ""));
-								}
-							}
+							specialisationString = StringUtil.mkStringObj(specialisations, ", ",
+									specialisation -> talentName.equals(specialisation.getString("Auswahl")) ? specialisation.getStringOrDefault("Freitext", "")
+											: "");
+						} else {
+							specialisationString = " ";
 						}
-						specialisationString = specString.toString();
 					} else {
 						specialisationString = " ";
 					}
@@ -801,23 +793,14 @@ public class TalentsSheet extends Sheet {
 				if (isFightGroup) {
 					String weaponmaster;
 					if (hero != null && fill) {
-						boolean first = true;
 						final JSONArray specialisations = skills.getArrOrDefault("Waffenmeister", null);
-						final StringBuilder specString = new StringBuilder();
 						if (specialisations != null) {
-							for (int i = 0; i < specialisations.size(); ++i) {
-								final JSONObject specialisation = specialisations.getObj(i);
-								if (talentName.equals(specialisation.getString("Auswahl"))) {
-									if (first) {
-										first = false;
-									} else {
-										specString.append(", ");
-									}
-									specString.append(specialisation.getStringOrDefault("Freitext", ""));
-								}
-							}
+							weaponmaster = StringUtil.mkStringObj(specialisations, ", ",
+									specialisation -> talentName.equals(specialisation.getString("Auswahl")) ? specialisation.getStringOrDefault("Freitext", "")
+											: "");
+						} else {
+							weaponmaster = " ";
 						}
-						weaponmaster = specString.toString();
 					} else {
 						weaponmaster = " ";
 					}
@@ -825,23 +808,10 @@ public class TalentsSheet extends Sheet {
 				} else if (!isWriting) {
 					String requirementString;
 					if (talent.containsKey("Voraussetzungen")) {
-						final StringBuilder requirementsString = new StringBuilder();
 						final JSONArray requirements = talent.getArr("Voraussetzungen");
-						boolean first = true;
-						for (int i = 0; i < requirements.size(); ++i) {
-							if (first) {
-								first = false;
-							} else {
-								requirementsString.append(", ");
-							}
-							final JSONObject requirement = requirements.getObj(i);
-							if (requirement.containsKey("Ab")) {
-								requirementsString.append(requirement.getInt("Ab"));
-								requirementsString.append("+:\u00A0");
-							}
-							requirementsString.append(SheetUtil.getRequirementString(requirement, talent));
-						}
-						requirementString = requirementsString.toString();
+						requirementString = StringUtil.mkStringObj(requirements, ", ",
+								requirement -> (requirement.containsKey("Ab") ? requirement.getInt("Ab") + "+:\u00A0" : "")
+										+ SheetUtil.getRequirementString(requirement, talent));
 					} else {
 						requirementString = " ";
 					}
@@ -852,63 +822,26 @@ public class TalentsSheet extends Sheet {
 					table.addCells(talent.getArr("Schriften").getStrings().stream().map(s -> s.replace(" (Schrift)", "")).collect(Collectors.joining(", ")));
 				} else if (isWriting) {
 					final JSONObject languages = ResourceManager.getResource("data/Talente").getObj("Sprachen und Schriften");
-					boolean first = true;
-					final StringBuilder languagesString = new StringBuilder();
-					for (final String languageName : languages.keySet()) {
+					final String languagesString = StringUtil.mkString(languages.keySet(), ", ", languageName -> {
 						final JSONObject language = languages.getObj(languageName);
-						if (language.containsKey("Schriften")) {
-							final JSONArray writings = language.getArr("Schriften");
-							for (int i = 0; i < writings.size(); ++i) {
-								if (talentName.equals(writings.getString(i))) {
-									if (first) {
-										first = false;
-									} else {
-										languagesString.append(", ");
-									}
-									languagesString.append(languageName);
-								}
-							}
-						}
-					}
-					table.addCells(languagesString.toString());
+						return language.containsKey("Schriften")
+								? StringUtil.mkStringString(language.getArr("Schriften"), ", ", writing -> talentName.equals(writing) ? languageName : "") : "";
+					});
+					table.addCells(languagesString);
 				} else if (talent.containsKey("Ableiten")) {
-					boolean first = true;
-					final StringBuilder derivationString = new StringBuilder();
 					final JSONObject derive = talent.getObj("Ableiten");
-					for (final String derivationTalentName : derive.keySet()) {
+					final String derivationString = StringUtil.mkString(derive.keySet(), ", ", derivationTalentName -> {
 						final JSONObject derivationTalent = derive.getObj(derivationTalentName);
 						if (derivationTalent.containsKey("Spezialisierung")) {
 							final JSONObject specializations = derivationTalent.getObj("Spezialisierung");
-							for (final String specialization : specializations.keySet()) {
-								if (first) {
-									first = false;
-								} else {
-									derivationString.append(", ");
-								}
-								derivationString.append(derivationTalentName);
-								derivationString.append("\u00A0(");
-								derivationString.append(specialization);
-								derivationString.append(')');
+							return StringUtil.mkString(specializations.keySet(), ", ", specialization -> {
 								final int difficulty = specializations.getIntOrDefault(specialization, 0);
-								if (difficulty != groupDerive) {
-									derivationString.append(" +");
-									derivationString.append(difficulty);
-								}
-							}
-						} else {
-							if (first) {
-								first = false;
-							} else {
-								derivationString.append(", ");
-							}
-							derivationString.append(derivationTalentName);
-							if (derivationTalent.containsKey("Erschwernis")) {
-								derivationString.append(" +");
-								derivationString.append(derivationTalent.getInt("Erschwernis"));
-							}
-						}
-					}
-					table.addCells(derivationString.toString());
+								return derivationTalentName + "\u00A0(" + specialization + ')' + (difficulty != groupDerive ? " +" + difficulty : "");
+							});
+						} else
+							return derivationTalentName + (derivationTalent.containsKey("Erschwernis") ? " +" + derivationTalent.getInt("Erschwernis") : "");
+					});
+					table.addCells(derivationString);
 				}
 
 				table.completeRow();

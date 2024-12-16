@@ -46,6 +46,7 @@ import dsatool.settings.SettingsPage;
 import dsatool.ui.ReactiveSpinner;
 import dsatool.ui.RenameDialog;
 import dsatool.util.ErrorLogger;
+import dsatool.util.StringUtil;
 import dsatool.util.Tuple;
 import dsatool.util.Util;
 import javafx.beans.binding.BooleanBinding;
@@ -790,7 +791,7 @@ public class AnimalSheet extends Sheet {
 		table.addColumn(new Column(0, FontManager.serif, fontSize, HAlign.LEFT));
 
 		table.addRow(SheetUtil.createTitleCell("Fertigkeit", 1), SheetUtil.createTitleCell("E", 1), SheetUtil.createTitleCell("S", 1),
-				((TextCell) SheetUtil.createTitleCell("Reit-AT", 1)).setPadding(0, 0, 0, 0), SheetUtil.createTitleCell("Beschreibung", 1));
+				SheetUtil.createTitleCell("Reit-AT", 1).setPadding(0, 0, 0, 0), SheetUtil.createTitleCell("Beschreibung", 1));
 
 		final JSONObject skills = ResourceManager.getResource("data/Tierfertigkeiten").getObj("Reittiere");
 		final JSONObject actualSkills = animal != null && fill ? animal.getObj("Fertigkeiten") : null;
@@ -1048,9 +1049,9 @@ public class AnimalSheet extends Sheet {
 		table.addColumn(new Column(0, 0, FontManager.serif, fontSize / 2, fontSize, HAlign.LEFT));
 
 		table.addRow(SheetUtil.createTitleCell("Ritual", 1), SheetUtil.createTitleCell("E", 1), SheetUtil.createTitleCell("K", 1),
-				SheetUtil.createTitleCell("Probe", 1), ((TextCell) SheetUtil.createTitleCell("Dauer", 1)).setPadding(0, 0, 0, 0),
-				((TextCell) SheetUtil.createTitleCell("Kosten", 1)).setPadding(0, 0, 0, 0), SheetUtil.createTitleCell("RW", 1),
-				SheetUtil.createTitleCell("ZO", 1), ((TextCell) SheetUtil.createTitleCell("W.-Dauer", 1)).setPadding(0, 0, 0, 0),
+				SheetUtil.createTitleCell("Probe", 1), SheetUtil.createTitleCell("Dauer", 1).setPadding(0, 0, 0, 0),
+				SheetUtil.createTitleCell("Kosten", 1).setPadding(0, 0, 0, 0), SheetUtil.createTitleCell("RW", 1),
+				SheetUtil.createTitleCell("ZO", 1), SheetUtil.createTitleCell("W.-Dauer", 1).setPadding(0, 0, 0, 0),
 				SheetUtil.createTitleCell("Beschreibung", 1));
 
 		final JSONObject rituals = ResourceManager.getResource("data/Tierfertigkeiten").getObj("Vertrautenmagie");
@@ -1155,16 +1156,7 @@ public class AnimalSheet extends Sheet {
 			if (skill.containsKey("Auswahl") || skill.containsKey("Freitext")) {
 				final StringBuilder text = new StringBuilder();
 				final JSONArray actualSkill = actualSkills.getArr(skillName);
-				boolean first = true;
-				for (int i = 0; i < actualSkill.size(); ++i) {
-					if (first) {
-						first = false;
-					} else {
-						text.append(", ");
-					}
-					final JSONObject current = actualSkill.getObj(i);
-					text.append(current.getStringOrDefault("Auswahl", current.getStringOrDefault("Freitext", "")));
-				}
+				StringUtil.mkStringObj(actualSkill, ", ", current -> current.getStringOrDefault("Auswahl", current.getStringOrDefault("Freitext", "")));
 				if (text.length() == 0) {
 					text.append(' ');
 				}

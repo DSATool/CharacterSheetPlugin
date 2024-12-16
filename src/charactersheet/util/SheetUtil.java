@@ -40,6 +40,7 @@ import boxtable.table.Table;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.util.ErrorLogger;
+import dsatool.util.StringUtil;
 import dsatool.util.Util;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
@@ -320,16 +321,7 @@ public class SheetUtil {
 				} else {
 					result.append(", ");
 				}
-				final JSONArray choice = choices.getArr(i);
-				boolean firstChoice = true;
-				for (int j = 0; j < choice.size(); ++j) {
-					if (firstChoice) {
-						firstChoice = false;
-					} else {
-						result.append(" o. ");
-					}
-					result.append(getRequirementString(choice.getObj(j), base));
-				}
+				result.append(StringUtil.mkStringObj(choices.getArr(i), " o. ", choice -> getRequirementString(choice, base)));
 			}
 		}
 		if (requirements.containsKey("Eigenschaften")) {
@@ -564,17 +556,7 @@ public class SheetUtil {
 					} else {
 						result.append(", ");
 					}
-					boolean firstChoice = true;
-					for (final String apRequirement : choice.keySet()) {
-						if (firstChoice) {
-							firstChoice = false;
-						} else {
-							result.append("o. ");
-						}
-						result.append(choice.getInt(apRequirement));
-						result.append("AP in\u00A0");
-						result.append(apRequirement);
-					}
+					result.append(StringUtil.mkString(choice.keySet(), " o. ", apRequirement -> choice.getInt(apRequirement) + "AP in\u00A0" + apRequirement));
 				}
 			}
 		}
@@ -637,23 +619,11 @@ public class SheetUtil {
 
 	public static String getTargetObjectsString(final JSONArray actualTargets) {
 		final JSONObject targets = ResourceManager.getResource("data/Zielobjekte");
-		final StringBuilder targetString = new StringBuilder();
-		if (actualTargets != null) {
-			boolean first = true;
-			for (final String targetName : targets.keySet()) {
-				for (int i = 0; i < actualTargets.size(); ++i) {
-					if (targetName.equals(actualTargets.getString(i))) {
-						if (first) {
-							first = false;
-						} else {
-							targetString.append(' ');
-						}
-						targetString.append(targets.getObj(targetName).getStringOrDefault("Abkürzung", ""));
-					}
-				}
-			}
-		}
-		return targetString.toString();
+		if (actualTargets != null)
+			return StringUtil.mkString(targets.keySet(), " ", targetName -> StringUtil.mkStringString(actualTargets, " ",
+					actualName -> targetName.equals(actualName) ? targets.getObj(targetName).getStringOrDefault("Abkürzung", "") : ""));
+		else
+			return "";
 	}
 
 	public static boolean matchesPageSize(final PDDocument document, final PDRectangle pageSize) {

@@ -44,6 +44,7 @@ import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
 import dsatool.ui.ReactiveSpinner;
 import dsatool.util.ErrorLogger;
+import dsatool.util.StringUtil;
 import dsatool.util.Tuple;
 import dsatool.util.Tuple3;
 import javafx.beans.property.BooleanProperty;
@@ -616,19 +617,7 @@ public class RitualsSheet extends Sheet {
 		ifHas("Verbreitung", actualGroup, o -> {
 			final Object spread = ritual.getUnsafe("Verbreitung");
 			if (spread instanceof final JSONObject obj) {
-				boolean first = true;
-				final StringBuilder res = new StringBuilder();
-				for (final String rep : obj.keySet()) {
-					if (first) {
-						first = false;
-					} else {
-						res.append(", ");
-					}
-					res.append(rep);
-					res.append(' ');
-					res.append(obj.getInt(rep));
-				}
-				table.addCells(res);
+				table.addCells(StringUtil.mkString(obj, ", ", rep -> rep + ' ' + obj.getInt(rep)));
 			} else if (spread != null) {
 				table.addCells(spread.toString());
 			} else {
@@ -747,17 +736,8 @@ public class RitualsSheet extends Sheet {
 				if (rituals.containsKey(ritualName)) {
 					final JSONArray choice = rituals.getArr(ritualName);
 					if (choice.size() > 0) {
-						final StringBuilder choices = new StringBuilder();
-						boolean first = true;
-						for (int i = 0; i < choice.size(); ++i) {
-							if (first) {
-								first = false;
-							} else {
-								choices.append(", ");
-							}
-							choices.append(choice.getObj(i).getString("Auswahl"));
-						}
-						table.addRow(new TextCell(choices.toString()).setColSpan(table.getNumColumns()));
+						final String choices = StringUtil.mkStringObj(choice, ", ", theChoice -> theChoice.getString("Auswahl"));
+						table.addRow(new TextCell(choices).setColSpan(table.getNumColumns()));
 					} else {
 						table.addRow(new TextCell(" ").setColSpan(table.getNumColumns()));
 					}
