@@ -1689,7 +1689,7 @@ public class FightSheet extends Sheet {
 									}
 								}
 
-								final Cell notes = new TextCell(HeroUtil.getItemNotes(item, baseArmor)).setColSpan(3);
+								final Cell notes = new TextCell(HeroUtil.getItemNotes(item, baseArmor)).setMinFontSize(4).setColSpan(3);
 
 								table.addRow(name, be, rs[0], rs[1], rs[2], rs[3], rs[4], rs[5], rs[6], rs[7], notes);
 							} else {
