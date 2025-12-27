@@ -390,8 +390,8 @@ public class SpellsSheet extends Sheet {
 		}
 
 		final Cell complexity = new TextCell(hero != null && fill
-				? DSAUtil.getEnhancementGroupString(HeroUtil.getSpellComplexity(hero, name, actualRepresentation, Integer.MAX_VALUE)) : " ").setPadding(0, 1, 1,
-						0);
+				? DSAUtil.getEnhancementGroupString(HeroUtil.getSpellComplexity(hero, actualSpell, name, actualRepresentation, Integer.MAX_VALUE)) : " ")
+				.setPadding(0, 1, 1, 0);
 
 		final JSONArray challenge = spell.getArrOrDefault("Probe", baseSpell.getArr("Probe"));
 		final String challengeString = settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get() ? HeroUtil.getChallengeValuesString(hero, challenge, fill)
