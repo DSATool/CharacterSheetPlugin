@@ -487,7 +487,7 @@ public class SpellsSheet extends Sheet {
 
 		final String range = DSAUtil.getModificationString(spell.getObjOrDefault("Reichweite", baseSpell.getObjOrDefault("Reichweite", null)), Units.RANGE,
 				false);
-		final JSONArray targets = spell.getArrOrDefault("Zielobjekt", baseSpell.getArrOrDefault("Zielobjekt", null));
+		final JSONArray targets = spell.getArrOrDefault("Zielobjekt", baseSpell.getArrOrDefault("Zielobjekt", new JSONArray(null)));
 		final String target = SheetUtil.getTargetObjectsString(targets);
 		ownTargets.addAll(targets.getStrings());
 		final String cost = DSAUtil.getModificationString(spell.getObjOrDefault("Kosten", baseSpell.getObjOrDefault("Kosten", null)), Units.NONE, false);
