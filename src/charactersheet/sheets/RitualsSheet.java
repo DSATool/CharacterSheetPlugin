@@ -553,7 +553,7 @@ public class RitualsSheet extends Sheet {
 			}
 		}
 
-		return new Tuple3<>(table, "Allgemeine Rituale".equals(groupName) ? null : width[0] < 400, section);
+		return new Tuple3<Table, Boolean, TitledPane>(table, "Allgemeine Rituale".equals(groupName) ? null : width[0] < 400, section);
 	}
 
 	private void fillRitual(final Table table, final JSONObject actualGroup, final boolean isObjectRitual, final String ritualName, final JSONObject ritual,

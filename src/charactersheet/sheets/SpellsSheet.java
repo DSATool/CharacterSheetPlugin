@@ -125,7 +125,7 @@ public class SpellsSheet extends Sheet {
 		table.addColumn(new Column(40, 40, FontManager.serif, 4, fontSize, HAlign.CENTER));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Spontane Modifikation", 1);
-		final Cell abbrevTitle = ((TextCell) SheetUtil.createTitleCell("Abk.", 1)).setPadding(0, 0, 0, 0);
+		final Cell abbrevTitle = SheetUtil.createTitleCell("Abk.", 1).setPadding(0, 0, 0, 0);
 		final Cell zfpTitle = SheetUtil.createTitleCell("Probe", 1);
 		final Cell durationTitle = SheetUtil.createTitleCell("Zauberd.", 1);
 
@@ -302,7 +302,7 @@ public class SpellsSheet extends Sheet {
 		table.addColumn(new Column(20, 20, FontManager.serif, 4, fontSize, HAlign.CENTER));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Zielobjekt", 1);
-		final Cell abbrevTitle = ((TextCell) SheetUtil.createTitleCell("Abk.", 1)).setPadding(0, 0, 0, 0);
+		final Cell abbrevTitle = SheetUtil.createTitleCell("Abk.", 1).setPadding(0, 0, 0, 0);
 
 		table.addRow(nameTitle, abbrevTitle);
 
@@ -331,7 +331,7 @@ public class SpellsSheet extends Sheet {
 		table.addColumn(new Column(20, 20, FontManager.serif, 4, fontSize, HAlign.CENTER));
 
 		final Cell nameTitle = SheetUtil.createTitleCell("Merkmal", 1);
-		final Cell abbrevTitle = ((TextCell) SheetUtil.createTitleCell("Abk.", 1)).setPadding(0, 0, 0, 0);
+		final Cell abbrevTitle = SheetUtil.createTitleCell("Abk.", 1).setPadding(0, 0, 0, 0);
 
 		table.addRow(nameTitle, abbrevTitle, nameTitle, abbrevTitle, nameTitle, abbrevTitle);
 
