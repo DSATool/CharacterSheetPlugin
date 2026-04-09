@@ -1231,7 +1231,7 @@ public class CompactSheet extends Sheet {
 		settingsPage.getBool(spells, VALUES_FOR_ATTRIBUTES).set(settings.getBoolOrDefault(VALUES_FOR_ATTRIBUTES + "für Zauber", false));
 
 		settingsPage.getBool(sections.get("Rituale"), "").set(settings.getBoolOrDefault("Rituale", hero != null && HeroUtil.isMagical(hero)));
-		settingsPage.getBool(sections.get("Liturgien"), "").set(settings.getBoolOrDefault("Liturgien", hero != null && HeroUtil.isClerical(hero, true)));
+		settingsPage.getBool(sections.get("Liturgien"), "").set(settings.getBoolOrDefault("Liturgien", hero != null && HeroUtil.isClerical(hero, false)));
 	}
 
 	@Override
