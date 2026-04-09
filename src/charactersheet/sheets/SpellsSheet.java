@@ -453,7 +453,9 @@ public class SpellsSheet extends Sheet {
 			if (specialisations != null) {
 				for (int i = 0; i < specialisations.size(); ++i) {
 					final JSONObject specialisation = specialisations.getObj(i);
-					if (name.equals(specialisation.getString("Auswahl"))) {
+					final String choice = specialisation.getString("Auswahl");
+					final int representationIndex = choice.indexOf(':');
+					if (name.equals(choice.substring(0, representationIndex)) && actualRepresentation.equals(choice.substring(representationIndex + 1))) {
 						final String spec = specialisation.getStringOrDefault("Freitext", "");
 						if (spoMos.containsKey(spec)) {
 							spoMoSpecs.add(spec);
