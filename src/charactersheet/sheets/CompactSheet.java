@@ -55,6 +55,7 @@ public class CompactSheet extends Sheet {
 	private static final String ADDITIONAL_ROWS = "Zusätzliche Zeilen";
 	private static final String GROUP_BASIC_TALENTS = "Basistalente gruppieren";
 	private static final String MARK_BASIC_TALENTS = "Basistalente markieren";
+	private static final String MARK_HOUSE_SPELLS = "Hauszauber markieren";
 	private static final String VALUES_FOR_ATTRIBUTES = "Eigenschaftswerte statt Eigenschaften anzeigen";
 
 	private static final float fontSize = 10f;
@@ -606,6 +607,11 @@ public class CompactSheet extends Sheet {
 					name = name + ": " + actualTalent.getStringOrDefault("Freitext", "");
 				}
 
+				final TextCell nameCell = new TextCell(name,
+						settingsPage.getBool(section, MARK_HOUSE_SPELLS).get() && actualTalent.getBoolOrDefault("Hauszauber", false) ? FontManager.serifItalic
+								: FontManager.serif,
+						8, 8);
+
 				final JSONArray challenge = rep.getArrOrDefault("Probe", spell.getArr("Probe"));
 				final String challengeString = settingsPage.getBool(section, VALUES_FOR_ATTRIBUTES).get()
 						? HeroUtil.getChallengeValuesString(hero, challenge, fill) : DSAUtil.getChallengeString(challenge);
@@ -629,7 +635,7 @@ public class CompactSheet extends Sheet {
 					zfw = actualTalent.getIntOrDefault("ZfW", 0).toString();
 				}
 
-				rows.add(new Object[] { name, spellNameRep._2, challengeString, traitString, zfw });
+				rows.add(new Object[] { nameCell, spellNameRep._2, challengeString, traitString, zfw });
 			}
 		}
 
@@ -1118,12 +1124,13 @@ public class CompactSheet extends Sheet {
 					settings.put(ADDITIONAL_ROWS + " für Rüstung", settingsPage.getInt(section, ADDITIONAL_ROWS + " für Rüstung").get());
 				}
 				case "Talente" -> {
-					settings.put("Basistalente gruppieren", settingsPage.getBool(section, GROUP_BASIC_TALENTS).get());
-					settings.put("Basistalente markieren", settingsPage.getBool(section, MARK_BASIC_TALENTS).get());
+					settings.put(GROUP_BASIC_TALENTS, settingsPage.getBool(section, GROUP_BASIC_TALENTS).get());
+					settings.put(MARK_BASIC_TALENTS, settingsPage.getBool(section, MARK_BASIC_TALENTS).get());
 					settings.put(ADDITIONAL_ROWS + " für Talente", settingsPage.getInt(section, ADDITIONAL_ROWS).get());
 					settings.put(VALUES_FOR_ATTRIBUTES + " für Talente", settingsPage.getBool(section, VALUES_FOR_ATTRIBUTES).get());
 				}
 				case "Zauber" -> {
+					settings.put(MARK_HOUSE_SPELLS, settingsPage.getBool(section, MARK_HOUSE_SPELLS).get());
 					settings.put(ADDITIONAL_ROWS + " für Zauber", settingsPage.getInt(section, ADDITIONAL_ROWS).get());
 					settings.put(VALUES_FOR_ATTRIBUTES + " für Zauber", settingsPage.getBool(section, VALUES_FOR_ATTRIBUTES).get());
 				}
@@ -1155,6 +1162,7 @@ public class CompactSheet extends Sheet {
 		settingsPage.addBooleanChoice(VALUES_FOR_ATTRIBUTES);
 
 		sections.put("Zauber", settingsPage.addSection("Zauber", true));
+		settingsPage.addBooleanChoice(MARK_HOUSE_SPELLS);
 		settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 60);
 		settingsPage.addBooleanChoice(VALUES_FOR_ATTRIBUTES);
 
@@ -1187,13 +1195,14 @@ public class CompactSheet extends Sheet {
 
 		final TitledPane talents = sections.get("Talente");
 		settingsPage.getBool(talents, "").set(settings.getBoolOrDefault("Talente", true));
-		settingsPage.getBool(talents, GROUP_BASIC_TALENTS).set(settings.getBoolOrDefault("Basistalente gruppieren", true));
-		settingsPage.getBool(talents, MARK_BASIC_TALENTS).set(settings.getBoolOrDefault("Basistalente markieren", false));
+		settingsPage.getBool(talents, GROUP_BASIC_TALENTS).set(settings.getBoolOrDefault(GROUP_BASIC_TALENTS, true));
+		settingsPage.getBool(talents, MARK_BASIC_TALENTS).set(settings.getBoolOrDefault(MARK_BASIC_TALENTS, false));
 		settingsPage.getInt(talents, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Talente", 0));
 		settingsPage.getBool(talents, VALUES_FOR_ATTRIBUTES).set(settings.getBoolOrDefault(VALUES_FOR_ATTRIBUTES + " für Talente", false));
 
 		final TitledPane spells = sections.get("Zauber");
 		settingsPage.getBool(spells, "").set(settings.getBoolOrDefault("Zauber", hero != null && HeroUtil.isMagical(hero)));
+		settingsPage.getBool(spells, MARK_HOUSE_SPELLS).set(settings.getBoolOrDefault(MARK_HOUSE_SPELLS, true));
 		settingsPage.getInt(spells, ADDITIONAL_ROWS).set(settings.getIntOrDefault(ADDITIONAL_ROWS + " für Zauber", 0));
 		settingsPage.getBool(spells, VALUES_FOR_ATTRIBUTES).set(settings.getBoolOrDefault(VALUES_FOR_ATTRIBUTES + "für Zauber", false));
 

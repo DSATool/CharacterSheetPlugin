@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 
 import boxtable.cell.Cell;
 import boxtable.cell.TextCell;
@@ -48,6 +49,7 @@ import jsonant.value.JSONObject;
 
 public class SpellsSheet extends Sheet {
 
+	private static final String MARK_HOUSE_SPELLS = "Hauszauber markieren";
 	private static final String ADDITIONAL_SPELL_ROWS = "Zusätzliche Zeilen";
 	private static final String VALUES_FOR_ATTRIBUTES = "Eigenschaftswerte statt Eigenschaften anzeigen";
 
@@ -503,8 +505,13 @@ public class SpellsSheet extends Sheet {
 			name = name + ": " + actualSpell.getStringOrDefault("Freitext", "");
 		}
 
-		table.addRow(name, value, se, complexity, actualRepresentation, challengeString, traitString, revString, specString, spoMoString, range, target, cost,
-				castTime, effectTime, description);
+		final PDFont font = settingsPage.getBool(MARK_HOUSE_SPELLS).get() && actualSpell.getBoolOrDefault("Hauszauber", false) ? FontManager.serifItalic
+				: FontManager.serif;
+		final TextCell nameCell = new TextCell(name);
+		nameCell.setFont(font);
+
+		table.addRow(nameCell, value, se, complexity, actualRepresentation, challengeString, traitString, revString, specString, spoMoString, range, target,
+				cost, castTime, effectTime, description);
 
 		return new Tuple3<>(ownTraits, ownTargets, ownSpoMos);
 	}
@@ -512,6 +519,9 @@ public class SpellsSheet extends Sheet {
 	@Override
 	public JSONObject getSettings(final JSONObject parent) {
 		final JSONObject settings = super.getSettings(parent);
+
+		settings.put(MARK_HOUSE_SPELLS, settingsPage.getBool(MARK_HOUSE_SPELLS).get());
+
 		final JSONArray reps = new JSONArray(settings);
 		final JSONObject representationNames = ResourceManager.getResource("data/Repraesentationen");
 		for (final String representationName : representationNames.keySet()) {
@@ -554,6 +564,9 @@ public class SpellsSheet extends Sheet {
 	@Override
 	public void load() {
 		super.load();
+
+		settingsPage.addBooleanChoice(MARK_HOUSE_SPELLS);
+
 		final JSONObject representationNames = ResourceManager.getResource("data/Repraesentationen");
 		for (final String representationName : representationNames.keySet()) {
 			settingsPage.addBooleanChoice("Repräsentation " + representationNames.getObj(representationName).getStringOrDefault("Name", representationName));
@@ -570,6 +583,9 @@ public class SpellsSheet extends Sheet {
 	@Override
 	public void loadSettings(final JSONObject settings) {
 		super.loadSettings(settings);
+
+		settingsPage.getBool(MARK_HOUSE_SPELLS).set(settings.getBoolOrDefault(MARK_HOUSE_SPELLS, true));
+
 		final JSONArray reps = settings.getArrOrDefault("Repräsentationen", new JSONArray(null));
 		final JSONObject representationNames = ResourceManager.getResource("data/Repraesentationen");
 		for (final String representationName : representationNames.keySet()) {
