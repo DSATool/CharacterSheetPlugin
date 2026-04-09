@@ -132,16 +132,15 @@ public class CharacterSheet extends Sheet {
 		if (hero != null && fill) {
 			final JSONObject bio = hero.getObj("Biografie");
 			final Cell name = new TextCell("Name: " + bio.getStringOrDefault("Vorname", "") + " " + bio.getStringOrDefault("Nachname", "")).setColSpan(3);
-			final JSONObject time = ResourceManager.getResource("data/Allgemein").getObj("Zeit");
-			final String age = settingsPage
-					.getBool("Alter").get()
-							? "Alter: "
-									+ (time != null
-											? Integer.toString(DSAUtil.getDaysBetween(bio.getIntOrDefault("Geburtstag", 1),
-													bio.getIntOrDefault("Geburtsmonat", 1), bio.getIntOrDefault("Geburtsjahr", 1000),
-													time.getIntOrDefault("Tag", 1), time.getIntOrDefault("Monat", 1), time.getIntOrDefault("Jahr", 1000)) / 365)
-											: " ")
-							: " ";
+			final JSONObject time = ResourceManager.getResource("settings/Allgemein").getObj("Zeit");
+			final String age = settingsPage.getBool("Alter").get()
+					? "Alter: "
+							+ (time != null
+									? Integer.toString(DSAUtil.getDaysBetween(bio.getIntOrDefault("Geburtstag", 1),
+											bio.getIntOrDefault("Geburtsmonat", 1), bio.getIntOrDefault("Geburtsjahr", 1000),
+											time.getIntOrDefault("Tag", 1), time.getIntOrDefault("Monat", 1), time.getIntOrDefault("Jahr", 1000)) / 365)
+									: " ")
+					: " ";
 			table.addRow(name, age);
 
 			final String eyeColor = "Augenfarbe: " + bio.getStringOrDefault("Augenfarbe", "");
