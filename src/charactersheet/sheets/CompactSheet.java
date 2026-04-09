@@ -98,9 +98,11 @@ public class CompactSheet extends Sheet {
 		final Table table = new Table().setBorder(0, 0, 0, 0);
 		table.addEventHandler(EventType.BEGIN_PAGE, header);
 
-		table.addColumn(new Column(453, 453, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
-		table.addColumn(new Column(65, 65, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
-		table.addColumn(new Column(65, 65, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
+		final boolean printBirthday = settingsPage.getBool("Geburtstag").get();
+
+		table.addColumn(new Column(printBirthday ? 413 : 458, printBirthday ? 413 : 458, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
+		table.addColumn(new Column(60, 60, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
+		table.addColumn(new Column(printBirthday ? 110 : 65, printBirthday ? 110 : 65, FontManager.serif, 4, fontSize, HAlign.LEFT).setBorder(0, 0, 0, 0.5f));
 
 		final JSONObject bio = hero.getObj("Biografie");
 
@@ -108,9 +110,21 @@ public class CompactSheet extends Sheet {
 				new TextCell("Spieler: " + hero.getStringOrDefault("Spieler", "")).setColSpan(2));
 
 		if (settingsPage.getBool("Allgemein").get()) {
-			table.addRow("Rasse: " + SheetUtil.getRaceString(bio), new TextCell("AP: " + bio.getIntOrDefault("Abenteuerpunkte", 0)).setColSpan(2));
+			final String birthday = printBirthday ? "Geburtstag: " + +bio.getIntOrDefault("Geburtstag", 0) + ". "
+					+ DSAUtil.months[bio.getIntOrDefault("Geburtsmonat", 1) - 1] + " " + bio.getIntOrDefault("Geburtsjahr", 0) : null;
+			table.addRow("Rasse: " + SheetUtil.getRaceString(bio),
+					new TextCell("AP: " + bio.getIntOrDefault("Abenteuerpunkte", 0)).setColSpan(birthday != null ? 1 : 2), birthday);
+			final JSONObject time = ResourceManager.getResource("settings/Allgemein").getObj("Zeit");
+			final String age = settingsPage.getBool("Alter").get()
+					? "Alter: "
+							+ (time != null
+									? Integer.toString(DSAUtil.getDaysBetween(bio.getIntOrDefault("Geburtstag", 1),
+											bio.getIntOrDefault("Geburtsmonat", 1), bio.getIntOrDefault("Geburtsjahr", 1000),
+											time.getIntOrDefault("Tag", 1), time.getIntOrDefault("Monat", 1), time.getIntOrDefault("Jahr", 1000)) / 365)
+									: " ")
+					: null;
 			table.addRow("Kultur: " + SheetUtil.getCultureString(bio),
-					new TextCell("Geschlecht: " + ("weiblich".equals(bio.getString("Geschlecht")) ? "♀" : "♂")).setColSpan(2));
+					new TextCell("Geschlecht: " + ("weiblich".equals(bio.getString("Geschlecht")) ? "♀" : "♂")).setColSpan(age != null ? 1 : 2), age);
 			table.addRow("Profession: " + HeroUtil.getProfessionString(hero, bio, ResourceManager.getResource("data/Professionen"), true),
 					"Größe: " + bio.getIntOrDefault("Größe", 0), "Gewicht: " + bio.getIntOrDefault("Gewicht", 0));
 		}
@@ -1112,6 +1126,9 @@ public class CompactSheet extends Sheet {
 		final JSONObject settings = super.getSettings(parent);
 		settings.put("Allgemein", settingsPage.getBool("Allgemein").get());
 
+		settings.put("Alter", settingsPage.getBool("Alter").get());
+		settings.put("Geburtstag", settingsPage.getBool("Geburtstag").get());
+
 		for (final TitledPane section : settingsPage.getSections()) {
 			final String name = settingsPage.getString(section, null).get();
 			settings.put(name, settingsPage.getBool(section, "").get());
@@ -1144,6 +1161,10 @@ public class CompactSheet extends Sheet {
 		super.load();
 
 		settingsPage.addBooleanChoice("Allgemein");
+
+		settingsPage.addBooleanChoice("Alter");
+		settingsPage.addBooleanChoice("Geburtstag");
+
 		sections.put(ATTRIBUTES, settingsPage.addSection(ATTRIBUTES, true));
 		sections.put("Vor-/Nachteile", settingsPage.addSection("Vor-/Nachteile", true));
 		sections.put("Sonderfertigkeiten", settingsPage.addSection("Sonderfertigkeiten", true));
@@ -1175,6 +1196,9 @@ public class CompactSheet extends Sheet {
 		super.loadSettings(settings);
 
 		settingsPage.getBool("Allgemein").set(settings.getBoolOrDefault("Allgemein", true));
+
+		settingsPage.getBool("Alter").set(settings.getBoolOrDefault("Alter", false));
+		settingsPage.getBool("Geburtstag").set(settings.getBoolOrDefault("Geburtstag", false));
 
 		orderSections(List.of(ATTRIBUTES, "Vor-/Nachteile", "Sonderfertigkeiten", "Kampf", "Talente", "Zauber", "Rituale", "Liturgien"));
 		orderSections(settings.keySet());
