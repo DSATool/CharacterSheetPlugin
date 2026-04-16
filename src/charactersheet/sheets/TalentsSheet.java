@@ -37,6 +37,8 @@ import boxtable.table.Column;
 import boxtable.table.Table;
 import charactersheet.util.FontManager;
 import charactersheet.util.SheetUtil;
+import dsa41basis.hero.MetaTalent;
+import dsa41basis.hero.Talent;
 import dsa41basis.util.DSAUtil;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
@@ -49,7 +51,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.TitledPane;
 import jsonant.value.JSONArray;
 import jsonant.value.JSONObject;
-import jsonant.value.JSONValue;
 
 public class TalentsSheet extends Sheet {
 
@@ -94,66 +95,13 @@ public class TalentsSheet extends Sheet {
 		}
 
 		for (final String talentName : metaTalents.keySet()) {
-			final JSONObject talent = metaTalents.get(talentName);
-
-			final JSONArray calculation = talent.getArr("Berechnung");
-			int numTalents = calculation.size();
-
-			if (talent.containsKey("Berechnung:Auswahl")) {
-				numTalents += 1;
-			}
-
-			double taw = 0;
-			int min = Integer.MAX_VALUE;
-			int current;
-			for (int i = 0; i < calculation.size(); ++i) {
-				final JSONObject actualTalent = (JSONObject) HeroUtil.findActualTalent(hero, calculation.getString(i))._1;
-				final JSONObject currentTalent = HeroUtil.findTalent(calculation.getString(i))._1;
-				if (actualTalent == null && !currentTalent.getBoolOrDefault("Basis", false)
-						|| actualTalent != null && actualTalent.getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1) < 0) {
-					taw = Double.NEGATIVE_INFINITY;
-					break;
-				}
-				current = actualTalent != null ? actualTalent.getIntOrDefault("TaW", 0) : 0;
-				min = Math.min(min, current);
-				taw += current;
-			}
-			if (talent.containsKey("Berechnung:Auswahl")) {
-				final JSONArray choice = talent.getArr("Berechnung:Auswahl");
-				int choiceTaw = -1;
-				for (int i = 0; i < choice.size(); ++i) {
-					final JSONValue actualTalent = HeroUtil.findActualTalent(hero, choice.getString(i))._1;
-					final JSONObject currentTalent = HeroUtil.findTalent(choice.getString(i))._1;
-					if (currentTalent.containsKey("Auswahl") || currentTalent.containsKey("Freitext")) {
-						int max = -1;
-						for (int j = 0; j < actualTalent.size(); ++j) {
-							max = Math.max(max, ((JSONArray) actualTalent).getObj(j).getIntOrDefault("TaW", -1));
-						}
-						choiceTaw = Math.max(choiceTaw, Math.max(max, currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
-					} else {
-						if (actualTalent != null) {
-							choiceTaw = Math.max(choiceTaw,
-									((JSONObject) actualTalent).getIntOrDefault("TaW", currentTalent.getBoolOrDefault("Basis", false) ? 0 : -1));
-						} else if (choiceTaw == -1 && currentTalent.getBoolOrDefault("Basis", false)) {
-							choiceTaw = 0;
-						}
-					}
-				}
-				if (choiceTaw < 0) {
-					taw = Double.NEGATIVE_INFINITY;
-				} else {
-					min = Math.min(min, choiceTaw);
-					taw += choiceTaw;
-				}
-			}
-
-			if (taw == Double.NEGATIVE_INFINITY && settingsPage.getBool(section, OWN_TALENTS_ONLY).get()) {
-				continue;
-			}
+			final JSONObject talent = talents.getObj(talentName);
 
 			String tawString;
 			if (hero != null && fillAll) {
-				tawString = taw != Double.NEGATIVE_INFINITY ? DSAUtil.oneDecimalPlace.format(Math.min(taw / numTalents, 2 * min)) : " ";
+				final MetaTalent metaTalent = (MetaTalent) Talent.getTalent(talentName, talents, talent, hero, new JSONObject(null), null);
+				final double taw = metaTalent.getPreciseValue();
+				tawString = taw != Double.NEGATIVE_INFINITY ? DSAUtil.oneDecimalPlace.format(taw) : " ";
 			} else {
 				tawString = " ";
 			}
@@ -162,6 +110,8 @@ public class TalentsSheet extends Sheet {
 			final Cell challengeCell = challenge != null ? new TextCell(challenge.getString(0)).addText("/").addText(challenge.getString(1)).addText("/")
 					.addText(challenge.getString(2)).setEquallySpaced(true).setPadding(0, 1, 1, 0) : new TextCell("—");
 
+			final JSONArray calculation = talent.getArr("Berechnung");
+			int numTalents = calculation.size();
 			boolean first = true;
 			final StringBuilder calculationString = new StringBuilder("(");
 			for (int i = 0; i < calculation.size(); ++i) {
@@ -183,9 +133,14 @@ public class TalentsSheet extends Sheet {
 			}
 			if (talent.containsKey("Berechnung:Auswahl")) {
 				calculationString.append("+Talent");
+				++numTalents;
 			}
 			calculationString.append(")/");
-			calculationString.append(numTalents);
+			if (talent.containsKey("Divisor")) {
+				calculationString.append(talent.getDouble("Divisor"));
+			} else {
+				calculationString.append(numTalents);
+			}
 			calculationString.toString();
 
 			table.addRow(talentName, tawString, challengeCell, calculationString.toString());
