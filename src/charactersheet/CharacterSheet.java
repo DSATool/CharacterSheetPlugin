@@ -45,7 +45,7 @@ public class CharacterSheet extends Plugin {
 	 */
 	@Override
 	public void initialize() {
-		Credits.credits.add(new Credits("Heldenbrief-Design inspiriert von Mario Rauschenberg", null, null, "http://www.dsa-hamburg.de", null));
+		Credits.credits.add(new Credits("Heldenbrief-Design inspiriert von Mario Rauschenberg", null, null, "https://www.dsa-hamburg.de", null));
 		Credits.credits.add(new Credits("Trefferzonengrafiken Achaz, Amazone, Magier von Alexander Kremel",
 				"mit freundlicher Genehmigung durch Mario Rauschenberg", null, null, null));
 		Credits.credits.add(new Credits(
@@ -54,11 +54,11 @@ public class CharacterSheet extends Plugin {
 		Credits.credits.add(new Credits("BoxTable", "Apache License 2.0", Util.getAppDir() + "/licenses/ALv2.txt",
 				"http://github.com/errt/BoxTable", null));
 		Credits.credits.add(new Credits("PDFBox, FontBox, Apache Commons Logging\nCopyright (c) 2002-2017 The Apache Software Foundation", "Apache License 2.0",
-				Util.getAppDir() + "/licenses/ALv2.txt", "http://pdfbox.apache.org/", null));
+				Util.getAppDir() + "/licenses/ALv2.txt", "https://pdfbox.apache.org/", null));
 		Credits.credits.add(new Credits("Apache Commons Logging\nCopyright (c) 2003-2014 The Apache Software Foundation", "Apache License 2.0",
-				Util.getAppDir() + "/licenses/ALv2.txt", "http://commons.apache.org/proper/commons-logging/", null));
+				Util.getAppDir() + "/licenses/ALv2.txt", "https://commons.apache.org/proper/commons-logging/", null));
 		Credits.credits.add(new Credits("Linux Libertine\nCopyright (c) 2003–2012 Philipp H. Poll", "SIL Open Font License 1.1",
-				Util.getAppDir() + "/licenses/LinLibertine-OFL.txt", "http://linuxlibertine.org/", null));
+				Util.getAppDir() + "/licenses/LinLibertine-OFL.txt", "https://linuxlibertine.org/", null));
 		Main.addDetachableToolComposite("Helden", "Heldenbogen", 900, 800, () -> new SheetConfiguration().getRoot());
 	}
 
