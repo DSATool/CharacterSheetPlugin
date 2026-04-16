@@ -112,7 +112,16 @@ public class SheetConfiguration extends HeroSelector {
 		});
 
 		sheets.setCellFactory(list -> {
-			final CheckBoxListCell<Sheet> cell = new CheckBoxListCell<>();
+			final CheckBoxListCell<Sheet> cell = new CheckBoxListCell<>() {
+				@Override
+				public void updateItem(final Sheet item, final boolean empty) {
+					super.updateItem(item, empty);
+					getStyleClass().remove("empty-row");
+					if (empty || item == null) {
+						getStyleClass().add("empty-row");
+					}
+				}
+			};
 
 			cell.setSelectedStateCallback(sheets::getItemBooleanProperty);
 

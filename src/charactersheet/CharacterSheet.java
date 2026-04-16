@@ -59,7 +59,7 @@ public class CharacterSheet extends Plugin {
 				Util.getAppDir() + "/licenses/ALv2.txt", "https://commons.apache.org/proper/commons-logging/", null));
 		Credits.credits.add(new Credits("Linux Libertine\nCopyright (c) 2003–2012 Philipp H. Poll", "SIL Open Font License 1.1",
 				Util.getAppDir() + "/licenses/LinLibertine-OFL.txt", "https://linuxlibertine.org/", null));
-		Main.addDetachableToolComposite("Helden", "Heldenbogen", 900, 800, () -> new SheetConfiguration().getRoot());
+		Main.addDetachableToolComposite("Helden", "Heldenbogen", 900, 850, () -> new SheetConfiguration().getRoot());
 	}
 
 	/*
