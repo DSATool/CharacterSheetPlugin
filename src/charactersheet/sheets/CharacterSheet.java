@@ -75,8 +75,9 @@ public class CharacterSheet extends Sheet {
 		table.addRow("Neu", new TextCell(" ").setBorder(1, 1, 1, 1));
 
 		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
-		bottom.bottom = table.render(document, 95, settingsPage.getBool(sections.get("Bild"), "").get() ? 300 : 488, page.getMediaBox().getHeight() - 265
-				+ (settingsPage.getBool("Astralenergie").get() ? 0 : 12) + (settingsPage.getBool("Karmaenergie").get() ? 0 : 12), 72, 10) - 5;
+		bottom.bottom = Math.min(bottom.bottom,
+				table.render(document, 95, settingsPage.getBool(sections.get("Bild"), "").get() ? 300 : 488, page.getMediaBox().getHeight() - 265
+						+ (settingsPage.getBool("Astralenergie").get() ? 0 : 12) + (settingsPage.getBool("Karmaenergie").get() ? 0 : 12), 72, 10) - 5);
 	}
 
 	private void addAttributesTable(final PDDocument document) throws IOException {
@@ -118,7 +119,7 @@ public class CharacterSheet extends Sheet {
 		table.addRow("Sozialstatus", so, empty, empty, empty);
 
 		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
-		table.render(document, 142, 12, page.getMediaBox().getHeight() - 105, 72, 10);
+		bottom.bottom = table.render(document, 142, 12, page.getMediaBox().getHeight() - 105, 72, 10) - 12.5f;
 	}
 
 	private void addBiographyTable(final PDDocument document) throws IOException {
@@ -297,7 +298,7 @@ public class CharacterSheet extends Sheet {
 		}
 
 		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
-		table.render(document, 212, 183, page.getMediaBox().getHeight() - 105, 72, 10);
+		bottom.bottom = Math.min(bottom.bottom, table.render(document, 212, 183, page.getMediaBox().getHeight() - 105, 72, 10) - 12.5f);
 	}
 
 	private void addEnergiesTable(final PDDocument document) throws IOException {
@@ -373,8 +374,7 @@ public class CharacterSheet extends Sheet {
 			}
 		}
 
-		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
-		table.render(document, 277, 12, page.getMediaBox().getHeight() - 258, 72, 10);
+		bottom.bottom = table.render(document, 277, 12, bottom.bottom, 72, 10) - 5;
 	}
 
 	private void addImageTable(final PDDocument document, final TitledPane section) throws IOException {
@@ -429,8 +429,7 @@ public class CharacterSheet extends Sheet {
 			table.addCells(" ", " ");
 		}
 
-		final PDPage page = document.getPage(document.getNumberOfPages() - 1);
-		table.render(document, needsSmallTable ? 277 : 383, 12, page.getMediaBox().getHeight() - 237, 72, 10);
+		bottom.bottom = table.render(document, needsSmallTable ? 277 : 383, 12, bottom.bottom, 72, 10) - 8;
 	}
 
 	private void addProOrConTable(final PDDocument document, final String title, final TitledPane section) throws IOException {
