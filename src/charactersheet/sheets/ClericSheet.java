@@ -44,6 +44,7 @@ import dsa41basis.util.DSAUtil;
 import dsa41basis.util.DSAUtil.Units;
 import dsa41basis.util.HeroUtil;
 import dsatool.resources.ResourceManager;
+import dsatool.resources.Settings;
 import dsatool.util.ErrorLogger;
 import dsatool.util.Tuple;
 import dsatool.util.Util;
@@ -386,7 +387,7 @@ public class ClericSheet extends Sheet {
 		final Cell ritualDurationTitle = SheetUtil.createTitleCell("Rituald.", 1);
 		final Cell effectDurationTitle = SheetUtil.createTitleCell("Wirkungsd.", 1);
 		final Cell targetTitle = SheetUtil.createTitleCell("Ziel", 1);
-		final Cell rangeTitle = ((TextCell) SheetUtil.createTitleCell("Rw.", 1)).setPadding(0, 1, 1, 0);
+		final Cell rangeTitle = SheetUtil.createTitleCell("Rw.", 1).setPadding(0, 1, 1, 0);
 		final Cell descriptionTitle = SheetUtil.createTitleCell("Beschreibung", 1);
 
 		table.addRow(nameTitle, actualTitle, costTitle, ritualDurationTitle, effectDurationTitle, targetTitle, rangeTitle, descriptionTitle);
@@ -403,8 +404,11 @@ public class ClericSheet extends Sheet {
 			liturgiesByLevel[i] = new TreeMap<>(SheetUtil.comparator);
 		}
 
+		final boolean primaryLiturgies = Settings.getSettingBoolOrDefault(true, "Geweihte", "Primäre Segnungen");
+
 		DSAUtil.foreach(liturgy -> liturgy.getObj("Gottheiten").containsKey(deity), (liturgyName, liturgy) -> {
-			final int grade = liturgy.getObj("Gottheiten").getObj(deity).getIntOrDefault("Grad", liturgy.getIntOrDefault("Grad", 1));
+			final int grade = Math.max(liturgy.getObj("Gottheiten").getObj(deity).getIntOrDefault("Grad", liturgy.getIntOrDefault("Grad", 1)),
+					primaryLiturgies ? 0 : 1);
 			final String name = liturgy.getObj("Gottheiten").getObj(deity).getStringOrDefault("Name", liturgyName);
 			if (grade >= numLevels || grade < 0) {
 				liturgiesByLevel[numLevels - 1].put(name, liturgyName);
@@ -415,47 +419,49 @@ public class ClericSheet extends Sheet {
 
 		int i = 0;
 		for (final String levelName : liturgyLevels.keySet()) {
-			final JSONObject level = liturgyLevels.getObj(levelName);
+			if (i != 0 || primaryLiturgies) {
+				final JSONObject level = liturgyLevels.getObj(levelName);
 
-			final int pKaP = level.getIntOrDefault("pKaP", 0);
+				final int pKaP = level.getIntOrDefault("pKaP", 0);
 
-			final TextCell titleCell = new TextCell(levelName, FontManager.serifBold, 7, 7);
-			titleCell.addText(new Text("(" + level.getIntOrDefault("KaP", 0) + " KaP, " + (pKaP != 0 ? pKaP + " pKaP, " : "") + "Probe "
-					+ Util.getSignedIntegerString(level.getIntOrDefault("Probe", 0)) + ", Wirkung: "
-					+ DSAUtil.getModificationString(level.getObj("Wirkung"), Units.NONE, false) + ", " + level.getIntOrDefault("Kosten", 0) + " AP)")
-					.setFont(FontManager.serif));
+				final TextCell titleCell = new TextCell(levelName, FontManager.serifBold, 7, 7);
+				titleCell.addText(new Text("(" + level.getIntOrDefault("KaP", 0) + " KaP, " + (pKaP != 0 ? pKaP + " pKaP, " : "") + "Probe "
+						+ Util.getSignedIntegerString(level.getIntOrDefault("Probe", 0)) + ", Wirkung: "
+						+ DSAUtil.getModificationString(level.getObj("Wirkung"), Units.NONE, false) + ", " + level.getIntOrDefault("Kosten", 0) + " AP)")
+						.setFont(FontManager.serif));
 
-			table.addRow(titleCell.setColSpan(8));
+				table.addRow(titleCell.setColSpan(8));
 
-			table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
-				try {
-					final PDPageContentStream stream = event.getStream();
-					stream.setLineWidth(1);
-					stream.moveTo(event.getLeft(), event.getTop());
-					stream.lineTo(event.getLeft() + event.getWidth(), event.getTop());
-					stream.stroke();
-				} catch (final IOException e) {
-					ErrorLogger.logError(e);
+				table.getRows().get(table.getNumRows() - 1).addEventHandler(EventType.AFTER_ROW, event -> {
+					try {
+						final PDPageContentStream stream = event.getStream();
+						stream.setLineWidth(1);
+						stream.moveTo(event.getLeft(), event.getTop());
+						stream.lineTo(event.getLeft() + event.getWidth(), event.getTop());
+						stream.stroke();
+					} catch (final IOException e) {
+						ErrorLogger.logError(e);
+					}
+				});
+
+				JSONObject actualSkills = null;
+				JSONObject cheaperSkills = null;
+				if (hero != null) {
+					actualSkills = hero.getObj("Sonderfertigkeiten");
+					cheaperSkills = hero.getObj("Verbilligte Sonderfertigkeiten");
 				}
-			});
 
-			JSONObject actualSkills = null;
-			JSONObject cheaperSkills = null;
-			if (hero != null) {
-				actualSkills = hero.getObj("Sonderfertigkeiten");
-				cheaperSkills = hero.getObj("Verbilligte Sonderfertigkeiten");
-			}
+				final int cost = level.getIntOrDefault("Kosten", 50 * i);
 
-			final int cost = level.getIntOrDefault("Kosten", 50 * i);
-
-			for (final String name : liturgiesByLevel[i].keySet()) {
-				final String baseName = liturgiesByLevel[i].get(name);
-				final JSONObject liturgy = liturgies.getObj(baseName);
-				if (hero != null && fill) {
-					fillLiturgy(table, deity, ownLiturgiesOnly, baseName, name, liturgy, actualSkills.getObjOrDefault(baseName, null),
-							cheaperSkills.getObjOrDefault(baseName, null), cost);
-				} else {
-					fillLiturgy(table, deity, ownLiturgiesOnly, baseName, name, liturgy, null, null, cost);
+				for (final String name : liturgiesByLevel[i].keySet()) {
+					final String baseName = liturgiesByLevel[i].get(name);
+					final JSONObject liturgy = liturgies.getObj(baseName);
+					if (hero != null && fill) {
+						fillLiturgy(table, deity, ownLiturgiesOnly, baseName, name, liturgy, actualSkills.getObjOrDefault(baseName, null),
+								cheaperSkills.getObjOrDefault(baseName, null), cost);
+					} else {
+						fillLiturgy(table, deity, ownLiturgiesOnly, baseName, name, liturgy, null, null, cost);
+					}
 				}
 			}
 			++i;
