@@ -700,7 +700,7 @@ public class AnimalSheet extends Sheet {
 			final String trainingString = String.join(", ", bio.getArr("Ausbildung").getStrings());
 			table.addRow("Rasse: " + bio.getStringOrDefault("Rasse", ""), "Ausbildung: " + trainingString, "Farbe: " + bio.getStringOrDefault("Farbe", ""),
 					"Größe: " + bio.getIntOrDefault("Größe", 0), "Gewicht: " + bio.getIntOrDefault("Gewicht", 0),
-					"Geschlecht: " + ("weiblich".equals(bio.getString("Geschlecht")) ? "♀" : "♂"));
+					"Geschlecht: " + ("männlich".equals(bio.getString("Geschlecht")) ? "♂" : "♀"));
 		} else {
 			table.addRow("Rasse:", "Ausbildung:", "Farbe:", "Größe:", "Gewicht:", "Geschlecht:");
 		}
