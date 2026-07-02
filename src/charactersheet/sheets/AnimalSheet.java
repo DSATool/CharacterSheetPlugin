@@ -134,11 +134,11 @@ public class AnimalSheet extends Sheet {
 			final ContextMenu menu = section.getContextMenu();
 
 			final MenuItem editItem = new MenuItem("Bearbeiten");
-			editItem.setOnAction(event -> renameAnimal(type, animalSettings, section));
+			editItem.setOnAction(_ -> renameAnimal(type, animalSettings, section));
 			menu.getItems().add(0, editItem);
 
 			final MenuItem removeItem = new MenuItem("Löschen");
-			removeItem.setOnAction(e -> {
+			removeItem.setOnAction(_ -> {
 				animalSettings.remove(settings);
 				settingsPage.removeSection(section);
 			});
@@ -189,7 +189,7 @@ public class AnimalSheet extends Sheet {
 		final BooleanProperty ownRitualsProperty = animalSettings.addBooleanChoice(OWN_RITUALS_ONLY).selectedProperty();
 		final ReactiveSpinner<Integer> additionalRitualsControl = animalSettings.addIntegerChoice(ADDITIONAL_ROWS, 0, 20);
 		additionalRitualsControl.setDisable(true);
-		ownRitualsProperty.addListener((o, oldV, newV) -> {
+		ownRitualsProperty.addListener((_, _, newV) -> {
 			additionalRitualsControl.setDisable(!newV);
 		});
 		ritualsSection.visibleProperty().bind(isMagical);
@@ -201,7 +201,7 @@ public class AnimalSheet extends Sheet {
 		final StringProperty showSkills = animalSettings.getString(skillsSection, "Anzeigen");
 		final ReactiveSpinner<Integer> additionalSkillsControl = animalSettings.addIntegerChoice(ADDITIONAL_ROWS, 0, 20);
 		additionalSkillsControl.setDisable(true);
-		showSkills.addListener((o, oldV, newV) -> {
+		showSkills.addListener((_, _, newV) -> {
 			additionalSkillsControl.setDisable(!"Erlernte".equals(newV));
 		});
 
@@ -600,6 +600,7 @@ public class AnimalSheet extends Sheet {
 			final JSONObject actualValues = animal.getObj("Basiswerte");
 
 			JSONObject actualValue = actualValues.getObj("Initiative");
+
 			Bordered actual = new TextCell(actualValues.getObj("Initiative-Basis").getIntOrDefault("Wert", 0) + "+"
 					+ actualValue.getIntOrDefault("Würfel:Anzahl", 1) + "W" + actualValue.getIntOrDefault("Würfel:Typ", 6));
 			TextCell mod = new TextCell(Util.getSignedIntegerString(actualValue.getIntOrDefault("Modifikator", 0)));
@@ -945,7 +946,7 @@ public class AnimalSheet extends Sheet {
 
 		if (inventory != null) {
 			if (((JSONObject) inventory.getParent()).containsKey("Name")) {
-				DSAUtil.foreach(item -> true, item -> {
+				DSAUtil.foreach(_ -> true, item -> {
 					equipment.add(item);
 				}, inventory);
 			} else {
@@ -1218,7 +1219,7 @@ public class AnimalSheet extends Sheet {
 
 	private void renameAnimal(final String type, final JSONObject animal, final TitledPane section) {
 		new RenameDialog(animalsBox.getScene().getWindow(), type, "Tiere", animalSettings, animal,
-				(oldName, newName) -> {
+				(_, newName) -> {
 					if (animal == null) {
 						settingsPage.removeNode(animalsBox);
 						addAnimal(new JSONObject(null), newName, type, new JSONObject(null));

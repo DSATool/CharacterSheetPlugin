@@ -254,7 +254,7 @@ public class FightSheet extends Sheet {
 	}
 
 	private void addNewWeaponSet(final boolean ranged, final JSONArray armorSets) {
-		renameWeaponSet(null, (newName) -> {
+		renameWeaponSet(null, (_) -> {
 			settingsPage.removeNode(addWeaponSet);
 			settingsPage.removeNode(addRangedWeaponSet);
 			addWeaponSet(weaponSets.getObj(weaponSets.size() - 1), new JSONObject(null), null, armorSets, ranged);
@@ -414,11 +414,11 @@ public class FightSheet extends Sheet {
 		final ContextMenu menu = section.getContextMenu();
 
 		final MenuItem editItem = new MenuItem("Bearbeiten");
-		editItem.setOnAction(event -> renameWeaponSet(weaponSet, (newName) -> settingsPage.getString(section, null).set(newName)));
+		editItem.setOnAction(_ -> renameWeaponSet(weaponSet, (newName) -> settingsPage.getString(section, null).set(newName)));
 		menu.getItems().add(0, editItem);
 
 		final MenuItem removeItem = new MenuItem("Löschen");
-		removeItem.setOnAction(e -> {
+		removeItem.setOnAction(_ -> {
 			weaponSets.remove(weaponSet);
 			settingsPage.removeSection(section);
 		});
@@ -455,7 +455,7 @@ public class FightSheet extends Sheet {
 
 		final String mainWeaponCategory = ranged ? "Fernkampfwaffe" : "Nahkampfwaffe";
 
-		HeroUtil.foreachInventoryItem(hero, item -> item.containsKey("Kategorien"), (item, extraInventory) -> {
+		HeroUtil.foreachInventoryItem(hero, item -> item.containsKey("Kategorien"), (item, _) -> {
 			if (item.getArr("Kategorien").contains(mainWeaponCategory)) {
 				for (final String category : item.getArr("Kategorien").getStrings()) {
 					if (mainWeaponCategory.equals(category)) {
@@ -1267,7 +1267,7 @@ public class FightSheet extends Sheet {
 		final JSONObject fight = hero == null ? null : hero.getObj("Kampf");
 		if (fight != null) {
 			fight.removeKey("Waffenkombinationen");
-			HeroUtil.foreachInventoryItem(hero, item -> true, (item, extraInventory) -> {
+			HeroUtil.foreachInventoryItem(hero, _ -> true, (item, _) -> {
 				item.removeKey("Waffenkombinationen:Hauptwaffe");
 				item.removeKey("Waffenkombinationen:Seitenwaffe");
 				for (final String category : List.of("Nahkampfwaffe", "Fernkampfwaffe", "Schild", "Parierwaffe")) {
@@ -1637,7 +1637,7 @@ public class FightSheet extends Sheet {
 		if (hero != null) {
 			final String armorSetting = Settings.getSettingStringOrDefault("Zonenrüstung", "Kampf", "Rüstungsart");
 			HeroUtil.foreachInventoryItem(hero, item -> item.containsKey("Kategorien") && item.getArr("Kategorien").contains("Rüstung"),
-					(item, extraInventory) -> {
+					(item, _) -> {
 						final JSONArray sets = item.getArrOrDefault("Rüstungskombinationen", null);
 						if (armorSet == null && (sets == null || sets.size() == 0)
 								|| armorSet != null && sets != null && sets.contains(armorSet.getString("Name"))) {
@@ -1852,11 +1852,11 @@ public class FightSheet extends Sheet {
 		settingsPage.endSection();
 
 		addWeaponSet = new Button("Waffenkombination hinzufügen");
-		addWeaponSet.setOnAction(e -> addNewWeaponSet(false, armorSets));
+		addWeaponSet.setOnAction(_ -> addNewWeaponSet(false, armorSets));
 		settingsPage.addNode(addWeaponSet);
 
 		addRangedWeaponSet = new Button("Fernkampfkombination hinzufügen");
-		addRangedWeaponSet.setOnAction(e -> addNewWeaponSet(true, armorSets));
+		addRangedWeaponSet.setOnAction(_ -> addNewWeaponSet(true, armorSets));
 		settingsPage.addNode(addRangedWeaponSet);
 
 		for (final TitledPane section : settingsPage.getSections()) {
@@ -1891,7 +1891,7 @@ public class FightSheet extends Sheet {
 
 	private void renameWeaponSet(final JSONObject weaponSet, final Consumer<String> afterRename) {
 		new RenameDialog(settingsPage.getControl().getScene().getWindow(), "Waffenkombination", "Waffenkombinationen", weaponSets, weaponSet,
-				(oldName, newName) -> afterRename.accept(newName), List.of("Rüstung"));
+				(_, newName) -> afterRename.accept(newName), List.of("Rüstung"));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1960,7 +1960,7 @@ public class FightSheet extends Sheet {
 			additionalRows.setDisable(true);
 		}
 
-		currentSelection.getCheckedItems().addListener((ListChangeListener<A>) change -> {
+		currentSelection.getCheckedItems().addListener((ListChangeListener<A>) _ -> {
 			if (!clearing[0]) {
 				if (selected.size() > 1 && (other1Selected.size() > 1 || other2Selected.size() > 1)) {
 					clearing[0] = true;

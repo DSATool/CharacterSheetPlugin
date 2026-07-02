@@ -261,7 +261,7 @@ public class SpecialSkillsSheet extends Sheet {
 		final boolean[] lock = { false };
 
 		final ReactiveSpinner<Integer> choiceRows = settingsPage.addIntegerChoice(ADDITIONAL_CHOICE_ROWS, 0, 30);
-		choiceRows.valueProperty().addListener((o, oldV, newV) -> {
+		choiceRows.valueProperty().addListener((_, _, newV) -> {
 			if (!lock[0]) {
 				lock[0] = true;
 				for (final TitledPane section : settingsPage.getSections()) {
@@ -273,7 +273,7 @@ public class SpecialSkillsSheet extends Sheet {
 
 		final CheckBox ownSkillsOnly = settingsPage.addBooleanChoice(OWN_SKILLS_ONLY);
 		ownSkillsOnly.setIndeterminate(true);
-		ownSkillsOnly.selectedProperty().addListener((o, oldV, newV) -> {
+		ownSkillsOnly.selectedProperty().addListener((_, _, newV) -> {
 			lock[0] = true;
 			for (final TitledPane section : settingsPage.getSections()) {
 				settingsPage.getBool(section, OWN_SKILLS_ONLY).setValue(newV);
@@ -288,7 +288,7 @@ public class SpecialSkillsSheet extends Sheet {
 
 			settingsPage.addIntegerChoice(ADDITIONAL_CHOICE_ROWS, 0, 30);
 			final IntegerProperty additional = settingsPage.getInt(section, ADDITIONAL_CHOICE_ROWS);
-			additional.addListener((o, oldV, newV) -> {
+			additional.addListener((_, _, _) -> {
 				if (!lock[0]) {
 					lock[0] = true;
 					choiceRows.getValueFactory().setValue(0);
@@ -301,7 +301,7 @@ public class SpecialSkillsSheet extends Sheet {
 			final ReactiveSpinner<Integer> additionalRowsControl = settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 30);
 			additionalRowsControl.setDisable(true);
 
-			own.addListener((o, oldV, newV) -> {
+			own.addListener((_, _, newV) -> {
 				if (!lock[0]) {
 					ownSkillsOnly.setIndeterminate(true);
 				}

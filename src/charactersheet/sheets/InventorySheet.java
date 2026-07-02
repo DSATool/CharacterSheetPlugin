@@ -247,7 +247,7 @@ public class InventorySheet extends Sheet {
 
 		if (inventory != null) {
 			if (((JSONObject) inventory.getParent()).containsKey("Name")) {
-				DSAUtil.foreach(item -> true, item -> {
+				DSAUtil.foreach(_ -> true, item -> {
 					equipment.add(item);
 				}, inventory);
 			} else {

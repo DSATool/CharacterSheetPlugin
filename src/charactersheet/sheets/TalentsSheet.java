@@ -188,7 +188,7 @@ public class TalentsSheet extends Sheet {
 		table.addRow(nameTitle, tawTitle, seTitle, challengeTitle);
 
 		final Map<String, JSONObject> talents = new TreeMap<>(SheetUtil.comparator);
-		DSAUtil.foreach(o -> true, (name, talent) -> {
+		DSAUtil.foreach(_ -> true, (name, talent) -> {
 			talents.put(name, talent);
 		}, ResourceManager.getResource("data/Talente").getObj(groupName));
 
@@ -845,7 +845,7 @@ public class TalentsSheet extends Sheet {
 		final ReactiveSpinner<Integer> additionalControl = settingsPage.addIntegerChoice(ADDITIONAL_TALENT_ROWS, 0, 30);
 		additionalControl.setDisable(true);
 		final IntegerProperty additional = settingsPage.getInt(section, ADDITIONAL_TALENT_ROWS);
-		additional.addListener((o, oldV, newV) -> {
+		additional.addListener((_, _, _) -> {
 			if (!lock[0]) {
 				lock[0] = true;
 				additionalRows.getValueFactory().setValue(0);
@@ -854,7 +854,7 @@ public class TalentsSheet extends Sheet {
 		});
 
 		if (!specialGroups.contains(name)) {
-			own.addListener((o, oldV, newV) -> {
+			own.addListener((_, _, newV) -> {
 				if (!lock[0]) {
 					ownTalentsOnly.setIndeterminate(true);
 				}
@@ -934,7 +934,7 @@ public class TalentsSheet extends Sheet {
 		final CheckBox ownTalentsOnly = settingsPage.addBooleanChoice(OWN_TALENTS_ONLY);
 
 		final ReactiveSpinner<Integer> additionalRows = settingsPage.addIntegerChoice(ADDITIONAL_TALENT_ROWS, 0, 30);
-		additionalRows.valueProperty().addListener((o, oldV, newV) -> {
+		additionalRows.valueProperty().addListener((_, _, newV) -> {
 			if (!lock[0]) {
 				lock[0] = true;
 				for (final TitledPane section : settingsPage.getSections()) {
@@ -949,7 +949,7 @@ public class TalentsSheet extends Sheet {
 		additionalRows.setDisable(true);
 
 		ownTalentsOnly.setIndeterminate(true);
-		ownTalentsOnly.selectedProperty().addListener((o, oldV, newV) -> {
+		ownTalentsOnly.selectedProperty().addListener((_, _, newV) -> {
 			lock[0] = true;
 			for (final TitledPane section : settingsPage.getSections()) {
 				if (!specialGroups.contains(settingsPage.getString(section, null).get())) {

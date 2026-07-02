@@ -626,7 +626,7 @@ public class CharacterSheet extends Sheet {
 		sections.put("Bild", imageSection);
 		final Button imageButton = settingsPage.addFileChoice("Bild", "*.jpg, *.png, *.gif", List.of("*.jpg", "*.png", "*.gif"));
 
-		settingsPage.getBool(imageSection, "").addListener((o, oldV, newV) -> {
+		settingsPage.getBool(imageSection, "").addListener((_, _, newV) -> {
 			imageButton.setDisable(!newV);
 		});
 

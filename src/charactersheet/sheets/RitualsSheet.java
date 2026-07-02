@@ -79,7 +79,7 @@ public class RitualsSheet extends Sheet {
 		final BooleanProperty own = settingsPage.addBooleanChoice(OWN_RITUALS_ONLY).selectedProperty();
 		final ReactiveSpinner<Integer> additionalRows = settingsPage.addIntegerChoice(ADDITIONAL_ROWS, 0, 20);
 		additionalRows.setDisable(true);
-		own.addListener((o, oldV, newV) -> {
+		own.addListener((_, _, newV) -> {
 			if (!lock[0]) {
 				ownRitualsOnly.setIndeterminate(true);
 			}
@@ -129,7 +129,7 @@ public class RitualsSheet extends Sheet {
 	public void create(final PDDocument document) throws IOException {
 		final Table[] ritualKnowledgeTable = new Table[] { getRitualKnowledgeTable(pageSize != SheetUtil.landscape) };
 
-		header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll, showName, showDate).andThen(event -> {
+		header = SheetUtil.createHeader("Ritualbrief", true, true, false, hero, fill, fillAll, showName, showDate).andThen(_ -> {
 			try {
 				if (pageSize == SheetUtil.landscape) {
 					bottom.bottom = ritualKnowledgeTable[0].render(document, 818, 12, 536, 59, 10) - 5;
@@ -325,7 +325,7 @@ public class RitualsSheet extends Sheet {
 		table.addCells(apTitle);
 
 		if (isObjectRitual) {
-			ifHas("Volumen", actualGroup, o -> {
+			ifHas("Volumen", actualGroup, _ -> {
 				table.addColumn(volumeColumn);
 				table.addCells(volumeTitle);
 				width[0] += volumeColumn.getMaxWidth();
@@ -337,54 +337,54 @@ public class RitualsSheet extends Sheet {
 			width[0] += activeColumn.getMaxWidth();
 		}
 
-		ifHas("Ritualprobe", actualGroup, o -> {
+		ifHas("Ritualprobe", actualGroup, _ -> {
 			table.addColumn(challengeColumn);
 			table.addCells(challengeTitle);
 			width[0] += challengeColumn.getMaxWidth();
 		});
-		ifHas("Ritualdauer", actualGroup, o -> {
+		ifHas("Ritualdauer", actualGroup, _ -> {
 			table.addColumn(timeColumn);
 			table.addCells(timeTitle);
 			width[0] += timeColumn.getMaxWidth();
 		});
-		ifHas("Ritualkosten", actualGroup, o -> {
+		ifHas("Ritualkosten", actualGroup, _ -> {
 			table.addColumn(costColumn);
 			table.addCells(costTitle);
 			width[0] += costColumn.getMaxWidth();
 		});
 
-		ifHas("Gegenprobe", actualGroup, o -> {
+		ifHas("Gegenprobe", actualGroup, _ -> {
 			table.addColumn(contraChallengeColumn);
 			table.addCells(contraChallengeTitle);
 			width[0] += contraChallengeColumn.getMaxWidth();
 		});
 
-		ifHas("Erschaffungsprobe", actualGroup, o -> {
+		ifHas("Erschaffungsprobe", actualGroup, _ -> {
 			table.addColumn(creationChallengeColumn);
 			table.addCells(creationChallengeTitle);
 			width[0] += creationChallengeColumn.getMaxWidth();
 		});
-		ifHas("Erschaffungskosten", actualGroup, o -> {
+		ifHas("Erschaffungskosten", actualGroup, _ -> {
 			table.addColumn(creationCostColumn);
 			table.addCells(creationCostTitle);
 			width[0] += creationCostColumn.getMaxWidth();
 		});
-		ifHas("Mondphase", actualGroup, o -> {
+		ifHas("Mondphase", actualGroup, _ -> {
 			table.addColumn(moonPhaseColumn);
 			table.addCells(moonPhaseTitle);
 			width[0] += moonPhaseColumn.getMaxWidth();
 		});
-		ifHas("Aktivierungsprobe", actualGroup, o -> {
+		ifHas("Aktivierungsprobe", actualGroup, _ -> {
 			table.addColumn(activationChallengeColumn);
 			table.addCells(activationChallengeTitle);
 			width[0] += activationChallengeColumn.getMaxWidth();
 		});
-		ifHas("Aktivierungskosten", actualGroup, o -> {
+		ifHas("Aktivierungskosten", actualGroup, _ -> {
 			table.addColumn(activationCostColumn);
 			table.addCells(activationCostTitle);
 			width[0] += activationCostColumn.getMaxWidth();
 		});
-		ifHas("Aktivierungsdauer", actualGroup, o -> {
+		ifHas("Aktivierungsdauer", actualGroup, _ -> {
 			table.addColumn(activationTimeColumn);
 			table.addCells(activationTimeTitle);
 			width[0] += activationTimeColumn.getMaxWidth();
@@ -395,31 +395,31 @@ public class RitualsSheet extends Sheet {
 			table.addCells(rangeTitle);
 			width[0] += rangeColumn.getMaxWidth();
 		} else {
-			ifHas("Reichweite", actualGroup, o -> {
+			ifHas("Reichweite", actualGroup, _ -> {
 				table.addColumn(rangeColumn);
 				table.addCells(rangeTitle);
 				width[0] += rangeColumn.getMaxWidth();
 			});
 		}
 
-		ifHas("Zielobjekt", actualGroup, o -> {
+		ifHas("Zielobjekt", actualGroup, _ -> {
 			table.addColumn(targetColumn);
 			table.addCells(targetTitle);
 			width[0] += targetColumn.getMaxWidth();
 		});
-		ifHas("Wirkungsdauer", actualGroup, o -> {
+		ifHas("Wirkungsdauer", actualGroup, _ -> {
 			table.addColumn(durationColumn);
 			table.addCells(durationTitle);
 			width[0] += durationColumn.getMaxWidth();
 		});
-		ifHas("Komplexität", actualGroup, o -> {
+		ifHas("Komplexität", actualGroup, _ -> {
 			table.addColumn(complexityColumn);
 			table.addCells(complexityTitle);
 			width[0] += complexityColumn.getMaxWidth();
 		});
 
 		final List<JSONObject> preconditions = new ArrayList<>();
-		DSAUtil.foreach(o -> true, (ritualName, ritual) -> {
+		DSAUtil.foreach(_ -> true, (ritualName, ritual) -> {
 			if (!"Apport".equals(ritualName)) {
 				preconditions.add(ritual.getObjOrDefault("Voraussetzungen", null));
 			}
@@ -553,7 +553,7 @@ public class RitualsSheet extends Sheet {
 			}
 		}
 
-		return new Tuple3<Table, Boolean, TitledPane>(table, "Allgemeine Rituale".equals(groupName) ? null : width[0] < 400, section);
+		return new Tuple3<>(table, "Allgemeine Rituale".equals(groupName) ? null : width[0] < 400, section);
 	}
 
 	private void fillRitual(final Table table, final JSONObject actualGroup, final boolean isObjectRitual, final String ritualName, final JSONObject ritual,
@@ -614,7 +614,7 @@ public class RitualsSheet extends Sheet {
 
 		table.addCells(ritualName, actual, se);
 
-		ifHas("Verbreitung", actualGroup, o -> {
+		ifHas("Verbreitung", actualGroup, _ -> {
 			final Object spread = ritual.getUnsafe("Verbreitung");
 			if (spread instanceof final JSONObject obj) {
 				table.addCells(StringUtil.mkString(obj, ", ", rep -> rep + ' ' + obj.getInt(rep)));
@@ -627,7 +627,7 @@ public class RitualsSheet extends Sheet {
 		table.addCells(cost);
 
 		if (isObjectRitual) {
-			ifHas("Volumen", actualGroup, o -> {
+			ifHas("Volumen", actualGroup, _ -> {
 				table.addCells(ritual.getIntOrDefault("Volumen", 0));
 			});
 		}
@@ -635,25 +635,25 @@ public class RitualsSheet extends Sheet {
 			table.addCells(active);
 		}
 
-		ifHas("Ritualprobe", actualGroup, o -> {
+		ifHas("Ritualprobe", actualGroup, _ -> {
 			if (settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get()) {
 				table.addCells(HeroUtil.getChallengeValuesString(hero, ritual.getArrOrDefault("Ritualprobe", null), fill));
 			} else {
 				table.addCells(DSAUtil.getChallengeString(ritual.getArrOrDefault("Ritualprobe", null)));
 			}
 		});
-		ifHas("Ritualdauer", actualGroup, o -> {
+		ifHas("Ritualdauer", actualGroup, _ -> {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Ritualdauer", null), Units.TIME, false));
 		});
-		ifHas("Ritualkosten", actualGroup, o -> {
+		ifHas("Ritualkosten", actualGroup, _ -> {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Ritualkosten", null), Units.NONE, false));
 		});
 
-		ifHas("Gegenprobe", actualGroup, o -> {
+		ifHas("Gegenprobe", actualGroup, _ -> {
 			table.addCells(ritual.getStringOrDefault("Gegenprobe", "—"));
 		});
 
-		ifHas("Erschaffungsprobe", actualGroup, o -> {
+		ifHas("Erschaffungsprobe", actualGroup, _ -> {
 			final Object challenge = ritual.getUnsafe("Erschaffungsprobe");
 			if (challenge instanceof final JSONObject obj) {
 				String challengeString = obj.getString("Talent");
@@ -673,10 +673,10 @@ public class RitualsSheet extends Sheet {
 				}
 			}
 		});
-		ifHas("Erschaffungskosten", actualGroup, o -> {
+		ifHas("Erschaffungskosten", actualGroup, _ -> {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Erschaffungskosten", null), Units.NONE, false));
 		});
-		ifHas("Mondphase", actualGroup, o -> {
+		ifHas("Mondphase", actualGroup, _ -> {
 			final JSONArray moonPhase = ritual.getArrOrDefault("Mondphase", null);
 			if (moonPhase == null) {
 				table.addCells("—");
@@ -689,35 +689,35 @@ public class RitualsSheet extends Sheet {
 				table.addCells(moonPhaseString.substring(1));
 			}
 		});
-		ifHas("Aktivierungsprobe", actualGroup, o -> {
+		ifHas("Aktivierungsprobe", actualGroup, _ -> {
 			if (settingsPage.getBool(VALUES_FOR_ATTRIBUTES).get()) {
 				table.addCells(HeroUtil.getChallengeValuesString(hero, ritual.getArrOrDefault("Aktivierungsprobe", null), fill));
 			} else {
 				table.addCells(DSAUtil.getChallengeString(ritual.getArrOrDefault("Aktivierungsprobe", null)));
 			}
 		});
-		ifHas("Aktivierungskosten", actualGroup, o -> {
+		ifHas("Aktivierungskosten", actualGroup, _ -> {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Aktivierungskosten", null), Units.NONE, false));
 		});
-		ifHas("Aktivierungsdauer", actualGroup, o -> {
+		ifHas("Aktivierungsdauer", actualGroup, _ -> {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Aktivierungsdauer", null), Units.TIME, false));
 		});
 
 		if (isObjectRitual) {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Reichweite", null), Units.RANGE, false));
 		} else {
-			ifHas("Reichweite", actualGroup, o -> {
+			ifHas("Reichweite", actualGroup, _ -> {
 				table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Reichweite", null), Units.RANGE, false));
 			});
 		}
 
-		ifHas("Zielobjekt", actualGroup, o -> {
+		ifHas("Zielobjekt", actualGroup, _ -> {
 			table.addCells(SheetUtil.getTargetObjectsString(ritual.getArrOrDefault("Zielobjekt", null)));
 		});
-		ifHas("Wirkungsdauer", actualGroup, o -> {
+		ifHas("Wirkungsdauer", actualGroup, _ -> {
 			table.addCells(DSAUtil.getModificationString(ritual.getObjOrDefault("Wirkungsdauer", null), Units.TIME, false));
 		});
-		ifHas("Komplexität", actualGroup, o -> {
+		ifHas("Komplexität", actualGroup, _ -> {
 			String complexity = ritual.getIntOrDefault("Komplexität", 1).toString();
 			if (ritual.getBoolOrDefault("Zusatzzeichen", false)) {
 				complexity = "+" + complexity;
@@ -900,7 +900,7 @@ public class RitualsSheet extends Sheet {
 	}
 
 	private void ifHas(final String key, final JSONObject actualGroup, final Consumer<JSONObject> function) {
-		DSAUtil.foreach(o -> true, (name, ritual) -> {
+		DSAUtil.foreach(_ -> true, (name, ritual) -> {
 			if (ritual.containsKey(key) && !"Apport".equals(name)) {
 				function.accept(ritual);
 				return false;
@@ -917,7 +917,7 @@ public class RitualsSheet extends Sheet {
 
 		ownRitualsOnly = settingsPage.addBooleanChoice(OWN_RITUALS_ONLY);
 		ownRitualsOnly.setIndeterminate(true);
-		ownRitualsOnly.selectedProperty().addListener((o, oldV, newV) -> {
+		ownRitualsOnly.selectedProperty().addListener((_, _, newV) -> {
 			lock[0] = true;
 			for (final TitledPane section : settingsPage.getSections()) {
 				settingsPage.getBool(section, OWN_RITUALS_ONLY).setValue(newV);

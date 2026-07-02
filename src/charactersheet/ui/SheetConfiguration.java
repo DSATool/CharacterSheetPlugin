@@ -105,13 +105,13 @@ public class SheetConfiguration extends HeroSelector {
 
 		sheets.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-		sheets.getSelectionModel().selectedItemProperty().addListener((o, oldV, newV) -> {
+		sheets.getSelectionModel().selectedItemProperty().addListener((_, _, newV) -> {
 			if (newV != null) {
 				sheetControls.get(newV).toFront();
 			}
 		});
 
-		sheets.setCellFactory(list -> {
+		sheets.setCellFactory(_ -> {
 			final CheckBoxListCell<Sheet> cell = new CheckBoxListCell<>() {
 				@Override
 				public void updateItem(final Sheet item, final boolean empty) {
@@ -126,7 +126,7 @@ public class SheetConfiguration extends HeroSelector {
 			cell.setSelectedStateCallback(sheets::getItemBooleanProperty);
 
 			GUIUtil.dragDropReorder(cell, () -> checkedPreviously = sheets.getCheckModel().getCheckedItems().toArray(new Sheet[0]),
-					this::restoreCheckedSheets, moved -> restoreCheckedSheets(), sheets);
+					this::restoreCheckedSheets, _ -> restoreCheckedSheets(), sheets);
 
 			return cell;
 		});
