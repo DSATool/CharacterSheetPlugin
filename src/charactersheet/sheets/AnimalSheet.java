@@ -697,8 +697,10 @@ public class AnimalSheet extends Sheet {
 
 		if (animal != null && fill) {
 			final JSONObject bio = animal.getObj("Biografie");
-			final String trainingString = String.join(", ", bio.getArr("Ausbildung").getStrings());
-			table.addRow("Rasse: " + bio.getStringOrDefault("Rasse", ""), "Ausbildung: " + trainingString, "Farbe: " + bio.getStringOrDefault("Farbe", ""),
+			final int educationTaP = animal.getObj("Basiswerte").getObjOrDefault("Ausbildung", new JSONObject(null)).getIntOrDefault("TaP*", 0);
+			final String raceString = bio.getStringOrDefault("Rasse", bio.getStringOrDefault("Tierart", ""));
+			final String trainingString = String.join(", ", bio.getArr("Ausbildung").getStrings()) + (educationTaP != 0 ? " (" + educationTaP + " TaP*)" : "");
+			table.addRow("Rasse: " + raceString, "Ausbildung: " + trainingString, "Farbe: " + bio.getStringOrDefault("Farbe", ""),
 					"Größe: " + bio.getIntOrDefault("Größe", 0), "Gewicht: " + bio.getIntOrDefault("Gewicht", 0),
 					"Geschlecht: " + ("männlich".equals(bio.getString("Geschlecht")) ? "♂" : "♀"));
 		} else {
