@@ -593,7 +593,7 @@ public class AnimalSheet extends Sheet {
 
 		final Cell emptyDesc = new TextCell(" ", FontManager.serif, 6, 6);
 		final Bordered curDesc = new TextCell("Akt.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
-		final Bordered modDesc = new TextCell(isMagical ? "Kauf" : "Mod.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
+		final Bordered modDesc = new TextCell(isMagical ? "Start" : "Mod.", FontManager.serif, 6, 6).setBorder(0, 0, 0, 0);
 		table.addRow(emptyDesc, emptyDesc, curDesc, modDesc, emptyDesc);
 
 		if (animal != null && fill) {
@@ -611,9 +611,9 @@ public class AnimalSheet extends Sheet {
 							.addText(Integer.toString(actualValue.getIntOrDefault("Körper", 0))).setEquallySpaced(true)
 					: new TextCell(Integer.toString(actualValue.getIntOrDefault("Wert", 0)));
 			mod = actualValue.containsKey("Geist")
-					? new TextCell(Integer.toString(actualValue.getIntOrDefault("Geist:Kauf", 0))).addText("/")
-							.addText(Integer.toString(actualValue.getIntOrDefault("Körper:Kauf", 0))).setEquallySpaced(true)
-					: new TextCell(Integer.toString(actualValue.getIntOrDefault("Kauf", 0)));
+					? new TextCell(Integer.toString(actualValue.getIntOrDefault("Geist:Start", 0))).addText("/")
+							.addText(Integer.toString(actualValue.getIntOrDefault("Körper:Start", 0))).setEquallySpaced(true)
+					: new TextCell(Integer.toString(actualValue.getIntOrDefault("Start", 0)));
 			table.addRow("", "Magieresistenz", actual, isMagical ? mod : "—");
 
 			actualValue = actualValues.getObj("Geschwindigkeit");
@@ -622,11 +622,11 @@ public class AnimalSheet extends Sheet {
 							.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Luft", 0.0))).setEquallySpaced(true)
 					: new TextCell(DSAUtil.threeDecimalPlaces.format(actualValue.getDoubleOrDefault("Wert", 0.0)));
 			mod = actualValue.containsKey("Boden")
-					? new TextCell(isMagical ? DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Boden:Kauf", 0))
+					? new TextCell(isMagical ? DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Boden:Start", 0))
 							: SheetUtil.threeDecimalPlacesSigned.format(actualValue.getIntOrDefault("Boden:Modifikator", 0))).addText("/")
-							.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault(isMagical ? "Luft:Kauf" : "Luft:Modifikator", 0)))
+							.addText(DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault(isMagical ? "Luft:Start" : "Luft:Modifikator", 0)))
 							.setEquallySpaced(true)
-					: new TextCell(isMagical ? DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Kauf", 0))
+					: new TextCell(isMagical ? DSAUtil.threeDecimalPlaces.format(actualValue.getIntOrDefault("Start", 0))
 							: SheetUtil.threeDecimalPlacesSigned.format(actualValue.getIntOrDefault("Modifikator", 0)));
 			table.addRow("", "Geschwindigkeit", actual, mod);
 
